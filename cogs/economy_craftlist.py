@@ -4,9 +4,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-EMOJI = {
-    "stick": "<:stick:1472472154175049880>",
-}
+from utils.config import load_emojis
+
+EMOJI = load_emojis()
 
 RECIPES = {
     "sword": (2, 1),

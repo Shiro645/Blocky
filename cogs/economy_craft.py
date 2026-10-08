@@ -6,13 +6,9 @@ from discord.ext import commands
 
 from database import init_db, ensure_user, add_gear, get_item_amount, remove_item_checked
 
-EMOJI = {
-    "stick": "<:stick:1472472154175049880>",
-    "gold": "<:gold:1472472602957058139>",
-    "iron": "<:iron:1472469042802462770>",
-    "diamond": "<:diamond:1472472278695678108>",
-    "netherite": "<:netherite:1472500827385102407>",
-}
+from utils.config import load_emojis
+
+EMOJI = load_emojis()
 
 MATERIALS = ("gold", "iron", "diamond", "netherite")
 

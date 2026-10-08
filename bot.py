@@ -39,7 +39,7 @@ def build_intents() -> discord.Intents:
     intents = discord.Intents.default()
     intents.guilds = True
     intents.members = True
-    intents.reactions = True
+    intents.reactions = False
     intents.message_content = False
     return intents
 

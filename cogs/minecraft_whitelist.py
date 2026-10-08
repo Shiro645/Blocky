@@ -16,22 +16,21 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 
 def staff_only():
     async def predicate(interaction: discord.Interaction) -> bool:
-        cfg = load_config()
-        staff_role_id = int(cfg["staff"]["role_id"])
-
         if interaction.guild is None:
             return False
 
-        role = interaction.guild.get_role(staff_role_id)
-        if role is None:
-            return False
+        cfg = load_config()
+        staff_role_id = int(cfg.get("staff", {}).get("role_id", 0) or 0)
 
         member = interaction.user
         if not isinstance(member, discord.Member):
             member = await interaction.guild.fetch_member(interaction.user.id)
 
-        return role in member.roles or member.guild_permissions.manage_guild
+        if member.guild_permissions.manage_guild:
+            return True
 
+        role = interaction.guild.get_role(staff_role_id)
+        return role is not None and role in member.roles
     return app_commands.check(predicate)
 
 

@@ -12,9 +12,9 @@ from database import (
     TALENT_BRANCHES,
 )
 
-EMOJI = {
-    "xp": "<:xp:1472479124894253248>",
-}
+from utils.config import load_emojis
+
+EMOJI = load_emojis()
 
 BRANCH_INFO = {
     "miner": "More/better blocks (higher gravel/deepslate odds + small bonus block chance).",

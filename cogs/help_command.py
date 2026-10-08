@@ -5,14 +5,9 @@ from discord import app_commands
 from discord.ext import commands
 
 
-EMOJI = {
-    "emerald": "<:emerald:1472479098055164145>",
-    "stick": "<:stick:1472472154175049880>",
-    "gold": "<:gold:1472472602957058139>",
-    "iron": "<:iron:1472469042802462770>",
-    "diamond": "<:diamond:1472472278695678108>",
-    "netherite": "<:netherite:1472500827385102407>",
-}
+from utils.config import load_emojis
+
+EMOJI = load_emojis()
 
 
 class HelpCog(commands.Cog):
@@ -28,7 +23,6 @@ class HelpCog(commands.Cog):
             color=discord.Color.blurple(),
         )
 
-        # 📦 Economy
         embed.add_field(
             name="Mining & Inventory",
             value=(
@@ -39,7 +33,6 @@ class HelpCog(commands.Cog):
             inline=False,
         )
 
-        # 🛠 Craft
         embed.add_field(
             name="Crafting",
             value=(
@@ -49,7 +42,6 @@ class HelpCog(commands.Cog):
             inline=False,
         )
 
-        # ⭐ XP & Talents
         embed.add_field(
             name="XP & Talents",
             value=(
@@ -60,19 +52,25 @@ class HelpCog(commands.Cog):
             inline=False,
         )
 
-        # 👑 Admin
         embed.add_field(
-            name="Admin Commands",
+            name="Minecraft",
             value=(
-                "`/add_block`\n"
-                "`/add_emerald`\n"
-                "`/add_item`\n"
-                "`/add_gear`\n"
+                "`/server_status` → Server status\n"
+                "`/ip` → How to join\n"
+                "`/modpacks` → Modpack info\n"
             ),
             inline=False,
         )
 
-        embed.set_footer(text="More features coming soon...")
+        embed.add_field(
+            name="Staff Commands",
+            value=(
+                "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist`\n"
+                "`/add_block` · `/add_emerald` · `/add_item` · `/add_gear`\n"
+                "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset`\n"
+            ),
+            inline=False,
+        )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

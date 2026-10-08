@@ -3,9 +3,17 @@
   "staff": {
     "role_id": 0
   },
+  "emojis": {
+    "emerald": "<:emerald:EMOJI_ID>",
+    "stick": "<:stick:EMOJI_ID>",
+    "gold": "<:gold:EMOJI_ID>",
+    "iron": "<:iron:EMOJI_ID>",
+    "diamond": "<:diamond:EMOJI_ID>",
+    "netherite": "<:netherite:EMOJI_ID>",
+    "xp": "<:xp:EMOJI_ID>"
+  },
   "minecraft": {
     "server_host": "minecraft",
-    "whitelist_path": "whitelist.json",
     "server_port": 25565,
     "public_ip_text": "IP",
     "modpack_text": "Modpack: [Name](link).",

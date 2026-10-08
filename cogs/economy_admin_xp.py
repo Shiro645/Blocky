@@ -14,8 +14,9 @@ from database import (
     reset_talents,
 )
 
-XP = "<:xp:1472479124894253248>"
+from utils.config import load_emojis
 
+XP = load_emojis()["xp"]
 
 class EconomyAdminXPCog(commands.Cog):
     def __init__(self, bot):
