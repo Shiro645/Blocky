@@ -79,6 +79,24 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_stats_stat ON stats(stat, value);
     """,
+    # 2 - daily rewards and auction house
+    """
+    ALTER TABLE users ADD COLUMN daily_streak INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN last_daily TEXT;
+    CREATE TABLE auctions (
+        auction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seller_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        asset TEXT NOT NULL,          -- see game/assets.py
+        amount INTEGER NOT NULL CHECK (amount > 0),
+        durability INTEGER,           -- gear only
+        max_durability INTEGER,       -- gear only
+        price INTEGER NOT NULL CHECK (price > 0),
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_auctions_seller ON auctions(seller_id);
+    CREATE INDEX idx_auctions_expires ON auctions(expires_at);
+    """,
 ]
 
 

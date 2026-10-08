@@ -29,6 +29,17 @@ class HelpCog(commands.Cog):
                 "`/inventory` → Show your blocks, items and gear\n"
                 "`/sell` → Sell all your blocks\n"
                 "`/market` → Open the market\n"
+                "`/daily` → Daily reward (keep your streak!)\n"
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Trading",
+            value=(
+                "`/pay <member> <amount>` → Send emeralds\n"
+                "`/trade <member> ...` → Propose a trade or a gift\n"
+                "`/auction sell · browse · buy · cancel · mine` → Auction house\n"
             ),
             inline=False,
         )

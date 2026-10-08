@@ -186,6 +186,18 @@ def bump_stat(ctx: Ctx, user_id: int, stat: str, amount: int = 1) -> None:
     )
 
 
+def set_stat_max(ctx: Ctx, user_id: int, stat: str, value: int) -> None:
+    """Keep the highest value ever reached (records like the best streak)."""
+    ensure_user(ctx, user_id)
+    ctx.execute(
+        """
+        INSERT INTO stats(user_id, stat, value) VALUES(?, ?, ?)
+        ON CONFLICT(user_id, stat) DO UPDATE SET value = MAX(value, excluded.value);
+        """,
+        (user_id, stat, value),
+    )
+
+
 def get_stats(ctx: Ctx, user_id: int) -> dict[str, int]:
     rows = ctx.all("SELECT stat, value FROM stats WHERE user_id=?;", (user_id,))
     return {r["stat"]: r["value"] for r in rows}
