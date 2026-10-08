@@ -7,7 +7,7 @@ from discord.ext import commands
 from game import gear, shop
 from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES
 from game.db import Ctx
-from utils.ui import EMOJI, gear_label, join_lines, mat, progress_bar
+from utils.ui import EMOJI, gear_icon, gear_label, join_lines, mat, progress_bar
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
@@ -27,7 +27,7 @@ class EconomyCraftCog(commands.Cog):
             cost.append(f"{mat(material)} {res['ingots']} ingot(s)".strip())
         if res["sticks"]:
             cost.append(f"{EMOJI['stick']} {res['sticks']} stick(s)".strip())
-        text = f"✅ Crafted {mat(material)} **{material} {item}**! Cost: " + " + ".join(cost)
+        text = f"✅ Crafted {gear_icon(item, material)} **{material} {item}**! Cost: " + " + ".join(cost)
         if res["equipped"]:
             text += "\nIt was equipped automatically (the slot was empty)."
         else:
@@ -43,7 +43,7 @@ class EconomyCraftCog(commands.Cog):
                 cost.append(f"{ingots} ingot(s)")
             if sticks:
                 cost.append(f"{EMOJI['stick']} {sticks} stick(s)".strip())
-            lines.append(f"**{item}** → " + " + ".join(cost))
+            lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost))
 
         embed = discord.Embed(title="Crafting Recipes", description="\n".join(lines))
         embed.set_footer(text="Materials: " + ", ".join(MATERIALS))

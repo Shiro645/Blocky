@@ -2,17 +2,35 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 
 import discord
 
 from game.errors import GameError
-from utils.config import load_emojis
+from utils import emojis
+from utils.config import load_config
 
 log = logging.getLogger("ui")
 
-EMOJI = load_emojis()
+# name -> emoji code. Filled from config.json now, then from the application
+# emojis once the bot is logged in (see load_application_emojis).
+EMOJI: defaultdict[str, str] = defaultdict(str, emojis.resolve(load_config().get("emojis") or {}, {}))
 
-BLOCK_ICONS = {"cobblestone": "🪨", "gravel": "🟫", "deepslate": "⬛", "bedrock": "🟪"}
+
+async def load_application_emojis(client: discord.Client) -> None:
+    """Use the emojis uploaded to the bot (Developer Portal > Emojis), found by name."""
+    try:
+        app = {e.name: str(e) for e in await client.fetch_application_emojis()}
+    except Exception:  # never prevent the bot from starting because of emojis
+        log.warning("Could not fetch the application emojis, using config.json only", exc_info=True)
+        app = {}
+    resolved = emojis.resolve(load_config().get("emojis") or {}, app)
+    EMOJI.clear()
+    EMOJI.update(resolved)
+    absent = emojis.missing(resolved)
+    log.info("Emojis: %d found, %d missing", len(emojis.EXPECTED_NAMES) - len(absent), len(absent))
+    if absent:
+        log.info("Missing emojis (upload them with these names): %s", ", ".join(absent))
 
 
 def em(amount: int) -> str:
@@ -25,6 +43,31 @@ def mat(material: str) -> str:
     return EMOJI.get(material, "")
 
 
+def gear_icon(item: str, material: str) -> str:
+    """Emoji of a piece of gear, or of its material when there is none."""
+    return EMOJI.get(emojis.gear_key(item, material)) or mat(material)
+
+
+def block_icon(block: str) -> str:
+    return EMOJI.get(block) or emojis.BLOCK_FALLBACK[block]
+
+
+def asset_icon(key: str) -> str:
+    """Emoji for an asset key of game/assets.py ('' if none)."""
+    parts = key.split(":")
+    if parts[0] == "emeralds":
+        return EMOJI.get("emerald", "")
+    if parts[0] == "stick":
+        return EMOJI.get("stick", "")
+    if parts[0] == "block" and len(parts) == 2 and parts[1] in emojis.BLOCK_FALLBACK:
+        return block_icon(parts[1])
+    if parts[0] == "ingot" and len(parts) == 2:
+        return mat(parts[1])
+    if parts[0] == "gear" and len(parts) == 3:
+        return gear_icon(parts[2], parts[1])
+    return ""
+
+
 def item_label(item: str, material: str, amount: int | None = None) -> str:
     if item == "stick":
         text = f"{EMOJI['stick']} stick" + ("s" if amount != 1 else "")
@@ -34,7 +77,7 @@ def item_label(item: str, material: str, amount: int | None = None) -> str:
 
 
 def gear_label(g: dict, show_durability: bool = True) -> str:
-    text = f"{mat(g['material'])} **{g['material']} {g['item']}**".strip()
+    text = f"{gear_icon(g['item'], g['material'])} **{g['material']} {g['item']}**".strip()
     if show_durability:
         text += f" `{g['durability']}/{g['max_durability']}`"
     return text

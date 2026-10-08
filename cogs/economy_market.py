@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import players, shop
-from utils.ui import BaseView, em, item_label, report_error
+from utils.ui import EMOJI, BaseView, em, item_label, mat, report_error
 
 
 class QuantityModal(discord.ui.Modal, title="Enter quantity"):
@@ -43,7 +43,10 @@ class MarketSelect(discord.ui.Select):
                 desc = f"{offer['unit_size']} sticks for {offer['price']} emeralds"
             else:
                 desc = f"{offer['price']} emeralds each"
-            options.append(discord.SelectOption(label=offer["label"], value=key, description=desc))
+            icon = EMOJI["stick"] if offer["item"] == "stick" else mat(offer["material"])
+            options.append(
+                discord.SelectOption(label=offer["label"], value=key, description=desc, emoji=icon or None)
+            )
         super().__init__(placeholder="Choose an item to buy…", options=options)
 
     async def callback(self, interaction: discord.Interaction):

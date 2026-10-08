@@ -8,6 +8,7 @@ import discord
 
 from game import notices as n
 from utils.config import channel_id, load_config
+from utils.ui import gear_icon
 
 log = logging.getLogger("announcer")
 
@@ -72,7 +73,8 @@ class Announcer:
         )
 
     async def on_GearBroken(self, notice: n.GearBroken) -> None:
-        await self.send(f"🔨 <@{notice.user_id}>'s **{notice.material} {notice.item}** broke! Time to craft a new one.")
+        icon = gear_icon(notice.item, notice.material)
+        await self.send(f"🔨 <@{notice.user_id}>'s {icon} **{notice.material} {notice.item}** broke! Time to craft a new one.")
 
     async def sync_level_role(self, user_id: int, level: int) -> None:
         """Give the highest level role reached and remove the other level roles."""

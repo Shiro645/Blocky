@@ -7,7 +7,7 @@ from discord.ext import commands
 from game import assets, exchange
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
-from utils.ui import BaseView, em
+from utils.ui import BaseView, asset_icon, em
 
 TRADE_TIMEOUT = 300
 
@@ -22,9 +22,9 @@ class TradeView(BaseView):
         self.done = False
 
     def describe(self) -> str:
-        text = f"{self.a.mention} offers **{assets.describe(self.give, self.give_amount)}**"
+        text = f"{self.a.mention} offers {asset_icon(self.give)} **{assets.describe(self.give, self.give_amount)}**"
         if self.get:
-            text += f"\nin exchange for **{assets.describe(self.get, self.get_amount)}** from {self.b.mention}"
+            text += f"\nin exchange for {asset_icon(self.get)} **{assets.describe(self.get, self.get_amount)}** from {self.b.mention}"
         else:
             text += f"\nas a gift to {self.b.mention}"
         return text

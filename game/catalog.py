@@ -1,7 +1,7 @@
 """Static game data: what exists in the game (values live in settings)."""
 from __future__ import annotations
 
-BLOCK_TYPES = ("cobblestone", "gravel", "deepslate", "bedrock")
+BLOCK_TYPES = ("cobblestone", "gravel", "deepslate", "bedrock", "obsidian")  # rarest last
 MATERIALS = ("gold", "iron", "diamond", "netherite")
 TOOLS = ("sword", "pickaxe", "axe", "shovel", "hoe")
 ARMOR = ("helmet", "chestplate", "leggings", "boots")
@@ -24,7 +24,7 @@ RECIPES = {
 TALENT_INFO = {
     "miner": "Better blocks (higher gravel/deepslate odds + bonus block chance).",
     "trader": "Bonus emeralds when you /sell.",
-    "lucky": "Higher bedrock chance on 1-block rolls.",
+    "lucky": "Higher bedrock and obsidian chance on 1-block rolls.",
     "efficiency": "Shorter cooldown between two mining rewards.",
 }
 

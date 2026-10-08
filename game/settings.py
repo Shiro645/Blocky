@@ -17,7 +17,7 @@ DEFAULTS: dict[str, Any] = {
         "min_cooldown_seconds": 5,
         "xp_per_message": [5, 15],
     },
-    "block_values": {"cobblestone": 1, "gravel": 3, "deepslate": 5, "bedrock": 10},
+    "block_values": {"cobblestone": 1, "gravel": 3, "deepslate": 5, "bedrock": 10, "obsidian": 25},
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
         "ingots": {"gold": 5, "iron": 10, "diamond": 25, "netherite": 100},
@@ -33,7 +33,7 @@ DEFAULTS: dict[str, Any] = {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
         "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
         # Pickaxe: extra blocks per mining event, and a chance per tier to
-        # upgrade the mined block (cobblestone -> gravel -> deepslate -> bedrock).
+        # upgrade the mined block (cobblestone -> gravel -> deepslate -> bedrock -> obsidian).
         "pickaxe_extra_blocks_per_tier": 1,
         "pickaxe_upgrade_chance_per_tier": 0.05,
         # Shovel: extra blocks per tier when the mined block is gravel.
