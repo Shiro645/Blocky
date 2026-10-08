@@ -69,6 +69,8 @@ DEFAULTS: dict[str, Any] = {
         "max_rounds": 40,
         "cooldown_seconds": 60,
         "request_timeout_seconds": 60,
+        "xp_win": 30,
+        "xp_loss": 10,
     },
     "drops": {
         "chance": 0.02,

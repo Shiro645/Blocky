@@ -41,6 +41,7 @@ EXTENSIONS = [
     "cogs.economy_admin",
     "cogs.competition_leaderboard",
     "cogs.competition_seasons",
+    "cogs.competition_duel",
     "cogs.help_command",
 ]
 

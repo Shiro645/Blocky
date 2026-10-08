@@ -17,6 +17,8 @@ PROFILE_STATS = [
     ("bedrock_found", "🟪 Bedrock found"),
     ("emeralds_earned", "💰 Emeralds earned"),
     ("items_crafted", "🛠️ Items crafted"),
+    ("duels_won", "⚔️ Duels won"),
+    ("duels_lost", "💀 Duels lost"),
     ("best_streak", "🔥 Best daily streak"),
     ("seasons_won", "👑 Seasons won"),
     ("season_podiums", "🏅 Season podiums"),
