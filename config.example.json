@@ -1,13 +1,13 @@
 {
   "minecraft": {
-    "server_host": "minecraft",
     "whitelist_path": "whitelist.json",
+    "server_host": "127.0.0.1",
     "server_port": 25565,
     "public_ip_text": "IP",
-    "modpack_text": "Modpack: [Craftoria](https://www.curseforge.com/minecraft/modpacks/craftoria).",
+    "modpack_text": "Modpack: [Name](link).",
     "rcon_host": "minecraft",
     "rcon_port": 25575,
-    "rcon_password": "Shiro@2006"
+    "rcon_password": "CHANGE_ME"
   },
   "economy": {
     "cooldown_seconds": 30
