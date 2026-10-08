@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 from game import events, settings
 from game.errors import GameError
 from utils.checks import staff_only
+from utils.config import role_id
 from utils.ui import em, progress_bar, report_error
 
 log = logging.getLogger("boss")
@@ -99,10 +100,13 @@ class BossCog(commands.Cog):
     # ---------- boss message ----------
     async def post_boss(self, boss: dict, channel: discord.abc.Messageable) -> None:
         boss["ranking"] = []
+        ping = role_id("event_ping")
         msg = await channel.send(
-            content="@here" if settings.get()["boss"]["ping_here"] else None,
+            content=f"<@&{ping}>" if ping else None,
             embed=boss_embed(boss),
             view=boss_view(boss["boss_id"], True),
+            # Only the configured role is pinged, never @everyone / @here.
+            allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=[discord.Object(ping)] if ping else False),
         )
         await self.bot.db.run(events.set_boss_message, boss["boss_id"], msg.channel.id, msg.id)
 

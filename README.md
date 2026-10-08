@@ -102,6 +102,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
+| `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
 | `minecraft.modpack_text` | Text shown by `/modpacks` |
