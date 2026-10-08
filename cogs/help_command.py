@@ -4,10 +4,49 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from utils.checks import is_staff
 
-from utils.config import load_emojis
+SECTIONS: list[tuple[str, list[str]]] = [
+    ("⛏️ Mining & Economy", [
+        "Chat to mine blocks automatically (with a cooldown).",
+        "`/inventory` → Your blocks, items and gear",
+        "`/sell` → Sell all your blocks",
+        "`/market` → Buy sticks and ingots",
+        "`/daily` → Daily reward (keep your streak!)",
+    ]),
+    ("🛠️ Crafting & Equipment", [
+        "`/craft <item> <material>` · `/craftlist` → Craft gear",
+        "`/gear` → Your equipment and what it does",
+        "`/equip` · `/equip_best` · `/unequip` → Manage your equipment",
+    ]),
+    ("⭐ XP & Talents", [
+        "`/xp` → Level and XP",
+        "`/talents` · `/talent_buy <branch> [points]` → Talent points",
+    ]),
+    ("🤝 Trading", [
+        "`/pay <member> <amount>` → Send emeralds",
+        "`/trade <member> <give> ...` → Propose a trade or a gift",
+        "`/auction sell · browse · buy · cancel · mine` → Auction house",
+    ]),
+    ("🏆 Competition", [
+        "`/leaderboard [board]` · `/profile [member]`",
+        "`/season` → This week's season (top 3 rewarded)",
+        "`/duel <member> <stake>` → Fight for emeralds",
+        "`/challenges` · `/achievements [member]`",
+        "`/boss` · `/attack` → Fight the server boss together",
+    ]),
+    ("🌍 Minecraft", [
+        "`/server_status` · `/ip` · `/modpacks`",
+        "`/link <username>` · `/link_status` → Link your account (whitelist)",
+    ]),
+]
 
-EMOJI = load_emojis()
+STAFF_SECTION = ("🔐 Staff", [
+    "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist` · `/unlink`",
+    "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`",
+    "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",
+    "`/boss_spawn` · `/drop_spawn`",
+])
 
 
 class HelpCog(commands.Cog):
@@ -16,89 +55,10 @@ class HelpCog(commands.Cog):
 
     @app_commands.command(name="help", description="Show all available commands.")
     async def help(self, interaction: discord.Interaction):
-
-        embed = discord.Embed(
-            title="Server Commands",
-            description="Here are all available commands:",
-            color=discord.Color.blurple(),
-        )
-
-        embed.add_field(
-            name="Mining & Inventory",
-            value=(
-                "`/inventory` → Show your blocks, items and gear\n"
-                "`/sell` → Sell all your blocks\n"
-                "`/market` → Open the market\n"
-                "`/daily` → Daily reward (keep your streak!)\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Trading",
-            value=(
-                "`/pay <member> <amount>` → Send emeralds\n"
-                "`/trade <member> ...` → Propose a trade or a gift\n"
-                "`/auction sell · browse · buy · cancel · mine` → Auction house\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Crafting & Equipment",
-            value=(
-                "`/craft <item> <material>` → Craft gear\n"
-                "`/craftlist` → Show all recipes\n"
-                "`/gear` → Your equipment and what it does\n"
-                "`/equip` · `/equip_best` · `/unequip` → Manage your equipment\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="XP & Talents",
-            value=(
-                "`/xp` → Show your level and XP\n"
-                "`/talents` → Show talent branches\n"
-                "`/talent_buy <branch> <points>` → Spend talent points\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Competition",
-            value=(
-                "`/leaderboard [board]` → Server rankings\n"
-                "`/profile [member]` → Show a player's profile\n"
-                "`/season` → This week's season standings\n"
-                "`/duel <member> <stake>` → Fight for emeralds\n"
-                "`/challenges` → This week's challenges\n"
-                "`/achievements [member]` → Achievements\n"
-                "`/boss` · `/attack` → Fight the server boss together\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Minecraft",
-            value=(
-                "`/server_status` → Server status\n"
-                "`/ip` → How to join\n"
-                "`/modpacks` → Modpack info\n"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Staff Commands",
-            value=(
-                "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist`\n"
-                "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`\n"
-                "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`\n"
-            ),
-            inline=False,
-        )
-
+        embed = discord.Embed(title="Blocky commands", color=discord.Color.blurple())
+        sections = SECTIONS + ([STAFF_SECTION] if is_staff(interaction.user) else [])
+        for name, lines in sections:
+            embed.add_field(name=name, value="\n".join(lines), inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 

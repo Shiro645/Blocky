@@ -34,6 +34,35 @@ class TransactionTests(GameTestCase):
         self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "iron"), 1)
 
 
+class LegacyDatabaseTests(unittest.IsolatedAsyncioTestCase):
+    async def test_old_database_is_set_aside(self):
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+
+        from game.db import Database
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "economy.db"
+            old = sqlite3.connect(path)
+            old.execute("CREATE TABLE users (user_id INTEGER PRIMARY KEY, emeralds INTEGER);")
+            old.commit()
+            old.close()
+
+            db = Database(path)
+            await db.open()
+            await db.run(players.give_emeralds, ALICE, 5)
+            await db.close()
+
+            backups = [p.name for p in Path(tmp).iterdir() if ".legacy-" in p.name]
+            self.assertEqual(len(backups), 1)
+
+            db = Database(path)  # reopening the new database keeps it
+            await db.open()
+            self.assertEqual(await db.run(players.get_emeralds, ALICE), 5)
+            await db.close()
+
+
 class EconomyTests(GameTestCase):
     async def test_sell_all_blocks_with_trader_bonus(self):
         def setup(ctx):

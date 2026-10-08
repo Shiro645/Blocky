@@ -234,7 +234,36 @@ class Database:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, functools.partial(fn, *args))
 
+    def _set_aside_legacy_database(self) -> None:
+        """The pre-migrations database can't be upgraded: keep it as a backup and start fresh."""
+        path = Path(self.path)
+        if not path.exists() or path.stat().st_size == 0:
+            return
+        conn = sqlite3.connect(self.path)
+        try:
+            version = conn.execute("PRAGMA user_version;").fetchone()[0]
+            has_users = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='users';"
+            ).fetchone()
+        finally:
+            conn.close()
+        if version != 0 or not has_users:
+            return
+        backup = path.with_name(f"{path.name}.legacy-{int(time.time())}")
+        try:
+            for suffix in ("", "-wal", "-shm"):
+                src = Path(str(path) + suffix)
+                if src.exists():
+                    src.rename(Path(str(backup) + suffix))
+        except OSError as e:
+            raise RuntimeError(
+                f"{path} uses the old database format and could not be renamed ({e}). "
+                "Move or delete it by hand (with Docker, mount a folder instead of the file: see README)."
+            ) from e
+        log.warning("Old database format found: moved to %s, starting a new database.", backup)
+
     def _open(self) -> None:
+        self._set_aside_legacy_database()
         conn = sqlite3.connect(self.path, isolation_level=None, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")

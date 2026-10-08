@@ -2,118 +2,73 @@
 
 A modular Discord bot built for a modded Minecraft server community.
 
-It connects to the Minecraft server through **RCON** to manage the whitelist, shows the server status, and runs a fully integrated Minecraft-themed economy system directly in Discord.
+It connects to the Minecraft server through **RCON** to manage the whitelist, shows the server status, and runs a Minecraft-themed economy and competition system directly in Discord.
 
 ---
 
 ## 🚀 Features
 
-### 🌍 Minecraft Commands (@everyone)
+### 🌍 Minecraft
 
-- `/server_status` — Show server status (players & ping)
-- `/ip` — Show join instructions
-- `/modpacks` — Show modpack information
+- `/server_status` — Server status (players & ping)
+- `/ip` — Join instructions
+- `/modpacks` — Modpack information
+- `/link <username>` — Link your Minecraft account. A staff member approves the request with a button, which whitelists the account. `/link_status` shows your link.
 - `/help` — List the available commands
 
-### 🔐 Staff Commands
+### ⛏️ Mining & economy
+
+- **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare bedrock), with a cooldown.
+- `/inventory` — Blocks, emeralds, items and gear
+- `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, bedrock 10 emeralds)
+- `/market` — Buy sticks and gold / iron / diamond / netherite ingots
+- `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day gives a diamond ingot, and missing a day resets the streak.
+
+### 🛠️ Crafting & equipment
+
+- `/craft <item> <material>` and `/craftlist` — Swords, tools and armor in gold, iron, diamond or netherite.
+- `/equip`, `/equip_best`, `/unequip`, `/gear` — One piece per slot. Freshly crafted gear is equipped if the slot is empty.
+- What gear does:
+  - **Pickaxe**: more blocks per message + chance to upgrade the block
+  - **Shovel**: extra gravel
+  - **Axe**: finds sticks while mining
+  - **Hoe**: more XP
+  - **Sword**: damage in duels and against bosses
+  - **Armor**: damage reduction in duels
+- Gear loses **durability** when used and breaks at 0, so players keep crafting.
+
+### ⭐ XP & talents
+
+- `/xp`, `/talents`, `/talent_buy <branch> [points]`
+- XP comes from activity; 1 talent point every 5 levels.
+- Branches (each has a cap): **Miner** (better blocks), **Trader** (sell bonus), **Lucky** (bedrock chance), **Efficiency** (shorter cooldown).
+- Level-ups are announced, and configurable **level roles** are given automatically.
+
+### 🤝 Trading
+
+- `/pay <member> <amount>` — Send emeralds
+- `/trade <member> <give> [give_amount] [get] [get_amount]` — Trade or gift emeralds, blocks, sticks, ingots or gear. The other player accepts with a button.
+- `/auction sell | browse | buy | cancel | mine` — Player auction house: 5% tax, 10 listings per player, unsold items come back after 7 days.
+
+### 🏆 Competition
+
+- `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
+- `/profile [member]` — Public profile: level, fortune and rank, equipment, achievements, stats, linked account, champion badge.
+- **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
+- `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is turn based: sword damage, armor reduction, random variance and critical hits.
+- `/challenges` — 3 weekly challenges, the same for everyone.
+- `/achievements [member]` — 25 achievements with emerald rewards, announced publicly.
+- **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock). The first player to click gets it.
+- **Server bosses** (`/boss`, `/attack` or the button) — A boss with shared HP. Everyone attacks once a minute, rewards are shared by damage dealt, and the top damage dealer gets a bonus. A boss escapes after 24h.
+
+### 🔐 Staff commands
 
 Restricted to the staff role (or members with the *Manage Server* permission).
 
-**Whitelist** (sent to the server via RCON):
-
-- `/add_whitelist <username>` — Add a player to the whitelist
-- `/remove_whitelist <username>` — Remove a player from the whitelist
-- `/check_whitelist` — Show the current whitelist
-
-**Economy administration:**
-
-- `/add_block`
-- `/add_emerald`
-- `/add_item`
-- `/add_gear`
-- `/xp_add`
-- `/xp_set`
-- `/level_set`
-- `/talent_add`
-- `/talent_reset`
-
----
-
-# 💎 Economy System
-
-A Minecraft-inspired progression system integrated directly into Discord.
-
-## 🪨 Passive Block Mining
-
-Users receive **1–6 random blocks** when sending messages.
-
-Block distribution:
-- 6 → Cobblestone
-- 4–5 → Cobblestone / Gravel
-- 2–3 → Cobblestone / Gravel / Deepslate
-- 1 → Cobblestone / Gravel / Deepslate / rare Bedrock
-
-The cooldown is configurable in `config.json` (`economy.cooldown_seconds`).
-
-## 💰 Selling Blocks
-
-`/sell` — Sell all your blocks.
-
-Block values:
-- Cobblestone → 1 emerald
-- Gravel → 3 emeralds
-- Deepslate → 5 emeralds
-- Bedrock → 10 emeralds
-
-## 🛒 Market System
-
-`/market`
-
-Buy:
-- 4 sticks → 1 emerald
-- Gold ingot → 5 emeralds
-- Iron ingot → 10 emeralds
-- Diamond ingot → 25 emeralds
-- Netherite ingot → 100 emeralds
-
-Interactive dropdown + quantity modal.
-
-## 🛠 Crafting
-
-- `/craft <item> <material>` — Craft a piece of gear
-- `/craftlist` — Show all recipes
-
-Items: sword, pickaxe, axe, shovel, hoe, helmet, chestplate, leggings, boots
-
-Materials: gold, iron, diamond, netherite
-
-Recipes follow Minecraft crafting logic.
-
-## 🎒 Inventory
-
-`/inventory`
-
-Displays:
-- Blocks
-- Emerald balance
-- Items
-- Gear
-- Estimated sell value
-
-## ⭐ XP & Talents
-
-- `/xp` — Show your level and XP
-- `/talents` — Show the talent branches
-- `/talent_buy <branch> <points>` — Spend talent points
-
-Users gain XP through activity.
-Talent points are earned every 5 levels.
-
-Talent branches:
-- Miner
-- Trader
-- Lucky
-- Efficiency
+- Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
+- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item`, `/add_gear`, `/remove_gear`
+- XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
+- Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
 
 ---
 
@@ -124,6 +79,7 @@ Talent branches:
 1. Create an application and a bot on the [Discord Developer Portal](https://discord.com/developers/applications).
 2. In the **Bot** tab, enable the **Server Members Intent**.
 3. Invite the bot to your server with the `bot` and `applications.commands` scopes.
+4. For level roles and the champion role, give the bot the **Manage Roles** permission and put its role **above** those roles.
 
 ### `.env`
 
@@ -141,16 +97,39 @@ Copy `config.example.json` to `config.json` and fill in your values:
 |---|---|
 | `guild_id` | ID of your Discord server (slash commands are synced instantly to it) |
 | `staff.role_id` | ID of the staff role allowed to use staff commands |
+| `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
+| `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
+| `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
+| `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
+| `roles.season_champion` | Role given to the winner of the last weekly season |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
 | `minecraft.modpack_text` | Text shown by `/modpacks` |
 | `minecraft.rcon_host` / `rcon_port` / `rcon_password` | RCON connection to the Minecraft server |
-| `economy.cooldown_seconds` | Cooldown between two block rewards |
 | `emojis.<name>` | Custom emojis used in the bot's messages (`emerald`, `stick`, `gold`, `iron`, `diamond`, `netherite`, `xp`) |
+| `balance` | Optional overrides of the game balance (see below) |
+| `database_path` | Optional, defaults to `economy.db` |
 
-To copy an ID in Discord, enable *Developer Mode* (Settings → Advanced), then right-click the server or role → *Copy ID*.
+To copy an ID in Discord, enable *Developer Mode* (Settings → Advanced), then right-click the server, channel or role → *Copy ID*.
 
-To get an emoji's code, send `\:emoji_name:` in any Discord channel and copy the result (e.g. `<:emerald:123456789012345678>`). The bot must be a member of the server that hosts the emojis. Restart the bot after changing them.
+To get an emoji's code, send `\:emoji_name:` in any Discord channel and copy the result (e.g. `<:emerald:123456789012345678>`). The bot must be a member of the server that hosts the emojis.
+
+Restart the bot after editing `config.json`.
+
+### Game balance
+
+Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, timezone…) has a default in [`game/settings.py`](game/settings.py). To change one, copy its path under `balance` in `config.json`, for example:
+
+```json
+"balance": {
+  "timezone": "Europe/Paris",
+  "mining": { "cooldown_seconds": 20 },
+  "daily": { "base_reward": 50 },
+  "boss": { "auto_spawn_hours": 48, "hp": 2000 }
+}
+```
+
+`balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
 
 > ⚠️ `.env`, `config.json` and `economy.db` contain secrets or user data. They are ignored by git — never commit them.
 
@@ -166,8 +145,8 @@ my-server/
 ├── data/               # Minecraft server files
 ├── Blocky/             # this repository
 └── bot/
-    ├── config.json
-    └── economy.db      # create it first (see below)
+    ├── config.json     # with "database_path": "db/economy.db"
+    └── db/             # the database lives here
 ```
 
 ```yaml
@@ -191,18 +170,22 @@ services:
       DISCORD_TOKEN: "your_bot_token_here"
     volumes:
       - ./bot/config.json:/app/config.json
-      - ./bot/economy.db:/app/economy.db
+      - ./bot/db:/app/db
     depends_on:
       - minecraft
     restart: unless-stopped
 ```
 
-Create the database file before the first start (otherwise Docker creates a directory instead):
+Set `"database_path": "db/economy.db"` in `config.json`, then start:
 
 ```bash
-touch bot/economy.db
+mkdir -p bot/db
 docker compose up -d --build
 ```
+
+> Mount the **folder**, not the `economy.db` file alone: SQLite also writes `economy.db-wal` and `economy.db-shm` next to it, and they must survive restarts too.
+
+> Upgrading from an older Blocky: the old database format can't be converted. On first start the bot renames it to `economy.db.legacy-<timestamp>` (kept as a backup) and starts a new one.
 
 ---
 
@@ -227,27 +210,41 @@ When running locally, set `server_host` and `rcon_host` to the address of your M
 
 ---
 
+
+---
+
+# 🧪 Tests
+
+The game logic (`game/`) doesn't depend on Discord and is covered by unit tests:
+
+```bash
+python -m unittest discover -s tests -t .
+```
+
+---
+
 # 🏗️ Project Structure
 
 ```
-bot.py                  # entry point, loads the cogs
-database.py             # SQLite economy database
-config.example.json     # config template
-.env.example            # environment template
-cogs/
-├── minecraft_core.py       # /server_status, /ip, /modpacks
-├── minecraft_whitelist.py  # whitelist commands (RCON)
-├── economy_phase1.py       # passive mining, /sell, /inventory
-├── economy_market.py       # /market
-├── economy_craft.py        # /craft
-├── economy_craftlist.py    # /craftlist
-├── economy_xp.py           # /xp, /talents, /talent_buy
-├── economy_admin.py        # economy staff commands
-├── economy_admin_xp.py     # XP staff commands
-└── help_command.py         # /help
-utils/
-├── config.py               # config loading
-└── minecraft_rcon.py       # RCON helper
+bot.py                       # entry point: database, announcer, cogs
+config.example.json          # config template
+.env.example                 # environment template
+game/                        # game rules, no Discord code
+├── db.py                    # async SQLite (one thread, one transaction per action) + migrations
+├── settings.py              # balancing values (overridable in config.json)
+├── catalog.py               # blocks, materials, gear, recipes
+├── players.py               # emeralds, blocks, items, stats, XP, talents
+├── mining.py                # passive mining
+├── shop.py                  # market and crafting
+├── gear.py                  # equipment, durability, combat stats
+├── daily.py · exchange.py · assets.py   # daily, pay/trade/auction
+├── leaderboard.py · seasons.py · duel.py
+├── progress.py              # achievements and weekly challenges
+├── events.py                # drops and bosses
+└── links.py                 # Discord <-> Minecraft links
+cogs/                        # slash commands, one file per feature
+utils/                       # config, checks, announcer, RCON, Mojang, UI helpers
+tests/                       # unit tests
 ```
 
 Generated at runtime (not versioned): `.env`, `config.json`, `economy.db`.

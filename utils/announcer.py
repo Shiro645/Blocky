@@ -43,7 +43,8 @@ class Announcer:
         if ch is None:
             return
         try:
-            await ch.send(content, embed=embed, allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False))
+            # Names are shown but nobody is pinged: announcements are frequent.
+            await ch.send(content, embed=embed, allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post in the %s channel", channel)
 
