@@ -23,10 +23,6 @@ log = logging.getLogger("bot")
 
 # -------- EXTENSIONS --------
 EXTENSIONS = [
-    "cogs.discord_verify",
-    "cogs.discord_tickets",
-    "cogs.discord_welcome",
-    "cogs.discord_reaction_roles",
     "cogs.minecraft_whitelist",
     "cogs.minecraft_core",
     "cogs.economy_phase1",

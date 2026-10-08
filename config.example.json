@@ -1,7 +1,11 @@
 {
+  "guild_id": 0,
+  "staff": {
+    "role_id": 0
+  },
   "minecraft": {
+    "server_host": "minecraft",
     "whitelist_path": "whitelist.json",
-    "server_host": "127.0.0.1",
     "server_port": 25565,
     "public_ip_text": "IP",
     "modpack_text": "Modpack: [Name](link).",
