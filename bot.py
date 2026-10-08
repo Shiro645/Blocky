@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
+
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from game import settings
+from game.db import Database
 from utils.config import load_config
+from utils.ui import report_error
 
 
 # -------- LOAD ENV --------
@@ -25,15 +30,14 @@ log = logging.getLogger("bot")
 EXTENSIONS = [
     "cogs.minecraft_whitelist",
     "cogs.minecraft_core",
-    "cogs.economy_phase1",
-    "cogs.economy_admin",
+    "cogs.economy_mining",
     "cogs.economy_market",
     "cogs.economy_craft",
-    "cogs.economy_craftlist",
     "cogs.economy_xp",
-    "cogs.economy_admin_xp",
+    "cogs.economy_admin",
     "cogs.help_command",
 ]
+
 
 def build_intents() -> discord.Intents:
     intents = discord.Intents.default()
@@ -50,9 +54,21 @@ class Bot(commands.Bot):
             command_prefix="!",
             intents=build_intents(),
         )
+        cfg = load_config()
+        settings.load(cfg.get("balance"))
+        self.db = Database(cfg.get("database_path", "economy.db"))
+
+    @property
+    def main_guild(self) -> discord.Guild | None:
+        guild_id = int(load_config().get("guild_id", 0) or 0)
+        return self.get_guild(guild_id) if guild_id else (self.guilds[0] if self.guilds else None)
 
     async def setup_hook(self) -> None:
-        # Charger les cogs
+        await self.db.open()
+
+        self.tree.on_error = self.on_app_command_error
+
+        # Load cogs
         for ext in EXTENSIONS:
             try:
                 await self.load_extension(ext)
@@ -61,9 +77,7 @@ class Bot(commands.Bot):
                 log.exception("Failed to load extension: %s", ext)
 
         # Sync slash commands
-        cfg = load_config()
-        guild_id = int(cfg.get("guild_id", 0) or 0)
-
+        guild_id = int(load_config().get("guild_id", 0) or 0)
         if guild_id:
             guild = discord.Object(id=guild_id)
             self.tree.copy_global_to(guild=guild)
@@ -73,14 +87,25 @@ class Bot(commands.Bot):
             synced = await self.tree.sync()
             log.info("Synced %d global commands", len(synced))
 
+    async def on_app_command_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.CommandInvokeError):
+            error = error.original  # type: ignore[assignment]
+        await report_error(interaction, error)
+
     async def on_ready(self) -> None:
         log.info("Connected as %s (%s)", self.user, self.user.id)
+
+    async def close(self) -> None:
+        await super().close()
+        await self.db.close()
 
 
 def main() -> None:
     token = os.getenv("DISCORD_TOKEN")
     if not token:
-        raise RuntimeError("DISCORD_TOKEN manquant dans .env")
+        raise RuntimeError("DISCORD_TOKEN missing from .env")
 
     bot = Bot()
     bot.run(token)

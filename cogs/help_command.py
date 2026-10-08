@@ -66,7 +66,7 @@ class HelpCog(commands.Cog):
             name="Staff Commands",
             value=(
                 "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist`\n"
-                "`/add_block` · `/add_emerald` · `/add_item` · `/add_gear`\n"
+                "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`\n"
                 "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset`\n"
             ),
             inline=False,

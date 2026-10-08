@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+
 from mcrcon import MCRcon
 
 from utils.config import load_config
 
 
-def rcon_command(command: str) -> str:
-    cfg = load_config()
-    host = cfg["minecraft"]["rcon_host"]
-    port = int(cfg["minecraft"]["rcon_port"])
-    password = cfg["minecraft"]["rcon_password"]
-
-    with MCRcon(host, password, port=port) as mcr:
+def _rcon_command_sync(command: str) -> str:
+    mc = load_config()["minecraft"]
+    with MCRcon(mc["rcon_host"], mc["rcon_password"], port=int(mc["rcon_port"])) as mcr:
         return mcr.command(command)
+
+
+async def rcon_command(command: str) -> str:
+    """Send a command to the Minecraft server without blocking the bot."""
+    return await asyncio.to_thread(_rcon_command_sync, command)

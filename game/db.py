@@ -1,0 +1,195 @@
+"""Async access to the SQLite database.
+
+All queries run on one dedicated thread, so the bot's event loop never
+blocks. Each `Database.run(fn, ...)` call executes `fn(ctx, ...)` inside a
+single transaction: either everything it does is saved, or nothing is.
+Because there is only one database thread, two actions can never interleave
+(no double spending between "check balance" and "debit").
+"""
+from __future__ import annotations
+
+import asyncio
+import functools
+import logging
+import random
+import sqlite3
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Awaitable, Callable, TypeVar
+from zoneinfo import ZoneInfo
+
+from game import settings
+
+log = logging.getLogger("db")
+
+T = TypeVar("T")
+
+# Each entry upgrades the schema by one version. Never edit an entry that
+# has shipped: append a new one instead.
+MIGRATIONS: list[str] = [
+    # 1 - core economy
+    """
+    CREATE TABLE users (
+        user_id INTEGER PRIMARY KEY,
+        emeralds INTEGER NOT NULL DEFAULT 0 CHECK (emeralds >= 0),
+        xp INTEGER NOT NULL DEFAULT 0 CHECK (xp >= 0),
+        level INTEGER NOT NULL DEFAULT 1 CHECK (level >= 1),
+        talent_points INTEGER NOT NULL DEFAULT 0 CHECK (talent_points >= 0),
+        miner_points INTEGER NOT NULL DEFAULT 0 CHECK (miner_points >= 0),
+        trader_points INTEGER NOT NULL DEFAULT 0 CHECK (trader_points >= 0),
+        lucky_points INTEGER NOT NULL DEFAULT 0 CHECK (lucky_points >= 0),
+        efficiency_points INTEGER NOT NULL DEFAULT 0 CHECK (efficiency_points >= 0),
+        created_at INTEGER NOT NULL
+    );
+    CREATE TABLE blocks (
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        block_type TEXT NOT NULL,
+        amount INTEGER NOT NULL DEFAULT 0 CHECK (amount >= 0),
+        PRIMARY KEY (user_id, block_type)
+    );
+    -- stackable resources: sticks (material 'none') and ingots
+    CREATE TABLE items (
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        item TEXT NOT NULL,
+        material TEXT NOT NULL,
+        amount INTEGER NOT NULL DEFAULT 0 CHECK (amount >= 0),
+        PRIMARY KEY (user_id, item, material)
+    );
+    CREATE TABLE gear (
+        gear_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        item TEXT NOT NULL,
+        material TEXT NOT NULL,
+        durability INTEGER NOT NULL CHECK (durability >= 0),
+        max_durability INTEGER NOT NULL,
+        equipped INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_gear_user ON gear(user_id);
+    -- one equipped piece per slot (the slot is the item type)
+    CREATE UNIQUE INDEX idx_gear_equipped ON gear(user_id, item) WHERE equipped = 1;
+    CREATE TABLE stats (
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        stat TEXT NOT NULL,
+        value INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, stat)
+    );
+    CREATE INDEX idx_stats_stat ON stats(stat, value);
+    """,
+]
+
+
+@dataclass
+class Ctx:
+    """What a game function receives: the connection plus the current moment."""
+
+    conn: sqlite3.Connection
+    now: float
+    rng: random.Random
+    notices: list[Any] = field(default_factory=list)
+
+    def execute(self, sql: str, params: tuple | dict = ()) -> sqlite3.Cursor:
+        return self.conn.execute(sql, params)
+
+    def one(self, sql: str, params: tuple | dict = ()) -> sqlite3.Row | None:
+        return self.conn.execute(sql, params).fetchone()
+
+    def all(self, sql: str, params: tuple | dict = ()) -> list[sqlite3.Row]:
+        return self.conn.execute(sql, params).fetchall()
+
+    @property
+    def local_now(self) -> datetime:
+        return datetime.fromtimestamp(self.now, ZoneInfo(settings.get()["timezone"]))
+
+    @property
+    def today(self) -> date:
+        return self.local_now.date()
+
+    @property
+    def week_id(self) -> str:
+        return week_id_of(self.local_now)
+
+
+def week_id_of(moment: datetime | date) -> str:
+    year, week, _ = moment.isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def apply_migrations(conn: sqlite3.Connection) -> None:
+    current = conn.execute("PRAGMA user_version;").fetchone()[0]
+    for version, script in enumerate(MIGRATIONS, start=1):
+        if version <= current:
+            continue
+        log.info("Applying database migration %d", version)
+        conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version = {version};\nCOMMIT;")
+
+
+class Database:
+    def __init__(self, path: str | Path = "economy.db"):
+        self.path = str(path)
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="db")
+        self._conn: sqlite3.Connection | None = None
+        # Overridable for tests.
+        self.clock: Callable[[], float] = time.time
+        self.rng = random.Random()
+        # Called with the notices of each committed transaction.
+        self.notice_handler: Callable[[list[Any]], Awaitable[None]] | None = None
+        self._pending: set[asyncio.Task] = set()
+
+    async def _call(self, fn: Callable[..., T], *args: Any) -> T:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, functools.partial(fn, *args))
+
+    def _open(self) -> None:
+        conn = sqlite3.connect(self.path, isolation_level=None, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        apply_migrations(conn)
+        self._conn = conn
+
+    async def open(self) -> None:
+        await self._call(self._open)
+
+    async def close(self) -> None:
+        if self._conn is not None:
+            await self._call(self._conn.close)
+            self._conn = None
+        self._executor.shutdown(wait=True)
+
+    def _transaction(self, fn: Callable[..., T], args: tuple, kwargs: dict) -> tuple[T, list[Any]]:
+        assert self._conn is not None, "Database.open() was not called"
+        ctx = Ctx(conn=self._conn, now=self.clock(), rng=self.rng)
+        self._conn.execute("BEGIN IMMEDIATE;")
+        try:
+            result = fn(ctx, *args, **kwargs)
+        except BaseException:
+            self._conn.execute("ROLLBACK;")
+            raise
+        self._conn.execute("COMMIT;")
+        return result, ctx.notices
+
+    async def run(self, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+        """Run `fn(ctx, *args, **kwargs)` in one transaction and return its result."""
+        result, notices = await self._call(self._transaction, fn, args, kwargs)
+        if notices and self.notice_handler is not None:
+            # Announce in the background: a slow Discord call must not delay
+            # the reply to the interaction that caused the notice.
+            task = asyncio.create_task(self._handle_notices(notices))
+            self._pending.add(task)
+            task.add_done_callback(self._pending.discard)
+        return result
+
+    async def _handle_notices(self, notices: list[Any]) -> None:
+        try:
+            await self.notice_handler(notices)  # type: ignore[misc]
+        except Exception:
+            log.exception("Notice handler failed")
+
+    async def drain(self) -> None:
+        """Wait for the background notice handlers (used by tests)."""
+        while self._pending:
+            await asyncio.gather(*list(self._pending))

@@ -4,139 +4,117 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils.config import load_config
-from database import (
-    init_db,
-    ensure_user,
-    add_blocks,
-    add_emeralds,
-    add_item,
-    add_gear,
-    BLOCK_TYPES,
-)
+from game import players, shop
+from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS
+from utils.checks import staff_only
+from utils.ui import em, item_label, mat
 
-from utils.config import load_emojis
+BLOCK_CHOICES = [app_commands.Choice(name=b, value=b) for b in BLOCK_TYPES]
+GEAR_CHOICES = [app_commands.Choice(name=g, value=g) for g in GEAR_ITEMS]
+MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
+RESOURCE_CHOICES = [app_commands.Choice(name="stick", value="stick:none")] + [
+    app_commands.Choice(name=f"{m} ingot", value=f"ingot:{m}") for m in MATERIALS
+]
 
-EMOJI = load_emojis()
-
-MATERIALS = ("gold", "iron", "diamond", "netherite")
-GEAR = ("sword", "pickaxe", "axe", "shovel", "hoe", "helmet", "chestplate", "leggings", "boots")
-
-
-def admin_only():
-    async def predicate(interaction: discord.Interaction) -> bool:
-        if interaction.guild is None:
-            return False
-
-        cfg = load_config()
-        staff_role_id = int(cfg.get("staff", {}).get("role_id", 0) or 0)
-
-        member = interaction.user
-        if not isinstance(member, discord.Member):
-            member = await interaction.guild.fetch_member(interaction.user.id)
-
-        if member.guild_permissions.manage_guild:
-            return True
-
-        role = interaction.guild.get_role(staff_role_id)
-        return role is not None and role in member.roles
-
-    return app_commands.check(predicate)
-
-
-def _mat_emoji(material: str) -> str:
-    return EMOJI.get(material, "")
+Amount = app_commands.Range[int, 1, 1_000_000]
 
 
 class EconomyAdminCog(commands.Cog):
+    """Staff commands to adjust the economy."""
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        init_db()
 
-    @app_commands.command(name="add_block", description="ADMIN: Add blocks to a user's inventory.")
-    @admin_only()
-    async def add_block(self, interaction: discord.Interaction, member: discord.Member, block_type: str, amount: int):
-        block_type = block_type.lower()
-        if block_type not in BLOCK_TYPES:
-            return await interaction.response.send_message(
-                f"❌ Invalid block type. Allowed: {', '.join(BLOCK_TYPES)}",
-                ephemeral=True,
-            )
-        if amount <= 0:
-            return await interaction.response.send_message("❌ Amount must be > 0.", ephemeral=True)
+    async def _done(self, interaction: discord.Interaction, text: str) -> None:
+        await interaction.response.send_message(f"✅ {text}", ephemeral=True)
 
-        ensure_user(member.id)
-        new_amt = add_blocks(member.id, block_type, amount)
-        await interaction.response.send_message(
-            f"✅ Added **{amount} {block_type}** to {member.mention}. New amount: **{new_amt}**",
-            ephemeral=True,
+    # ---------- economy ----------
+    @app_commands.command(name="add_block", description="STAFF: Add blocks to a member.")
+    @app_commands.choices(block_type=BLOCK_CHOICES)
+    @staff_only()
+    async def add_block(self, interaction: discord.Interaction, member: discord.Member, block_type: str, amount: Amount):
+        def run(ctx):
+            players.add_blocks(ctx, member.id, block_type, amount)
+            return players.get_blocks(ctx, member.id)[block_type]
+
+        total = await self.bot.db.run(run)
+        await self._done(interaction, f"Added **{amount} {block_type}** to {member.mention} (now {total}).")
+
+    @app_commands.command(name="add_emerald", description="STAFF: Give emeralds to a member.")
+    @staff_only()
+    async def add_emerald(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
+        def run(ctx):
+            players.give_emeralds(ctx, member.id, amount)
+            return players.get_emeralds(ctx, member.id)
+
+        balance = await self.bot.db.run(run)
+        await self._done(interaction, f"Added **{em(amount)}** to {member.mention}. Balance: **{em(balance)}**.")
+
+    @app_commands.command(name="remove_emerald", description="STAFF: Remove emeralds from a member.")
+    @staff_only()
+    async def remove_emerald(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
+        balance = await self.bot.db.run(players.remove_emeralds_clamped, member.id, amount)
+        await self._done(interaction, f"Removed up to **{em(amount)}** from {member.mention}. Balance: **{em(balance)}**.")
+
+    @app_commands.command(name="add_item", description="STAFF: Give sticks or ingots to a member.")
+    @app_commands.choices(resource=RESOURCE_CHOICES)
+    @staff_only()
+    async def add_item(self, interaction: discord.Interaction, member: discord.Member, resource: str, amount: Amount):
+        item, material = resource.split(":")
+        total = await self.bot.db.run(players.add_item, member.id, item, material, amount)
+        await self._done(interaction, f"Gave **{item_label(item, material, amount)}** to {member.mention} (now {total}).")
+
+    @app_commands.command(name="add_gear", description="STAFF: Give a piece of gear to a member.")
+    @app_commands.choices(gear=GEAR_CHOICES, material=MATERIAL_CHOICES)
+    @staff_only()
+    async def add_gear(self, interaction: discord.Interaction, member: discord.Member, gear: str, material: str):
+        await self.bot.db.run(shop.create_gear, member.id, gear, material)
+        await self._done(interaction, f"Gave {mat(material)} **{material} {gear}** to {member.mention}.")
+
+    @app_commands.command(name="remove_gear", description="STAFF: Remove pieces of gear from a member.")
+    @app_commands.choices(gear=GEAR_CHOICES, material=MATERIAL_CHOICES)
+    @staff_only()
+    async def remove_gear(
+        self, interaction: discord.Interaction, member: discord.Member, gear: str, material: str,
+        count: app_commands.Range[int, 1, 100] = 1,
+    ):
+        removed = await self.bot.db.run(shop.remove_gear, member.id, gear, material, count)
+        await self._done(interaction, f"Removed **{removed}** {material} {gear} from {member.mention}.")
+
+    # ---------- XP / talents ----------
+    @app_commands.command(name="xp_add", description="STAFF: Give XP to a member.")
+    @staff_only()
+    async def xp_add(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
+        p = await self.bot.db.run(players.add_xp, member.id, amount)
+        await self._done(interaction, f"{member.mention} is now level **{p['level']}** ({p['xp']} XP).")
+
+    @app_commands.command(name="xp_set", description="STAFF: Set a member's XP inside their level.")
+    @staff_only()
+    async def xp_set(self, interaction: discord.Interaction, member: discord.Member, xp: app_commands.Range[int, 0]):
+        p = await self.bot.db.run(players.set_xp, member.id, xp)
+        await self._done(interaction, f"{member.mention} is now level **{p['level']}** ({p['xp']} XP).")
+
+    @app_commands.command(name="level_set", description="STAFF: Set a member's level (talent points are recomputed).")
+    @staff_only()
+    async def level_set(self, interaction: discord.Interaction, member: discord.Member, level: app_commands.Range[int, 1, 10_000]):
+        p = await self.bot.db.run(players.set_level, member.id, level)
+        await self._done(
+            interaction,
+            f"{member.mention} is now level **{p['level']}** with **{p['talent_points']}** unspent talent point(s).",
         )
 
-    @app_commands.command(name="add_emerald", description="ADMIN: Add emeralds to a user.")
-    @admin_only()
-    async def add_emerald(self, interaction: discord.Interaction, member: discord.Member, amount: int):
-        if amount <= 0:
-            return await interaction.response.send_message("❌ Amount must be > 0.", ephemeral=True)
+    @app_commands.command(name="talent_add", description="STAFF: Add (or remove, if negative) talent points.")
+    @staff_only()
+    async def talent_add(self, interaction: discord.Interaction, member: discord.Member, points: int):
+        p = await self.bot.db.run(players.add_talent_points, member.id, points)
+        await self._done(interaction, f"{member.mention} has **{p['talent_points']}** unspent talent point(s).")
 
-        ensure_user(member.id)
-        new_balance = add_emeralds(member.id, amount)
-        await interaction.response.send_message(
-            f"✅ Added **{amount} {EMOJI['emerald']}** to {member.mention}. New balance: **{new_balance} {EMOJI['emerald']}**",
-            ephemeral=True,
-        )
+    @app_commands.command(name="talent_reset", description="STAFF: Reset a member's talents (points are refunded).")
+    @staff_only()
+    async def talent_reset(self, interaction: discord.Interaction, member: discord.Member):
+        p = await self.bot.db.run(players.reset_talents, member.id)
+        await self._done(interaction, f"{member.mention}'s talents were reset. Unspent points: **{p['talent_points']}**.")
 
-    @app_commands.command(name="add_item", description="ADMIN: Add resources to YOUR inventory (sticks/ingots).")
-    @admin_only()
-    async def add_item_simple(self, interaction: discord.Interaction, item: str, amount: int):
-        item = item.lower().strip()
-        if amount <= 0:
-            return await interaction.response.send_message("❌ Amount must be > 0.", ephemeral=True)
-
-        ensure_user(interaction.user.id)
-
-        if item in ("stick", "sticks"):
-            new_amt = add_item(interaction.user.id, "stick", "none", amount)
-            return await interaction.response.send_message(
-                f"✅ Added **{amount} {EMOJI['stick']} sticks**. New amount: **{new_amt}**",
-                ephemeral=True,
-            )
-
-        mat = item[:-6] if item.endswith("_ingot") else item
-        if mat in MATERIALS:
-            new_amt = add_item(interaction.user.id, "ingot", mat, amount)
-            return await interaction.response.send_message(
-                f"✅ Added {_mat_emoji(mat)} **{amount} {mat} ingot(s)**. New amount: **{new_amt}**",
-                ephemeral=True,
-            )
-
-        return await interaction.response.send_message(
-            "❌ Invalid item. Use: stick | gold | iron | diamond | netherite (optionally *_ingot).",
-            ephemeral=True,
-        )
-
-    @app_commands.command(name="add_gear", description="ADMIN: Add ONE gear piece to YOUR gear inventory.")
-    @admin_only()
-    async def add_gear_cmd(self, interaction: discord.Interaction, gear: str, material: str):
-        gear = gear.lower().strip()
-        material = material.lower().strip()
-
-        if gear not in GEAR:
-            return await interaction.response.send_message(
-                f"❌ Invalid gear. Allowed: {', '.join(GEAR)}",
-                ephemeral=True,
-            )
-        if material not in MATERIALS:
-            return await interaction.response.send_message(
-                f"❌ Invalid material. Allowed: {', '.join(MATERIALS)}",
-                ephemeral=True,
-            )
-
-        ensure_user(interaction.user.id)
-        add_gear(interaction.user.id, gear, material)
-        await interaction.response.send_message(
-            f"✅ Added {_mat_emoji(material)} **{material} {gear}** to your gear inventory.",
-            ephemeral=True,
-        )
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(EconomyAdminCog(bot))
