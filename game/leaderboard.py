@@ -14,6 +14,7 @@ BOARDS: dict[str, tuple[str, str]] = {
     "bedrock_found": ("Bedrock found", ""),
     "items_crafted": ("Items crafted", ""),
     "duels_won": ("Duels won", ""),
+    "boss_damage": ("Boss damage", ""),
     "achievements": ("Achievements", ""),
 }
 

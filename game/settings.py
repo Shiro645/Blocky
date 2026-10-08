@@ -98,6 +98,7 @@ DEFAULTS: dict[str, Any] = {
         "top_damage_bonus": 150,
         "xp_reward": 150,
         "names": ["Wither", "Ender Dragon", "Elder Guardian", "Warden"],
+        "ping_here": False,  # mention @here when a boss appears
     },
     "seasons": {"rewards": [300, 150, 75]},
     "challenges": {"per_week": 3},

@@ -136,6 +136,28 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (week_id, user_id, code)
     );
     """,
+    # 5 - server bosses
+    """
+    CREATE TABLE bosses (
+        boss_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        max_hp INTEGER NOT NULL,
+        hp INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',  -- active | defeated | escaped
+        started_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE TABLE boss_damage (
+        boss_id INTEGER NOT NULL REFERENCES bosses(boss_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        damage INTEGER NOT NULL DEFAULT 0,
+        hits INTEGER NOT NULL DEFAULT 0,
+        last_attack_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (boss_id, user_id)
+    );
+    """,
 ]
 
 

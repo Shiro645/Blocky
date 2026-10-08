@@ -74,6 +74,7 @@ class HelpCog(commands.Cog):
                 "`/duel <member> <stake>` → Fight for emeralds\n"
                 "`/challenges` → This week's challenges\n"
                 "`/achievements [member]` → Achievements\n"
+                "`/boss` · `/attack` → Fight the server boss together\n"
             ),
             inline=False,
         )
