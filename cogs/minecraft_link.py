@@ -99,7 +99,16 @@ class LinkCog(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.set_thumbnail(url=f"https://mc-heads.net/avatar/{uuid}")
-        await staff_channel.send(embed=embed, view=decision_view(interaction.user.id, req["mc_username"]))
+        try:
+            await staff_channel.send(embed=embed, view=decision_view(interaction.user.id, req["mc_username"]))
+        except discord.Forbidden:
+            # Nobody would see the request: cancel it so the member can retry later.
+            await self.bot.db.run(links.unlink, interaction.user.id)
+            log.error("Missing access to the staff channel %s", getattr(staff_channel, "id", "?"))
+            raise GameError(
+                "The bot can't post in the staff channel. Ask an admin to give it "
+                "View Channel, Send Messages and Embed Links there, then try again."
+            )
         await interaction.followup.send(
             f"✅ Request sent for **{req['mc_username']}**. A staff member will review it soon; you'll get a DM.",
             ephemeral=True,

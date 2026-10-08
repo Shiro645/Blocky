@@ -118,6 +118,12 @@ async def report_error(interaction: discord.Interaction, error: Exception) -> No
         message = "❌ You don't have permission to use this command."
     elif isinstance(error, discord.app_commands.CommandOnCooldown):
         message = f"⏳ Slow down! Try again in **{error.retry_after:.0f}s**."
+    elif isinstance(error, discord.Forbidden):
+        log.error("Missing Discord permission", exc_info=error)
+        message = (
+            "❌ The bot is missing a Discord permission (a channel it can't see, or a role "
+            "above its own). Ask an admin to check its permissions."
+        )
     else:
         log.error("Unhandled interaction error", exc_info=error)
         message = "❌ Something went wrong. The error has been logged."

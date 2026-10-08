@@ -27,6 +27,12 @@ class SeasonsCog(commands.Cog):
 
     @tasks.loop(minutes=5)
     async def close_loop(self):
+        try:
+            await self.close_tick()
+        except Exception:  # an error must never stop the loop
+            log.exception("Season loop failed")
+
+    async def close_tick(self) -> None:
         closed = await self.bot.db.run(seasons.close_finished)
         for season in closed:
             await self.announce(season)
