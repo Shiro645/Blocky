@@ -95,6 +95,8 @@ class LeaderboardCog(commands.Cog):
         embed.set_thumbnail(url=target.display_avatar.url)
         embed.add_field(name="Emeralds", value=em(u["emeralds"]), inline=True)
         embed.add_field(name="Fortune", value=f"{em(p['fortune'])} ({rank_text(p['fortune_rank'])})", inline=True)
+        if p["link"] and p["link"]["status"] == "approved":
+            embed.add_field(name="Minecraft", value=f"🔗 {p['link']['mc_username']}", inline=True)
         talents = " · ".join(f"{b} {u[b + '_points']}" for b in TALENT_BRANCHES)
         embed.add_field(name="Talents", value=talents, inline=False)
 

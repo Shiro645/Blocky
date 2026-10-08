@@ -31,6 +31,7 @@ log = logging.getLogger("bot")
 EXTENSIONS = [
     "cogs.minecraft_whitelist",
     "cogs.minecraft_core",
+    "cogs.minecraft_link",
     "cogs.economy_mining",
     "cogs.economy_market",
     "cogs.economy_craft",

@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import players, progress, seasons, shop
+from game import links, players, progress, seasons, shop
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -86,4 +86,5 @@ def profile(ctx: Ctx, user_id: int) -> dict:
         "equipped": [g for g in shop.get_gear(ctx, user_id) if g["equipped"]],
         "is_champion": seasons.current_champion(ctx) == user_id,
         "achievements": progress.achievements_overview(ctx, user_id),
+        "link": links.get_link(ctx, user_id),
     }

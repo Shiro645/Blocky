@@ -158,6 +158,18 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (boss_id, user_id)
     );
     """,
+    # 6 - Discord <-> Minecraft account links
+    """
+    CREATE TABLE links (
+        user_id INTEGER PRIMARY KEY,
+        mc_username TEXT NOT NULL,
+        status TEXT NOT NULL,  -- pending | approved
+        requested_at INTEGER NOT NULL,
+        decided_by INTEGER,
+        decided_at INTEGER
+    );
+    CREATE UNIQUE INDEX idx_links_username ON links(mc_username COLLATE NOCASE);
+    """,
 ]
 
 

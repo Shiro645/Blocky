@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import aiohttp
 import re
 
 import discord
@@ -9,27 +8,10 @@ from discord.ext import commands
 
 from utils.checks import staff_only
 from utils.minecraft_rcon import rcon_command
+from utils.mojang import fetch_uuid
 
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,16}$")
-
-
-async def fetch_uuid(username: str) -> str | None:
-    url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                return None
-            data = await resp.json()
-            raw_uuid = data["id"]
-            return (
-                f"{raw_uuid[0:8]}-"
-                f"{raw_uuid[8:12]}-"
-                f"{raw_uuid[12:16]}-"
-                f"{raw_uuid[16:20]}-"
-                f"{raw_uuid[20:]}"
-            )
 
 
 class MinecraftWhitelistCog(commands.Cog):
