@@ -3,6 +3,19 @@
   "staff": {
     "role_id": 0
   },
+  "channels": {
+    "announcements": 0,
+    "events": 0,
+    "staff_log": 0
+  },
+  "roles": {
+    "level_roles": {
+      "10": 0,
+      "25": 0,
+      "50": 0
+    },
+    "season_champion": 0
+  },
   "emojis": {
     "emerald": "<:emerald:EMOJI_ID>",
     "stick": "<:stick:EMOJI_ID>",
@@ -21,7 +34,9 @@
     "rcon_port": 25575,
     "rcon_password": "CHANGE_ME"
   },
-  "economy": {
-    "cooldown_seconds": 30
+  "balance": {
+    "mining": {
+      "cooldown_seconds": 30
+    }
   }
 }

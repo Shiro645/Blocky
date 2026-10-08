@@ -53,6 +53,15 @@ class HelpCog(commands.Cog):
         )
 
         embed.add_field(
+            name="Competition",
+            value=(
+                "`/leaderboard [board]` → Server rankings\n"
+                "`/profile [member]` → Show a player's profile\n"
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
             name="Minecraft",
             value=(
                 "`/server_status` → Server status\n"
@@ -67,7 +76,7 @@ class HelpCog(commands.Cog):
             value=(
                 "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist`\n"
                 "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`\n"
-                "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset`\n"
+                "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`\n"
             ),
             inline=False,
         )

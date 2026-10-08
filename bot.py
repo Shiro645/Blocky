@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from game import settings
 from game.db import Database
+from utils.announcer import Announcer
 from utils.config import load_config
 from utils.ui import report_error
 
@@ -35,6 +36,7 @@ EXTENSIONS = [
     "cogs.economy_craft",
     "cogs.economy_xp",
     "cogs.economy_admin",
+    "cogs.competition_leaderboard",
     "cogs.help_command",
 ]
 
@@ -55,8 +57,15 @@ class Bot(commands.Bot):
             intents=build_intents(),
         )
         cfg = load_config()
-        settings.load(cfg.get("balance"))
+        balance = dict(cfg.get("balance") or {})
+        legacy_cooldown = cfg.get("economy", {}).get("cooldown_seconds")
+        if legacy_cooldown is not None and "cooldown_seconds" not in balance.get("mining", {}):
+            # Old config.json format: economy.cooldown_seconds
+            balance["mining"] = {**balance.get("mining", {}), "cooldown_seconds": legacy_cooldown}
+        settings.load(balance)
         self.db = Database(cfg.get("database_path", "economy.db"))
+        self.announcer = Announcer(self)
+        self.db.notice_handler = self.announcer.handle
 
     @property
     def main_guild(self) -> discord.Guild | None:

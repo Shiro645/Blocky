@@ -115,6 +115,15 @@ class EconomyAdminCog(commands.Cog):
         p = await self.bot.db.run(players.reset_talents, member.id)
         await self._done(interaction, f"{member.mention}'s talents were reset. Unspent points: **{p['talent_points']}**.")
 
+    @app_commands.command(name="sync_level_roles", description="STAFF: Give every member the level role matching their level.")
+    @staff_only()
+    async def sync_level_roles(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        levels = await self.bot.db.run(lambda ctx: [(r["user_id"], r["level"]) for r in ctx.all("SELECT user_id, level FROM users;")])
+        for user_id, level in levels:
+            await self.bot.announcer.sync_level_role(user_id, level)
+        await interaction.followup.send(f"✅ Level roles checked for **{len(levels)}** player(s).", ephemeral=True)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(EconomyAdminCog(bot))
