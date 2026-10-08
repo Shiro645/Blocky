@@ -40,6 +40,7 @@ EXTENSIONS = [
     "cogs.economy_auction",
     "cogs.economy_admin",
     "cogs.competition_leaderboard",
+    "cogs.competition_seasons",
     "cogs.help_command",
 ]
 

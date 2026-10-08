@@ -18,6 +18,8 @@ PROFILE_STATS = [
     ("emeralds_earned", "💰 Emeralds earned"),
     ("items_crafted", "🛠️ Items crafted"),
     ("best_streak", "🔥 Best daily streak"),
+    ("seasons_won", "👑 Seasons won"),
+    ("season_podiums", "🏅 Season podiums"),
 ]
 
 
@@ -75,8 +77,11 @@ class LeaderboardCog(commands.Cog):
     def build_profile_embed(self, target: discord.abc.User, p: dict) -> discord.Embed:
         u = p["user"]
         req = players.xp_required_for_level(u["level"])
+        title = f"{target.display_name}'s profile"
+        if p["is_champion"]:
+            title = "👑 " + title + " — Season champion"
         embed = discord.Embed(
-            title=f"{target.display_name}'s profile",
+            title=title,
             description=(
                 f"**Level {u['level']}** ({rank_text(p['level_rank'])}) — {u['xp']}/{req} XP\n"
                 f"`{progress_bar(u['xp'], req)}`"

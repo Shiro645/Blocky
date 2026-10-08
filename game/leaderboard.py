@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import players, shop
+from game import players, seasons, shop
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -9,6 +9,7 @@ BOARDS: dict[str, tuple[str, str]] = {
     "emeralds": ("Emeralds", "emerald"),
     "level": ("Level", "level"),
     "fortune": ("Total fortune", "emerald"),
+    "season": ("This week's season", "emerald"),
     "blocks_mined": ("Blocks mined", ""),
     "bedrock_found": ("Bedrock found", ""),
     "items_crafted": ("Items crafted", ""),
@@ -37,6 +38,8 @@ def ranking(ctx: Ctx, board: str) -> list[tuple[int, int]]:
     if board == "level":
         rows = ctx.all("SELECT user_id, level FROM users ORDER BY level DESC, xp DESC, user_id;")
         return [(r["user_id"], r["level"]) for r in rows]
+    if board == "season":
+        return seasons.standings(ctx, ctx.week_id)
     if board == "fortune":
         values = fortunes(ctx)
         return sorted(((u, v) for u, v in values.items() if v > 0), key=lambda x: (-x[1], x[0]))
@@ -73,4 +76,5 @@ def profile(ctx: Ctx, user_id: int) -> dict:
         "fortune_rank": fortune_rank,
         "level_rank": level_rank,
         "equipped": [g for g in shop.get_gear(ctx, user_id) if g["equipped"]],
+        "is_champion": seasons.current_champion(ctx) == user_id,
     }

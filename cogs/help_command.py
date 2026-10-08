@@ -70,6 +70,7 @@ class HelpCog(commands.Cog):
             value=(
                 "`/leaderboard [board]` → Server rankings\n"
                 "`/profile [member]` → Show a player's profile\n"
+                "`/season` → This week's season standings\n"
             ),
             inline=False,
         )

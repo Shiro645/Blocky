@@ -97,6 +97,28 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_auctions_seller ON auctions(seller_id);
     CREATE INDEX idx_auctions_expires ON auctions(expires_at);
     """,
+    # 3 - weekly seasons
+    """
+    CREATE TABLE season_scores (
+        season_id TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        score INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (season_id, user_id)
+    );
+    CREATE INDEX idx_season_scores ON season_scores(season_id, score);
+    CREATE TABLE seasons_closed (
+        season_id TEXT PRIMARY KEY,
+        closed_at INTEGER NOT NULL
+    );
+    CREATE TABLE season_results (
+        season_id TEXT NOT NULL,
+        rank INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        reward INTEGER NOT NULL,
+        PRIMARY KEY (season_id, rank)
+    );
+    """,
 ]
 
 

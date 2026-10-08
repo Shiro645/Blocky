@@ -27,11 +27,21 @@ def get_emeralds(ctx: Ctx, user_id: int) -> int:
 
 
 def earn_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
-    """Emeralds created by playing (selling, rewards...). Counts as earned."""
+    """Emeralds created by playing (selling, rewards...).
+
+    Counts as earned, and as score for the weekly season.
+    """
     if amount <= 0:
         return
     give_emeralds(ctx, user_id, amount)
     bump_stat(ctx, user_id, "emeralds_earned", amount)
+    ctx.execute(
+        """
+        INSERT INTO season_scores(season_id, user_id, score) VALUES(?, ?, ?)
+        ON CONFLICT(season_id, user_id) DO UPDATE SET score = score + excluded.score;
+        """,
+        (ctx.week_id, user_id, amount),
+    )
 
 
 def give_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
