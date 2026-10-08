@@ -16,15 +16,7 @@
     },
     "season_champion": 0
   },
-  "emojis": {
-    "emerald": "<:emerald:EMOJI_ID>",
-    "stick": "<:stick:EMOJI_ID>",
-    "gold": "<:gold:EMOJI_ID>",
-    "iron": "<:iron:EMOJI_ID>",
-    "diamond": "<:diamond:EMOJI_ID>",
-    "netherite": "<:netherite:EMOJI_ID>",
-    "xp": "<:xp:EMOJI_ID>"
-  },
+  "emojis": {},
   "minecraft": {
     "server_host": "minecraft",
     "server_port": 25565,

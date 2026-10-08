@@ -8,13 +8,13 @@ from discord.ext import commands, tasks
 
 from game import assets, exchange, settings
 from utils.autocomplete import owned_asset_choices
-from utils.ui import em
+from utils.ui import asset_icon, em
 
 log = logging.getLogger("auction")
 
 
 def listing_line(r: dict) -> str:
-    text = f"`#{r['auction_id']}` **{assets.describe(r['asset'], r['amount'])}**"
+    text = f"`#{r['auction_id']}` {asset_icon(r['asset'])} **{assets.describe(r['asset'], r['amount'])}**"
     if r["durability"] is not None:
         text += f" `{r['durability']}/{r['max_durability']}`"
     return text + f" — {em(r['price'])} · <@{r['seller_id']}> · expires <t:{r['expires_at']}:R>"
@@ -74,7 +74,7 @@ class AuctionCog(commands.Cog):
         r = await self.bot.db.run(exchange.list_for_sale, interaction.user.id, item, amount, price)
         tax = exchange.tax_for(price)
         await interaction.response.send_message(
-            f"🏷️ {interaction.user.mention} listed **{assets.describe(item, amount)}** for **{em(price)}** "
+            f"🏷️ {interaction.user.mention} listed {asset_icon(item)} **{assets.describe(item, amount)}** for **{em(price)}** "
             f"(listing `#{r['auction_id']}`). Buy it with `/auction buy {r['auction_id']}`!",
             allowed_mentions=discord.AllowedMentions.none(),
         )
@@ -116,7 +116,7 @@ class AuctionCog(commands.Cog):
     async def cancel(self, interaction: discord.Interaction, listing: int):
         r = await self.bot.db.run(exchange.cancel, interaction.user.id, listing)
         await interaction.response.send_message(
-            f"✅ Listing `#{listing}` cancelled: **{assets.describe(r['asset'], r['amount'])}** returned to you.",
+            f"✅ Listing `#{listing}` cancelled: {asset_icon(r['asset'])} **{assets.describe(r['asset'], r['amount'])}** returned to you.",
             ephemeral=True,
         )
 

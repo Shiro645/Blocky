@@ -12,7 +12,7 @@ from game import settings
 from game.db import Database
 from utils.announcer import Announcer
 from utils.config import load_config
-from utils.ui import report_error
+from utils.ui import load_application_emojis, report_error
 
 
 # -------- LOAD ENV --------
@@ -85,6 +85,7 @@ class Bot(commands.Bot):
         await self.db.open()
 
         self.tree.on_error = self.on_app_command_error
+        await load_application_emojis(self)
 
         # Load cogs
         for ext in EXTENSIONS:

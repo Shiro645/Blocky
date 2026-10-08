@@ -15,6 +15,7 @@ BOARD_CHOICES = [app_commands.Choice(name=label, value=key) for key, (label, _) 
 PROFILE_STATS = [
     ("blocks_mined", "⛏️ Blocks mined"),
     ("bedrock_found", "🟪 Bedrock found"),
+    ("obsidian_found", "🟣 Obsidian found"),
     ("emeralds_earned", "💰 Emeralds earned"),
     ("items_crafted", "🛠️ Items crafted"),
     ("duels_won", "⚔️ Duels won"),

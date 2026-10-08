@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from game import mining, players, shop
 from game.db import Ctx
-from utils.ui import BLOCK_ICONS, EMOJI, em, gear_label, item_label, join_lines
+from utils.ui import EMOJI, block_icon, em, gear_label, item_label, join_lines
 
 
 def _inventory(ctx: Ctx, user_id: int) -> dict:
@@ -54,7 +54,7 @@ class EconomyMiningCog(commands.Cog):
         for block, amount in inv["blocks"].items():
             value = players.block_value(block)
             total_value += amount * value
-            lines.append(f"{BLOCK_ICONS[block]} **{block}**: {amount} ({em(value)} each)")
+            lines.append(f"{block_icon(block)} **{block}**: {amount} ({em(value)} each)")
 
         embed = discord.Embed(
             title=f"{interaction.user.display_name}'s Inventory",
@@ -77,7 +77,7 @@ class EconomyMiningCog(commands.Cog):
         res = await self.bot.db.run(players.sell_all_blocks, interaction.user.id)
 
         lines = [
-            f"{BLOCK_ICONS[b]} **{b}** ×{amt} → +{em(amt * players.block_value(b))}"
+            f"{block_icon(b)} **{b}** ×{amt} → +{em(amt * players.block_value(b))}"
             for b, amt in res["sold"].items()
         ]
         embed = discord.Embed(title="Sale complete", description="\n".join(lines), color=discord.Color.green())

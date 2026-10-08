@@ -94,6 +94,8 @@ class MiningWithToolsTests(GameTestCase):
 
     def test_upgrade_block(self):
         self.assertEqual(mining.upgrade_block("cobblestone"), "gravel")
+        self.assertEqual(mining.upgrade_block("deepslate"), "obsidian")
+        self.assertEqual(mining.upgrade_block("obsidian"), "bedrock")
         self.assertEqual(mining.upgrade_block("bedrock"), "bedrock")
 
 

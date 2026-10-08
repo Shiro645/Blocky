@@ -35,8 +35,8 @@ def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tup
         )[0]
     else:
         block = rng.choices(
-            ["cobblestone", "gravel", "deepslate", "bedrock"],
-            weights=[70, 20, 9, 1 + lucky],
+            ["cobblestone", "gravel", "deepslate", "obsidian", "bedrock"],
+            weights=[70, 20, 9, 3 + lucky, 1 + lucky],
         )[0]
 
     # Miner talent: small chance of one bonus block on big rolls.
@@ -87,8 +87,8 @@ def mine(ctx: Ctx, user_id: int) -> dict:
 
     players.add_blocks(ctx, user_id, block, amount)
     players.bump_stat(ctx, user_id, "blocks_mined", amount)
-    if block == "bedrock":
-        players.bump_stat(ctx, user_id, "bedrock_found", amount)
+    if block in ("bedrock", "obsidian"):
+        players.bump_stat(ctx, user_id, f"{block}_found", amount)
     players.add_xp(ctx, user_id, xp)
 
     broken = [f"{piece['material']} {piece['item']}" for piece in used if gear.wear(ctx, piece)]

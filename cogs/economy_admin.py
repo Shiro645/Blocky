@@ -7,7 +7,7 @@ from discord.ext import commands
 from game import players, shop
 from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS
 from utils.checks import staff_only
-from utils.ui import em, item_label, mat
+from utils.ui import em, gear_icon, item_label
 
 BLOCK_CHOICES = [app_commands.Choice(name=b, value=b) for b in BLOCK_TYPES]
 GEAR_CHOICES = [app_commands.Choice(name=g, value=g) for g in GEAR_ITEMS]
@@ -69,7 +69,7 @@ class EconomyAdminCog(commands.Cog):
     @staff_only()
     async def add_gear(self, interaction: discord.Interaction, member: discord.Member, gear: str, material: str):
         await self.bot.db.run(shop.create_gear, member.id, gear, material)
-        await self._done(interaction, f"Gave {mat(material)} **{material} {gear}** to {member.mention}.")
+        await self._done(interaction, f"Gave {gear_icon(gear, material)} **{material} {gear}** to {member.mention}.")
 
     @app_commands.command(name="remove_gear", description="STAFF: Remove pieces of gear from a member.")
     @app_commands.choices(gear=GEAR_CHOICES, material=MATERIAL_CHOICES)
