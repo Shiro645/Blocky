@@ -251,9 +251,3 @@ utils/
 ```
 
 Generated at runtime (not versioned): `.env`, `config.json`, `economy.db`.
-
----
-
-# 📜 License
-
-MIT
