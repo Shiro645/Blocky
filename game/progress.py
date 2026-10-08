@@ -45,7 +45,7 @@ def _level(at_least: int) -> Callable[[dict], bool]:
 ACHIEVEMENTS: list[Achievement] = [
     Achievement("first_bedrock", "🟪", "Bedrock Breaker", "Find your first bedrock", 25, _stat("bedrock_found", 1)),
     Achievement("bedrock_100", "💎", "Bedrock Collector", "Find 100 bedrock", 200, _stat("bedrock_found", 100)),
-    Achievement("first_obsidian", "🟣", "Into the Void", "Find your first obsidian", 50, _stat("obsidian_found", 1)),
+    Achievement("first_obsidian", "🟣", "Into the Void", "Find your first obsidian", 15, _stat("obsidian_found", 1)),
     Achievement("miner_1k", "⛏️", "Miner", "Mine 1,000 blocks", 100, _stat("blocks_mined", 1_000)),
     Achievement("miner_10k", "🚧", "Excavator", "Mine 10,000 blocks", 500, _stat("blocks_mined", 10_000)),
     Achievement("miner_50k", "🌋", "Quarry Master", "Mine 50,000 blocks", 1500, _stat("blocks_mined", 50_000)),

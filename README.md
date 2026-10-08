@@ -18,9 +18,9 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 ### ⛏️ Mining & economy
 
-- **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare bedrock, very rare obsidian), with a cooldown.
+- **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown.
 - `/inventory` — Blocks, emeralds, items and gear
-- `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, bedrock 10, obsidian 25 emeralds)
+- `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds)
 - `/market` — Buy sticks and gold / iron / diamond / netherite ingots
 - `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day gives a diamond ingot, and missing a day resets the streak.
 
@@ -120,7 +120,7 @@ The bot finds its emojis **by name** among the emojis uploaded to the applicatio
 |---|---|
 | `emerald`, `stick`, `xp` | Currency, sticks, XP |
 | `gold`, `iron`, `diamond`, `netherite` | Ingots / materials |
-| `cobblestone`, `gravel`, `deepslate`, `bedrock`, `obsidian` | Blocks |
+| `cobblestone`, `gravel`, `deepslate`, `obsidian`, `bedrock` | Blocks |
 | `<material>_<item>`, e.g. `iron_sword`, `gold_helmet`, `netherite_boots` | Gear (4 materials × sword, pickaxe, axe, shovel, hoe, helmet, chestplate, leggings, boots) |
 
 At startup the logs show how many were found and list the missing names. A missing emoji is simply not shown (blocks fall back to 🪨 🟫 ⬛ 🟪, gear to its material).

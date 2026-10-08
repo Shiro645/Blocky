@@ -35,8 +35,8 @@ def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tup
         )[0]
     else:
         block = rng.choices(
-            ["cobblestone", "gravel", "deepslate", "bedrock", "obsidian"],
-            weights=[70, 20, 9, 1 + lucky, 0.5 + 0.5 * lucky],
+            ["cobblestone", "gravel", "deepslate", "obsidian", "bedrock"],
+            weights=[70, 20, 9, 3 + lucky, 1 + lucky],
         )[0]
 
     # Miner talent: small chance of one bonus block on big rolls.
