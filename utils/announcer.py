@@ -61,6 +61,9 @@ class Announcer:
         await self.send(text)
         await self.sync_level_role(notice.user_id, notice.new_level)
 
+    async def on_GearBroken(self, notice: n.GearBroken) -> None:
+        await self.send(f"🔨 <@{notice.user_id}>'s **{notice.material} {notice.item}** broke! Time to craft a new one.")
+
     async def sync_level_role(self, user_id: int, level: int) -> None:
         """Give the highest level role reached and remove the other level roles."""
         pairs = level_roles()

@@ -34,10 +34,12 @@ class HelpCog(commands.Cog):
         )
 
         embed.add_field(
-            name="Crafting",
+            name="Crafting & Equipment",
             value=(
                 "`/craft <item> <material>` → Craft gear\n"
                 "`/craftlist` → Show all recipes\n"
+                "`/gear` → Your equipment and what it does\n"
+                "`/equip` · `/equip_best` · `/unequip` → Manage your equipment\n"
             ),
             inline=False,
         )

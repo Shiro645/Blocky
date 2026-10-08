@@ -1,7 +1,7 @@
 """NPC market and crafting."""
 from __future__ import annotations
 
-from game import players, settings
+from game import gear, players, settings
 from game.catalog import MATERIALS, RECIPES
 from game.db import Ctx
 from game.errors import GameError
@@ -105,7 +105,11 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str) -> dict:
     players.take_item(ctx, user_id, "stick", "none", sticks)
     gear_id = create_gear(ctx, user_id, item, material)
     players.bump_stat(ctx, user_id, "items_crafted")
-    return {"gear_id": gear_id, "ingots": ingots, "sticks": sticks}
+    # Equip it right away if the slot is empty.
+    auto_equipped = item not in gear.get_equipped(ctx, user_id)
+    if auto_equipped:
+        gear.equip(ctx, user_id, gear_id)
+    return {"gear_id": gear_id, "ingots": ingots, "sticks": sticks, "equipped": auto_equipped}
 
 
 def get_gear(ctx: Ctx, user_id: int) -> list[dict]:

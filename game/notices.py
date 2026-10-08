@@ -14,3 +14,10 @@ class LevelUp:
     old_level: int
     new_level: int
     talent_points_gained: int
+
+
+@dataclass(frozen=True)
+class GearBroken:
+    user_id: int
+    item: str
+    material: str

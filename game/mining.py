@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import random
 
-from game import players, settings
+from game import gear, players, settings
+from game.catalog import BLOCK_TYPES
 from game.db import Ctx
 
 
@@ -44,23 +45,59 @@ def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tup
     return block, amount
 
 
+def upgrade_block(block: str) -> str:
+    i = BLOCK_TYPES.index(block)
+    return BLOCK_TYPES[min(i + 1, len(BLOCK_TYPES) - 1)]
+
+
 def mine(ctx: Ctx, user_id: int) -> dict:
-    """Mine once. Returns what was found and the cooldown before the next mining."""
+    """Mine once with the equipped tools. Returns what was found and the next cooldown."""
+    g = settings.get()["gear"]
     user = players.get_user(ctx, user_id)
+    tools = gear.get_equipped(ctx, user_id)
     block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"])
+    used: list[dict] = []
+    sticks = 0
+
+    pickaxe = tools.get("pickaxe")
+    if pickaxe:
+        t = gear.tier(pickaxe["material"])
+        amount += g["pickaxe_extra_blocks_per_tier"] * t
+        if ctx.rng.random() < g["pickaxe_upgrade_chance_per_tier"] * t:
+            block = upgrade_block(block)
+        used.append(pickaxe)
+
+    shovel = tools.get("shovel")
+    if shovel and block == "gravel":
+        amount += g["shovel_extra_gravel_per_tier"] * gear.tier(shovel["material"])
+        used.append(shovel)
+
+    axe = tools.get("axe")
+    if axe and ctx.rng.random() < g["axe_stick_chance"]:
+        sticks = gear.tier(axe["material"])
+        players.add_item(ctx, user_id, "stick", "none", sticks)
+        used.append(axe)
+
+    lo, hi = settings.get()["mining"]["xp_per_message"]
+    xp = ctx.rng.randint(int(lo), int(hi))
+    hoe = tools.get("hoe")
+    if hoe:
+        xp = int(round(xp * (1 + g["hoe_xp_bonus_per_tier"] * gear.tier(hoe["material"]))))
+        used.append(hoe)
 
     players.add_blocks(ctx, user_id, block, amount)
     players.bump_stat(ctx, user_id, "blocks_mined", amount)
     if block == "bedrock":
         players.bump_stat(ctx, user_id, "bedrock_found", amount)
-
-    lo, hi = settings.get()["mining"]["xp_per_message"]
-    xp = ctx.rng.randint(int(lo), int(hi))
     players.add_xp(ctx, user_id, xp)
+
+    broken = [f"{piece['material']} {piece['item']}" for piece in used if gear.wear(ctx, piece)]
 
     return {
         "block": block,
         "amount": amount,
+        "sticks": sticks,
         "xp": xp,
+        "broken": broken,
         "cooldown": cooldown_seconds(user["efficiency_points"]),
     }
