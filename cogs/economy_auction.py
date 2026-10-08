@@ -42,6 +42,12 @@ class AuctionCog(commands.Cog):
 
     @tasks.loop(minutes=5)
     async def expire_loop(self):
+        try:
+            await self.expire_tick()
+        except Exception:  # an error must never stop the loop
+            log.exception("Auction expiry loop failed")
+
+    async def expire_tick(self) -> None:
         expired = await self.bot.db.run(exchange.expire)
         for r in expired:
             await self.notify(

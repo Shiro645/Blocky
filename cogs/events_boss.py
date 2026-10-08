@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 
 import discord
 from discord import app_commands
@@ -84,6 +85,7 @@ class BossCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._refresh_scheduled: set[int] = set()
+        self._post_retry_at = 0.0
         self._tasks: set[asyncio.Task] = set()
 
     async def cog_load(self) -> None:
@@ -178,34 +180,53 @@ class BossCog(commands.Cog):
     @app_commands.describe(name="Boss name (random if empty)", hp="Health points (default from settings)")
     @staff_only()
     async def boss_spawn(self, interaction: discord.Interaction, name: str | None = None, hp: app_commands.Range[int, 1, 10_000_000] | None = None):
+        await interaction.response.defer(ephemeral=True)
         boss = await self.bot.db.run(events.spawn_boss, name, hp)
         channel = self.bot.announcer.channel("events") or interaction.channel
-        await interaction.response.send_message(f"✅ {boss['name']} summoned in {channel.mention}.", ephemeral=True)
+        # If posting fails (permissions), the boss stays and the loop posts it later.
         await self.post_boss(boss, channel)
+        await interaction.followup.send(f"✅ {boss['name']} summoned in {channel.mention}.", ephemeral=True)
 
     # ---------- background ----------
     @tasks.loop(minutes=1)
     async def boss_loop(self):
+        try:
+            await self.boss_tick()
+        except Exception:  # an error must never stop the loop
+            log.exception("Boss loop failed")
+
+    async def boss_tick(self) -> None:
         escaped = await self.bot.db.run(events.escape_expired)
         for boss in escaped:
             await self.refresh_message(boss["boss_id"])
             await self.bot.announcer.send(f"💨 **{boss['name']}** escaped… Better luck next time!")
 
-        interval = float(settings.get()["boss"]["auto_spawn_hours"])
-        if interval <= 0:
-            return
         channel = self.bot.announcer.channel("events") or self.bot.announcer.channel()
-        if channel is None:
+        if channel is None or time.monotonic() < self._post_retry_at:
             return
 
-        def maybe_spawn(ctx):
-            if events.active_boss(ctx) or ctx.now < events.last_boss_end(ctx) + interval * HOUR:
-                return None
-            return events.spawn_boss(ctx)
+        interval = float(settings.get()["boss"]["auto_spawn_hours"])
 
-        boss = await self.bot.db.run(maybe_spawn)
-        if boss:
+        def pending_or_spawn(ctx):
+            boss = events.active_boss(ctx)
+            if boss:
+                # A boss whose message could not be posted yet (e.g. missing permission).
+                return boss if not boss["message_id"] else None
+            if interval > 0 and ctx.now >= events.last_boss_end(ctx) + interval * HOUR:
+                return events.spawn_boss(ctx)
+            return None
+
+        boss = await self.bot.db.run(pending_or_spawn)
+        if boss is None:
+            return
+        try:
             await self.post_boss(boss, channel)
+        except discord.HTTPException:
+            self._post_retry_at = time.monotonic() + 600
+            log.warning(
+                "Could not post boss %s in #%s: give the bot View Channel, Send Messages and "
+                "Embed Links there. Retrying in 10 minutes.", boss["name"], getattr(channel, "name", "?"),
+            )
 
     @boss_loop.before_loop
     async def before_boss_loop(self):
