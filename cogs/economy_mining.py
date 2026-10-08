@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from game import mining, players, shop
 from game.db import Ctx
-from utils.ui import BLOCK_ICONS, EMOJI, em, gear_label, item_label
+from utils.ui import BLOCK_ICONS, EMOJI, em, gear_label, item_label, join_lines
 
 
 def _inventory(ctx: Ctx, user_id: int) -> dict:
@@ -65,10 +65,10 @@ class EconomyMiningCog(commands.Cog):
         embed.add_field(name="Blocks sell value", value=em(total_value), inline=True)
 
         item_lines = [item_label(item, material, amount) for (item, material), amount in sorted(inv["items"].items())]
-        embed.add_field(name="Items", value="\n".join(item_lines)[:1024] or "No items yet.", inline=False)
+        embed.add_field(name="Items", value=join_lines(item_lines, empty="No items yet."), inline=False)
 
         gear_lines = [("🟢 " if g["equipped"] else "▫️ ") + gear_label(g) for g in inv["gear"]]
-        embed.add_field(name="Gear (🟢 equipped)", value="\n".join(gear_lines)[:1024] or "No gear yet.", inline=False)
+        embed.add_field(name="Gear (🟢 equipped)", value=join_lines(gear_lines, empty="No gear yet."), inline=False)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

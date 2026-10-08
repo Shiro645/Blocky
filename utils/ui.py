@@ -40,6 +40,19 @@ def gear_label(g: dict, show_durability: bool = True) -> str:
     return text
 
 
+def join_lines(lines: list[str], limit: int = 1024, empty: str = "—") -> str:
+    """Join lines without cutting one in half (embed fields hold 1024 characters)."""
+    out, size = [], 0
+    for i, line in enumerate(lines):
+        more = f"…and {len(lines) - i} more"
+        if size + len(line) + 1 > limit - len(more) - 1:
+            out.append(more)
+            break
+        out.append(line)
+        size += len(line) + 1
+    return "\n".join(out) or empty
+
+
 def progress_bar(current: int, total: int, width: int = 14) -> str:
     if total <= 0:
         return "█" * width

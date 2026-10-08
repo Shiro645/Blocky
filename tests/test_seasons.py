@@ -31,7 +31,8 @@ class SeasonTests(GameTestCase):
         self.assertEqual(len(closed), 1)
         podium = [(p["user_id"], p["reward"]) for p in closed[0]["podium"]]
         self.assertEqual(podium, [(BOB, 300), (CAROL, 150), (DAVE, 75)])
-        self.assertEqual(await self.run_game(players.get_emeralds, BOB), 340)
+        # 40 + 300 for the season + 250 for the "Champion" achievement
+        self.assertEqual(await self.run_game(players.get_emeralds, BOB), 590)
         self.assertEqual(await self.run_game(seasons.close_finished), [])  # not paid twice
 
         # Rewards don't feed the new season, and the champion is known.

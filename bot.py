@@ -42,6 +42,7 @@ EXTENSIONS = [
     "cogs.competition_leaderboard",
     "cogs.competition_seasons",
     "cogs.competition_duel",
+    "cogs.events_progress",
     "cogs.help_command",
 ]
 

@@ -21,3 +21,18 @@ class GearBroken:
     user_id: int
     item: str
     material: str
+
+
+@dataclass(frozen=True)
+class AchievementUnlocked:
+    user_id: int
+    code: str
+    name: str
+    reward: int
+
+
+@dataclass(frozen=True)
+class ChallengeCompleted:
+    user_id: int
+    text: str
+    reward: int

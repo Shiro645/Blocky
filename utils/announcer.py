@@ -61,6 +61,15 @@ class Announcer:
         await self.send(text)
         await self.sync_level_role(notice.user_id, notice.new_level)
 
+    async def on_AchievementUnlocked(self, notice: n.AchievementUnlocked) -> None:
+        reward = f" (+{notice.reward} emeralds)" if notice.reward else ""
+        await self.send(f"🏅 <@{notice.user_id}> unlocked the achievement **{notice.name}**!{reward}")
+
+    async def on_ChallengeCompleted(self, notice: n.ChallengeCompleted) -> None:
+        await self.send(
+            f"🎯 <@{notice.user_id}> completed a weekly challenge: **{notice.text}** (+{notice.reward} emeralds)"
+        )
+
     async def on_GearBroken(self, notice: n.GearBroken) -> None:
         await self.send(f"🔨 <@{notice.user_id}>'s **{notice.material} {notice.item}** broke! Time to craft a new one.")
 

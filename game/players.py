@@ -194,6 +194,14 @@ def bump_stat(ctx: Ctx, user_id: int, stat: str, amount: int = 1) -> None:
         """,
         (user_id, stat, amount),
     )
+    _stat_changed(ctx, user_id, stat, amount)
+
+
+def _stat_changed(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
+    # Imported here: progress depends on this module.
+    from game import progress
+
+    progress.on_stat(ctx, user_id, stat, amount)
 
 
 def set_stat_max(ctx: Ctx, user_id: int, stat: str, value: int) -> None:
@@ -206,6 +214,7 @@ def set_stat_max(ctx: Ctx, user_id: int, stat: str, value: int) -> None:
         """,
         (user_id, stat, value),
     )
+    _stat_changed(ctx, user_id, stat, 0)
 
 
 def get_stats(ctx: Ctx, user_id: int) -> dict[str, int]:
@@ -246,6 +255,7 @@ def add_xp(ctx: Ctx, user_id: int, amount: int) -> dict:
     )
     if level > user["level"]:
         ctx.notices.append(LevelUp(user_id, user["level"], level, gained))
+        _stat_changed(ctx, user_id, "level", 0)
     return get_user(ctx, user_id)
 
 
@@ -267,6 +277,7 @@ def set_level(ctx: Ctx, user_id: int, level: int) -> dict:
     )
     if level > user["level"]:
         ctx.notices.append(LevelUp(user_id, user["level"], level, 0))
+        _stat_changed(ctx, user_id, "level", 0)
     return get_user(ctx, user_id)
 
 

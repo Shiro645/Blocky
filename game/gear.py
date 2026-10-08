@@ -24,6 +24,9 @@ def equip(ctx: Ctx, user_id: int, gear_id: int) -> dict:
         raise GameError("You don't own this piece of gear.")
     ctx.execute("UPDATE gear SET equipped=0 WHERE user_id=? AND item=? AND equipped=1;", (user_id, row["item"]))
     ctx.execute("UPDATE gear SET equipped=1 WHERE gear_id=?;", (gear_id,))
+    from game import progress  # progress depends on this module
+
+    progress.check_achievements(ctx, user_id)
     return dict(ctx.one("SELECT * FROM gear WHERE gear_id=?;", (gear_id,)))
 
 

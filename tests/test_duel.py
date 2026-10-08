@@ -47,7 +47,8 @@ class FightTests(GameTestCase):
     async def test_winner_takes_the_pot(self):
         res = await self.run_game(duel.fight, ALICE, BOB, 50)
         winner, loser = res["winner"], res["loser"]
-        self.assertEqual(await self.run_game(players.get_emeralds, winner), 150)
+        # 100 - 50 + 100 from the pot + 20 for the "First Blood" achievement
+        self.assertEqual(await self.run_game(players.get_emeralds, winner), 170)
         self.assertEqual(await self.run_game(players.get_emeralds, loser), 50)
         self.assertEqual(await self.run_game(players.get_stat, winner, "duels_won"), 1)
         self.assertEqual(await self.run_game(players.get_stat, loser, "duels_lost"), 1)

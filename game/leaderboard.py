@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import players, seasons, shop
+from game import players, progress, seasons, shop
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -14,6 +14,7 @@ BOARDS: dict[str, tuple[str, str]] = {
     "bedrock_found": ("Bedrock found", ""),
     "items_crafted": ("Items crafted", ""),
     "duels_won": ("Duels won", ""),
+    "achievements": ("Achievements", ""),
 }
 
 
@@ -39,6 +40,11 @@ def ranking(ctx: Ctx, board: str) -> list[tuple[int, int]]:
     if board == "level":
         rows = ctx.all("SELECT user_id, level FROM users ORDER BY level DESC, xp DESC, user_id;")
         return [(r["user_id"], r["level"]) for r in rows]
+    if board == "achievements":
+        rows = ctx.all(
+            "SELECT user_id, COUNT(*) AS n FROM achievements GROUP BY user_id ORDER BY n DESC, user_id;"
+        )
+        return [(r["user_id"], r["n"]) for r in rows]
     if board == "season":
         return seasons.standings(ctx, ctx.week_id)
     if board == "fortune":
@@ -78,4 +84,5 @@ def profile(ctx: Ctx, user_id: int) -> dict:
         "level_rank": level_rank,
         "equipped": [g for g in shop.get_gear(ctx, user_id) if g["equipped"]],
         "is_champion": seasons.current_champion(ctx) == user_id,
+        "achievements": progress.achievements_overview(ctx, user_id),
     }

@@ -119,6 +119,23 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (season_id, rank)
     );
     """,
+    # 4 - achievements and weekly challenges
+    """
+    CREATE TABLE achievements (
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        code TEXT NOT NULL,
+        unlocked_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, code)
+    );
+    CREATE TABLE challenge_progress (
+        week_id TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        code TEXT NOT NULL,
+        progress INTEGER NOT NULL DEFAULT 0,
+        completed_at INTEGER,
+        PRIMARY KEY (week_id, user_id, code)
+    );
+    """,
 ]
 
 

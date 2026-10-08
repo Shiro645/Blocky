@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from game import leaderboard, players
 from game.catalog import TALENT_BRANCHES
-from utils.ui import em, gear_label, progress_bar
+from utils.ui import em, gear_label, join_lines, progress_bar
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
@@ -96,8 +96,13 @@ class LeaderboardCog(commands.Cog):
         talents = " · ".join(f"{b} {u[b + '_points']}" for b in TALENT_BRANCHES)
         embed.add_field(name="Talents", value=talents, inline=False)
 
-        equipped = "\n".join(gear_label(g) for g in p["equipped"]) or "Nothing equipped."
-        embed.add_field(name="Equipment", value=equipped[:1024], inline=False)
+        equipped = join_lines([gear_label(g) for g in p["equipped"]], empty="Nothing equipped.")
+        embed.add_field(name="Equipment", value=equipped, inline=False)
+
+        unlocked = p["achievements"]["unlocked"]
+        total = len(unlocked) + len(p["achievements"]["locked"])
+        icons = " ".join(a.icon for a, _ in unlocked[-12:])
+        embed.add_field(name=f"Achievements ({len(unlocked)}/{total})", value=icons or "None yet.", inline=False)
 
         stats = "\n".join(f"{label}: **{p['stats'].get(key, 0):,}**" for key, label in PROFILE_STATS)
         embed.add_field(name="Stats", value=stats, inline=False)

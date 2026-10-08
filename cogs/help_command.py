@@ -72,6 +72,8 @@ class HelpCog(commands.Cog):
                 "`/profile [member]` → Show a player's profile\n"
                 "`/season` → This week's season standings\n"
                 "`/duel <member> <stake>` → Fight for emeralds\n"
+                "`/challenges` → This week's challenges\n"
+                "`/achievements [member]` → Achievements\n"
             ),
             inline=False,
         )

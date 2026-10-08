@@ -7,7 +7,7 @@ from discord.ext import commands
 from game import gear, shop
 from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES
 from game.db import Ctx
-from utils.ui import EMOJI, gear_label, mat, progress_bar
+from utils.ui import EMOJI, gear_label, join_lines, mat, progress_bar
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
@@ -106,7 +106,7 @@ class EconomyCraftCog(commands.Cog):
         embed.add_field(name="🛡️ Damage reduction", value=f"{gear.damage_reduction(equipped):.0%}", inline=True)
         spare = [g for g in owned if not g["equipped"]]
         if spare:
-            embed.add_field(name="Spare gear", value="\n".join(gear_label(g) for g in spare)[:1024], inline=False)
+            embed.add_field(name="Spare gear", value=join_lines([gear_label(g) for g in spare]), inline=False)
         embed.set_footer(text="Gear wears out when used and breaks at 0 durability.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
