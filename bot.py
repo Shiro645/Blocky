@@ -35,6 +35,7 @@ EXTENSIONS = [
     "cogs.economy_mining",
     "cogs.economy_market",
     "cogs.economy_craft",
+    "cogs.economy_enchant",
     "cogs.economy_xp",
     "cogs.economy_daily",
     "cogs.economy_exchange",

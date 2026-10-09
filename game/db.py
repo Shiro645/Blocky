@@ -258,6 +258,15 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (tournament_id, round, slot)
     );
     """,
+    # 9 - enchantments (books and lapis are rows of the items table)
+    """
+    CREATE TABLE gear_enchants (
+        gear_id INTEGER NOT NULL REFERENCES gear(gear_id) ON DELETE CASCADE,
+        enchant TEXT NOT NULL,
+        level INTEGER NOT NULL CHECK (level >= 1),
+        PRIMARY KEY (gear_id, enchant)
+    );
+    """,
 ]
 
 

@@ -14,7 +14,7 @@ GEAR_CHOICES = [app_commands.Choice(name=g, value=g) for g in GEAR_ITEMS]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
 RESOURCE_CHOICES = [app_commands.Choice(name="stick", value="stick:none")] + [
     app_commands.Choice(name=f"{m} ingot", value=f"ingot:{m}") for m in MATERIALS
-]
+] + [app_commands.Choice(name="lapis lazuli", value="lapis:none")]
 
 Amount = app_commands.Range[int, 1, 1_000_000]
 
@@ -56,7 +56,7 @@ class EconomyAdminCog(commands.Cog):
         balance = await self.bot.db.run(players.remove_emeralds_clamped, member.id, amount)
         await self._done(interaction, f"Removed up to **{em(amount)}** from {member.mention}. Balance: **{em(balance)}**.")
 
-    @app_commands.command(name="add_item", description="STAFF: Give sticks or ingots to a member.")
+    @app_commands.command(name="add_item", description="STAFF: Give sticks, ingots or lapis to a member.")
     @app_commands.choices(resource=RESOURCE_CHOICES)
     @staff_only()
     async def add_item(self, interaction: discord.Interaction, member: discord.Member, resource: str, amount: Amount):

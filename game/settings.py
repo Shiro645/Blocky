@@ -77,13 +77,15 @@ DEFAULTS: dict[str, Any] = {
         "min_interval_seconds": 900,
         "claim_seconds": 60,
         # weight, reward. A reward is {"emeralds": n} or {"ingot": material, "amount": n}
-        # or {"block": type, "amount": n}.
+        # or {"block": type, "amount": n} or {"lapis": n} or {"book": true} (random book).
         "table": [
             {"weight": 40, "title": "An emerald pouch", "reward": {"emeralds": 50}},
             {"weight": 25, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 3}},
             {"weight": 15, "title": "A bedrock cluster", "reward": {"block": "bedrock", "amount": 10}},
             {"weight": 12, "title": "A diamond vein", "reward": {"ingot": "diamond", "amount": 2}},
             {"weight": 8, "title": "Ancient debris", "reward": {"ingot": "netherite", "amount": 1}},
+            {"weight": 12, "title": "A lapis vein", "reward": {"lapis": 4}},
+            {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
         ],
     },
     "boss": {
@@ -109,6 +111,26 @@ DEFAULTS: dict[str, Any] = {
         "max_xp_bonus": 0.20,
         # Weekly team season: top teams' rewards, shared by contribution.
         "season_rewards": [600, 300, 150],
+    },
+    "enchants": {
+        # Lapis lazuli: found while mining, spent to apply books.
+        "lapis_chance": 0.025,  # per mining reward (1 in 40)
+        "lapis_amount": [1, 2],
+        "apply_cost": [2, 4, 8],  # lapis to apply a book of level I / II / III
+        "book_weights": [60, 30, 10],  # chances of level I / II / III (drops, challenges)
+        "boss_book_weights": [0, 70, 30],  # book of the top damage dealer
+        "challenges_book": True,  # a random book for completing every weekly challenge
+        # Effects for level I / II / III.
+        "efficiency_seconds": [2, 4, 6],  # pickaxe: shorter mining cooldown
+        "fortune_bonus": [1, 2, 3],  # pickaxe blocks, shovel gravel, axe sticks
+        "fortune_hoe_xp": [0.05, 0.10, 0.15],
+        "unbreaking_chance": [0.25, 0.40, 0.50],  # chance a use costs no durability
+        "sharpness_damage": [1, 2, 3],
+        "looting_boss_bonus": [0.10, 0.20, 0.30],
+        "protection_points": [1, 2, 3],  # armor points per piece
+        # Reference values in emeralds (fortune, fair auction prices).
+        "lapis_value": 10,
+        "book_values": [50, 150, 400],
     },
     "tournament": {
         "entry_fee": 50,

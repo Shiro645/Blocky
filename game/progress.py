@@ -9,10 +9,10 @@ import random
 from dataclasses import dataclass
 from typing import Callable
 
-from game import gear, players, settings
+from game import enchants, gear, players, settings
 from game.catalog import ARMOR
 from game.db import Ctx
-from game.notices import AchievementUnlocked, ChallengeCompleted
+from game.notices import AchievementUnlocked, AllChallengesCompleted, ChallengeCompleted
 
 
 # ---------------- achievements ----------------
@@ -162,6 +162,25 @@ def advance_challenges(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
             players.earn_emeralds(ctx, user_id, c.reward)
             players.bump_stat(ctx, user_id, "challenges_completed")
             ctx.notices.append(ChallengeCompleted(user_id, c.text, c.reward))
+            _check_all_done(ctx, user_id, week)
+
+
+def _check_all_done(ctx: Ctx, user_id: int, week: str) -> None:
+    """Every challenge of the week done: a random enchanted book."""
+    codes = [c.code for c in challenges_of_week(week)]
+    if not codes or not settings.get()["enchants"]["challenges_book"]:
+        return
+    marks = ",".join("?" * len(codes))
+    done = ctx.one(
+        f"""
+        SELECT COUNT(*) AS n FROM challenge_progress
+        WHERE week_id=? AND user_id=? AND completed_at IS NOT NULL AND code IN ({marks});
+        """,
+        (week, user_id, *codes),
+    )["n"]
+    if done == len(codes):
+        name, level = enchants.give_random_book(ctx, user_id)
+        ctx.notices.append(AllChallengesCompleted(user_id, enchants.label(name, level)))
 
 
 def weekly_challenges(ctx: Ctx, user_id: int) -> list[dict]:

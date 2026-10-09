@@ -29,6 +29,7 @@ CATEGORIES = {
     "gameplay": "🎮 Gameplay",
     "teams": "🛡️ Teams",
     "tournament": "🏟️ Tournament",
+    "enchants": "✨ Enchanting",
     "minecraft": "🌍 Minecraft texts",
 }
 
@@ -98,6 +99,8 @@ FIELDS: list[Field] = [
     _balance("tn_start_hour", "tournament", "First round: hour (0-23)", "tournament", "start_hour", max=23),
     _balance("tn_round", "tournament", "Minutes between rounds", "tournament", "round_minutes", min=1, max=1440),
     _balance("tn_xp", "tournament", "XP per match won", "tournament", "xp_per_win"),
+    _balance("ench_lapis", "enchants", "Lapis chance per mining reward (0-1)", "enchants", "lapis_chance", kind="float", max=1),
+    _balance("ench_lapis_value", "enchants", "Lapis value (fortune, fair prices)", "enchants", "lapis_value"),
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text"),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text"),
 ]

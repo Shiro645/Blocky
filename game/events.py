@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import gear, players, settings
+from game import enchants, gear, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -21,18 +21,30 @@ def describe_reward(reward: dict) -> str:
         return f"{reward['emeralds']} emeralds"
     if "ingot" in reward:
         return f"{reward['amount']} {reward['ingot']} ingot(s)"
+    if "lapis" in reward:
+        return f"{reward['lapis']} lapis lazuli"
+    if "book" in reward:
+        return "an enchanted book"
     return f"{reward['amount']} {reward['block']}"
 
 
-def claim_drop(ctx: Ctx, user_id: int, drop: dict) -> None:
+def claim_drop(ctx: Ctx, user_id: int, drop: dict) -> str:
+    """Give the drop's reward. Returns what was won."""
     reward = drop["reward"]
+    text = describe_reward(reward)
     if "emeralds" in reward:
         players.earn_emeralds(ctx, user_id, int(reward["emeralds"]))
     elif "ingot" in reward:
         players.add_item(ctx, user_id, "ingot", reward["ingot"], int(reward["amount"]))
+    elif "lapis" in reward:
+        enchants.give_lapis(ctx, user_id, int(reward["lapis"]))
+    elif "book" in reward:
+        name, level = enchants.give_random_book(ctx, user_id)
+        text = f"a {enchants.label(name, level)} book"
     else:
         players.add_blocks(ctx, user_id, reward["block"], int(reward["amount"]))
     players.bump_stat(ctx, user_id, "drops_claimed")
+    return text
 
 
 # ---------------- bosses ----------------
@@ -120,7 +132,10 @@ def attack_boss(ctx: Ctx, user_id: int, boss_id: int | None = None) -> dict:
 
 
 def _defeat(ctx: Ctx, boss: dict) -> dict:
-    """Share the reward pool by damage dealt; the top damage dealer gets a bonus."""
+    """Share the reward pool by damage dealt; the top damage dealer gets a bonus and a book.
+
+    A sword with Looting adds a bonus on top of the player's share.
+    """
     b = settings.get()["boss"]
     # ends_at becomes the real end, so the next automatic boss waits from now.
     ctx.execute(
@@ -135,10 +150,16 @@ def _defeat(ctx: Ctx, boss: dict) -> dict:
         share = pool * r["damage"] // total
         if i == 0:
             share += int(b["top_damage_bonus"])
-        players.earn_emeralds(ctx, r["user_id"], share)
+        sword = gear.get_equipped(ctx, r["user_id"]).get("sword")
+        looting = int(share * enchants.bonus("looting", enchants.level_of(sword, "looting")))
+        players.earn_emeralds(ctx, r["user_id"], share + looting)
         players.add_xp(ctx, r["user_id"], int(b["xp_reward"]))
         players.bump_stat(ctx, r["user_id"], "bosses_defeated")
-        rewards.append({**r, "reward": share})
+        reward = {**r, "reward": share + looting, "looting": looting, "book": None}
+        if i == 0:
+            book = enchants.give_random_book(ctx, r["user_id"], settings.get()["enchants"]["boss_book_weights"])
+            reward["book"] = enchants.label(*book)
+        rewards.append(reward)
     return {"rewards": rewards, "xp": int(b["xp_reward"])}
 
 

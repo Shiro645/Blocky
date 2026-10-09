@@ -18,6 +18,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
         "`/craft <item> <material>` · `/craftlist` → Craft gear",
         "`/gear` → Your equipment and what it does",
         "`/equip` · `/equip_best` · `/unequip` → Manage your equipment",
+        "`/enchant apply · combine · info` → Enchanted books (costs lapis, found while mining)",
     ]),
     ("⭐ XP & Talents", [
         "`/xp` → Level and XP",
@@ -49,7 +50,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
 
 STAFF_SECTION = ("🔐 Staff", [
     "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist` · `/unlink`",
-    "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`",
+    "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear` · `/add_book`",
     "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",
     "`/boss_spawn` · `/drop_spawn` · `/tournament_admin` · `/team_remove`",
     "`/config` · `/mc <command>` · `/reload_config` · `/backup_now`",

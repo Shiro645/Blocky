@@ -1,7 +1,7 @@
 """NPC market and crafting."""
 from __future__ import annotations
 
-from game import gear, players, settings
+from game import enchants, gear, players, settings
 from game.catalog import MATERIALS, RECIPES
 from game.db import Ctx
 from game.errors import GameError
@@ -64,6 +64,19 @@ def craft_cost(item: str, material: str) -> float:
     return ingots * ingot_value(material) + sticks * stick_value()
 
 
+def item_value(item: str, material: str) -> float:
+    """Reference value in emeralds of a stackable item."""
+    if item == "stick":
+        return stick_value()
+    if item == "ingot":
+        return ingot_value(material)
+    e = settings.get()["enchants"]
+    if item == "lapis":
+        return float(e["lapis_value"])
+    _, level = enchants.parse_book(material)
+    return float(e["book_values"][level - 1])
+
+
 def max_durability(material: str) -> int:
     return int(settings.get()["gear"]["durability"][material])
 
@@ -117,7 +130,7 @@ def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
         "SELECT * FROM gear WHERE user_id=? ORDER BY equipped DESC, item, material, gear_id;",
         (user_id,),
     )
-    return [dict(r) for r in rows]
+    return enchants.attach(ctx, [dict(r) for r in rows])
 
 
 def remove_gear(ctx: Ctx, user_id: int, item: str, material: str, count: int) -> int:

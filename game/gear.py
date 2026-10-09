@@ -1,7 +1,7 @@
 """Equipment: equip slots, durability and the bonuses each piece gives."""
 from __future__ import annotations
 
-from game import players, settings
+from game import enchants, players, settings
 from game.catalog import ARMOR, GEAR_ITEMS
 from game.db import Ctx
 from game.errors import GameError
@@ -13,9 +13,9 @@ def tier(material: str) -> int:
 
 
 def get_equipped(ctx: Ctx, user_id: int) -> dict[str, dict]:
-    """slot (item type) -> gear row"""
-    rows = ctx.all("SELECT * FROM gear WHERE user_id=? AND equipped=1;", (user_id,))
-    return {r["item"]: dict(r) for r in rows}
+    """slot (item type) -> gear row (with its "enchants")"""
+    rows = enchants.attach(ctx, [dict(r) for r in ctx.all("SELECT * FROM gear WHERE user_id=? AND equipped=1;", (user_id,))])
+    return {r["item"]: r for r in rows}
 
 
 def equip(ctx: Ctx, user_id: int, gear_id: int) -> dict:
@@ -41,22 +41,30 @@ def unequip(ctx: Ctx, user_id: int, slot: str) -> dict:
 
 
 def equip_best(ctx: Ctx, user_id: int) -> list[dict]:
-    """Equip, for every empty slot, the best piece owned (highest tier, then durability)."""
+    """Equip, for every empty slot, the best piece owned (highest tier, then enchantments, then durability)."""
     equipped = get_equipped(ctx, user_id)
     done = []
     for slot in GEAR_ITEMS:
         if slot in equipped:
             continue
-        rows = ctx.all("SELECT * FROM gear WHERE user_id=? AND item=?;", (user_id, slot))
+        rows = enchants.attach(ctx, [dict(r) for r in ctx.all("SELECT * FROM gear WHERE user_id=? AND item=?;", (user_id, slot))])
         if not rows:
             continue
-        best = max(rows, key=lambda r: (tier(r["material"]), r["durability"]))
+        best = max(rows, key=lambda r: (tier(r["material"]), sum(r["enchants"].values()), r["durability"]))
         done.append(equip(ctx, user_id, best["gear_id"]))
     return done
 
 
 def wear(ctx: Ctx, piece: dict, amount: int = 1) -> bool:
     """Use a piece of gear. Returns True if it broke (it is then destroyed)."""
+    if "enchants" not in piece:
+        piece["enchants"] = enchants.of_gear(ctx, [piece["gear_id"]]).get(piece["gear_id"], {})
+    unbreaking = enchants.level_of(piece, "unbreaking")
+    if unbreaking:
+        keep = enchants.bonus("unbreaking", unbreaking)
+        amount = sum(1 for _ in range(amount) if ctx.rng.random() >= keep)
+        if amount <= 0:
+            return False
     left = piece["durability"] - amount
     if left > 0:
         ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (left, piece["gear_id"]))
@@ -70,15 +78,25 @@ def wear(ctx: Ctx, piece: dict, amount: int = 1) -> bool:
 
 
 # ---------------- combat stats ----------------
-def attack_damage(equipped: dict[str, dict]) -> int:
+def _number(value: float) -> int | float:
+    return int(value) if float(value).is_integer() else value
+
+
+def attack_damage(equipped: dict[str, dict]) -> int | float:
     dmg = settings.get()["gear"]["sword_damage"]
     sword = equipped.get("sword")
-    return int(dmg[sword["material"]] if sword else dmg["none"])
+    base = float(dmg[sword["material"]] if sword else dmg["none"])
+    return _number(base + enchants.bonus("sharpness", enchants.level_of(sword, "sharpness")))
 
 
-def armor_points(equipped: dict[str, dict]) -> int:
+def armor_points(equipped: dict[str, dict]) -> int | float:
     table = settings.get()["gear"]["armor_points"]
-    return sum(int(table[equipped[s]["material"]][s]) for s in ARMOR if s in equipped)
+    total = 0.0
+    for slot in ARMOR:
+        piece = equipped.get(slot)
+        if piece:
+            total += float(table[piece["material"]][slot]) + enchants.bonus("protection", enchants.level_of(piece, "protection"))
+    return _number(total)
 
 
 def damage_reduction(equipped: dict[str, dict]) -> float:
