@@ -73,10 +73,18 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
 - `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
-- `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is turn based: sword damage, armor reduction, random variance and critical hits.
+- `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn, click **Attack**, or pick a potion to drink first. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. Damage comes from the sword, armor reduces it, with random variance and critical hits. If the bot restarts during a duel, both stakes are refunded.
+- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel, the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one). They can be traded and sold at auction.
+
+  | Potion | Effect |
+  |---|---|
+  | Strength | this turn's attack +50% |
+  | Speed | 1 chance in 5 to strike twice, this turn and your next 2 turns |
+  | Healing | heals 6 HP (max 20) |
+  | Harming | 4 direct damage to the opponent, ignoring armor (on top of your attack) |
 - `/challenges` — 3 weekly challenges, the same for everyone.
 - `/achievements [member]` — 28 achievements with emerald rewards, announced publicly.
-- **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock, lapis, enchanted books). The first player to click gets it.
+- **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock, lapis, enchanted books, potions). The first player to click gets it.
 - **Server bosses** (`/boss`, `/attack` or the button) — A boss with shared HP. Everyone attacks once a minute, rewards are shared by damage dealt, and the top damage dealer gets a bonus. A boss escapes after 24h.
 
 ### 🏟️ Weekend tournament
@@ -103,7 +111,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 Restricted to the staff role (or members with the *Manage Server* permission).
 
 - Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
-- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`
+- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
@@ -164,6 +172,7 @@ The bot finds its emojis **by name** among the emojis uploaded to the applicatio
 |---|---|
 | `emerald`, `stick`, `xp` | Currency, sticks, XP |
 | `lapis`, `enchanted_book` | Lapis lazuli, enchanted books |
+| `potion_strength`, `potion_speed`, `potion_healing`, `potion_harming` | Potions |
 | `gold`, `iron`, `diamond`, `netherite` | Ingots / materials |
 | `cobblestone`, `gravel`, `deepslate`, `obsidian`, `bedrock` | Blocks |
 | `<material>_<item>`, e.g. `iron_sword`, `gold_helmet`, `netherite_boots` | Gear (4 materials × sword, pickaxe, axe, shovel, hoe, helmet, chestplate, leggings, boots) |
@@ -196,6 +205,8 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
+
+Duels and potions are tuned with `balance.duel` (`turn_seconds`, `afk_turns`, `hp`, `min_stake`…) and `balance.potions`: `max_per_duel`, `strength_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `boss_top` and the reference `value`.
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
@@ -312,6 +323,7 @@ game/                        # game rules, no Discord code
 ├── teams.py                 # teams, team bonus and weekly team season
 ├── tournament.py            # weekend tournament
 ├── enchants.py              # enchanted books, lapis and enchantment effects
+├── potions.py               # duel potions
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links

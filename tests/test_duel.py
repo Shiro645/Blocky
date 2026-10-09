@@ -34,7 +34,7 @@ class SimulateTests(unittest.TestCase):
     def test_fight_always_ends(self):
         rng = random.Random(1)
         res = duel.simulate(rng, duel.Fighter(1, 1, 0.8, 20), duel.Fighter(2, 1, 0.8, 20))
-        self.assertLessEqual(len(res.log), settings.get()["duel"]["max_rounds"])
+        self.assertLessEqual(len(res.fight.log), settings.get()["duel"]["max_rounds"])
         self.assertIn(res.winner, (0, 1))
 
 

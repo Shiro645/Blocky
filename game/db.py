@@ -267,6 +267,16 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (gear_id, enchant)
     );
     """,
+    # 10 - duels being fought (the stakes are held until the end; refunded after a restart)
+    """
+    CREATE TABLE duels (
+        duel_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        challenger_id INTEGER NOT NULL,
+        opponent_id INTEGER NOT NULL,
+        stake INTEGER NOT NULL,
+        started_at INTEGER NOT NULL
+    );
+    """,
 ]
 
 

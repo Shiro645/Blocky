@@ -6,13 +6,14 @@
     "ingot:<material>"  ingots
     "lapis"             lapis lazuli
     "book:<enchant>:<level>"   an enchanted book
+    "potion:<kind>"     a potion
     "gear:<material>:<item>"   one piece of gear without enchantments (the most worn spare piece is used)
     "gear:<material>:<item>:<enchantments>"   one piece with exactly these enchantments,
                         e.g. "gear:diamond:sword:sharpness2,unbreaking1" (they follow the piece)
 """
 from __future__ import annotations
 
-from game import enchants, players, shop
+from game import enchants, players, potions, shop
 from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS
 from game.db import Ctx
 from game.errors import GameError
@@ -26,6 +27,7 @@ def parse(key: str) -> tuple[str, ...]:
         or (kind == "block" and len(parts) == 2 and parts[1] in BLOCK_TYPES)
         or (kind == "ingot" and len(parts) == 2 and parts[1] in MATERIALS)
         or (kind == "book" and len(parts) == 3)
+        or (kind == "potion" and len(parts) == 2 and parts[1] in potions.POTIONS)
         or (kind == "gear" and len(parts) in (3, 4) and parts[1] in MATERIALS and parts[2] in GEAR_ITEMS)
     )
     if ok and kind == "book":
@@ -67,6 +69,8 @@ def describe(key: str, amount: int | None = None) -> str:
         name = f"{parts[1]} ingot"
     elif kind == "book":
         name = f"{enchants.label(parts[1], int(parts[2]))} book"
+    elif kind == "potion":
+        name = potions.label(parts[1])
     else:
         name = f"{parts[1]} {parts[2]}"
         if len(parts) == 4:
@@ -94,6 +98,8 @@ def unit_value(key: str) -> float:
         return shop.ingot_value(parts[1])
     if kind == "book":
         return shop.item_value("book", f"{parts[1]}:{parts[2]}")
+    if kind == "potion":
+        return shop.item_value("potion", parts[1])
     books = sum(shop.item_value("book", enchants.book_material(n, lvl)) for n, lvl in gear_enchants(key).items())
     return shop.craft_cost(parts[2], parts[1]) + books
 
@@ -159,6 +165,11 @@ def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
         if have < amount:
             raise GameError(f"Not enough **{describe(key)}**: you have **{have}**, you need **{amount}**.")
         players.take_item(ctx, user_id, "book", material, amount)
+    elif kind == "potion":
+        have = players.item_amount(ctx, user_id, "potion", parts[1])
+        if have < amount:
+            raise GameError(f"Not enough **{describe(key)}**: you have **{have}**, you need **{amount}**.")
+        players.take_item(ctx, user_id, "potion", parts[1], amount)
     elif kind == "block":
         players.take_blocks(ctx, user_id, parts[1], amount)
     else:
@@ -182,6 +193,8 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
         players.add_item(ctx, user_id, "ingot", parts[1], amount)
     elif kind == "book":
         enchants.give_book(ctx, user_id, parts[1], int(parts[2]), amount)
+    elif kind == "potion":
+        potions.give(ctx, user_id, parts[1], amount)
     elif kind == "block":
         players.add_blocks(ctx, user_id, parts[1], amount)
     else:

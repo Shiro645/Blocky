@@ -22,7 +22,7 @@ BOARDS: dict[str, tuple[str, str]] = {
 
 
 def fortunes(ctx: Ctx) -> dict[int, int]:
-    """user_id -> emeralds + value of blocks, items (sticks, ingots, lapis, books) and gear (worn gear is worth less)."""
+    """user_id -> emeralds + value of blocks, items (sticks, ingots, lapis, books, potions) and gear (worn gear is worth less)."""
     total: dict[int, float] = {r["user_id"]: r["emeralds"] for r in ctx.all("SELECT user_id, emeralds FROM users;")}
     for r in ctx.all("SELECT user_id, block_type, amount FROM blocks;"):
         total[r["user_id"]] += r["amount"] * players.block_value(r["block_type"])
