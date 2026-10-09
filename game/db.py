@@ -274,6 +274,17 @@ class Database:
     async def open(self) -> None:
         await self._call(self._open)
 
+    def _backup(self, dest: str) -> None:
+        assert self._conn is not None, "Database.open() was not called"
+        target = sqlite3.connect(dest)
+        try:
+            self._conn.backup(target)  # consistent copy, even while the bot is writing
+        finally:
+            target.close()
+
+    async def backup_to(self, dest: str | Path) -> None:
+        await self._call(self._backup, str(dest))
+
     async def close(self) -> None:
         if self._conn is not None:
             await self._call(self._conn.close)
