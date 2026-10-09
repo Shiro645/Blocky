@@ -83,6 +83,12 @@ def gear_label(g: dict, show_durability: bool = True) -> str:
     return text
 
 
+def tag_prefix(tags: dict[int, str], user_id: int) -> str:
+    """'`[ABC]` ' when the player is in a team, '' otherwise."""
+    tag = tags.get(user_id)
+    return f"`[{tag}]` " if tag else ""
+
+
 def join_lines(lines: list[str], limit: int = 1024, empty: str = "—") -> str:
     """Join lines without cutting one in half (embed fields hold 1024 characters)."""
     out, size = [], 0

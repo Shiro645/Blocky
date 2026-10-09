@@ -67,6 +67,7 @@ ACHIEVEMENTS: list[Achievement] = [
     Achievement("treasure_hunter", "🎁", "Treasure Hunter", "Claim 10 drops", 150, _stat("drops_claimed", 10)),
     Achievement("boss_slayer", "🐉", "Boss Slayer", "Help defeat a boss", 100, _stat("bosses_defeated", 1)),
     Achievement("champion", "👑", "Champion", "Win a weekly season", 250, _stat("seasons_won", 1)),
+    Achievement("team_champion", "🚩", "Squad Goals", "Win a team season with your team", 150, _stat("team_seasons_won", 1)),
     Achievement("tycoon", "💰", "Emerald Tycoon", "Earn 10,000 emeralds", 500, _stat("emeralds_earned", 10_000)),
     Achievement("wear_and_tear", "🔨", "Wear and Tear", "Break a piece of gear", 10, _stat("gear_broken", 1)),
 ]

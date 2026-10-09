@@ -27,6 +27,7 @@ CATEGORIES = {
     "market": "🛒 Market prices",
     "blocks": "🪨 Block sell values",
     "gameplay": "🎮 Gameplay",
+    "teams": "🛡️ Teams",
     "minecraft": "🌍 Minecraft texts",
 }
 
@@ -78,6 +79,11 @@ FIELDS: list[Field] = [
     _balance("boss_auto", "gameplay", "Automatic boss every X hours (0 = off)", "boss", "auto_spawn_hours", kind="float"),
     _balance("boss_pool", "gameplay", "Boss reward pool", "boss", "reward_pool"),
     _balance("backup_keep", "gameplay", "Backups kept", "backups", "keep", min=1, max=365),
+    _balance("team_max", "teams", "Max members per team", "teams", "max_members", min=2, max=25),
+    _balance("team_cost", "teams", "Team creation cost", "teams", "create_cost"),
+    _balance("team_invite", "teams", "Invitations last (hours)", "teams", "invite_hours", min=1, max=720),
+    _balance("team_bonus", "teams", "XP bonus per active teammate (0-1)", "teams", "xp_bonus_per_active_member", kind="float", max=1),
+    _balance("team_bonus_max", "teams", "Max team XP bonus (0-1)", "teams", "max_xp_bonus", kind="float", max=1),
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text"),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text"),
 ]

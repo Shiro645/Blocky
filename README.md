@@ -53,13 +53,24 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### 🏆 Competition
 
 - `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
-- `/profile [member]` — Public profile: level, fortune and rank, equipment, achievements, stats, linked account, champion badge.
+- `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is turn based: sword damage, armor reduction, random variance and critical hits.
 - `/challenges` — 3 weekly challenges, the same for everyone.
-- `/achievements [member]` — 26 achievements with emerald rewards, announced publicly.
+- `/achievements [member]` — 27 achievements with emerald rewards, announced publicly.
 - **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock). The first player to click gets it.
 - **Server bosses** (`/boss`, `/attack` or the button) — A boss with shared HP. Everyone attacks once a minute, rewards are shared by damage dealt, and the top damage dealer gets a bonus. A boss escapes after 24h.
+
+### 🛡️ Teams
+
+- `/team create <name> <tag>` — Anyone can create a team (name 3–24 characters, tag 2–4 letters or numbers) and becomes its leader. Up to 5 members.
+- `/team invite <member>` — The leader invites a player, who answers with the buttons (they still work after a restart) or later with `/team join <tag>`. Invitations last 48h.
+- `/team leave` — Leave the team. When the leader leaves, the oldest member becomes leader; the last one to leave disbands the team.
+- Leader: `/team kick`, `/team transfer`, `/team rename [name] [tag]`, `/team disband`.
+- `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
+- **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
+- **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
+- **Weekly team season** (`/team top`) — A team's score is the emeralds its members earned while in the team (Monday to Sunday). The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
 
 ### 🔐 Staff commands
 
@@ -69,7 +80,8 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item`, `/add_gear`, `/remove_gear`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
-- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
+- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -153,6 +165,8 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 ```
 
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
+
+Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
 
 > ⚠️ `.env`, `config.json` and `economy.db` contain secrets or user data. They are ignored by git — never commit them.
 
@@ -262,6 +276,7 @@ game/                        # game rules, no Discord code
 ├── gear.py                  # equipment, durability, combat stats
 ├── daily.py · exchange.py · assets.py   # daily, pay/trade/auction
 ├── leaderboard.py · seasons.py · duel.py
+├── teams.py                 # teams, team bonus and weekly team season
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links

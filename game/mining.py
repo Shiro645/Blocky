@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import gear, players, settings
+from game import gear, players, settings, teams
 from game.catalog import BLOCK_TYPES
 from game.db import Ctx
 
@@ -84,6 +84,9 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     if hoe:
         xp = int(round(xp * (1 + g["hoe_xp_bonus_per_tier"] * gear.tier(hoe["material"]))))
         used.append(hoe)
+    team_bonus = teams.activity_bonus(ctx, user_id)
+    if team_bonus:
+        xp = int(round(xp * (1 + team_bonus)))
 
     players.add_blocks(ctx, user_id, block, amount)
     players.bump_stat(ctx, user_id, "blocks_mined", amount)
@@ -98,6 +101,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         "amount": amount,
         "sticks": sticks,
         "xp": xp,
+        "team_bonus": team_bonus,
         "broken": broken,
         "cooldown": cooldown_seconds(user["efficiency_points"]),
     }

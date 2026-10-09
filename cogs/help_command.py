@@ -35,6 +35,11 @@ SECTIONS: list[tuple[str, list[str]]] = [
         "`/challenges` · `/achievements [member]`",
         "`/boss` · `/attack` → Fight the server boss together",
     ]),
+    ("🛡️ Teams", [
+        "`/team create` · `/team invite` · `/team join` · `/team leave` → Play together",
+        "`/team info [team]` · `/team top` → Members, weekly team season, XP bonus",
+        "Leader: `/team kick` · `/team transfer` · `/team rename` · `/team disband`",
+    ]),
     ("🌍 Minecraft", [
         "`/server_status` · `/ip` · `/modpacks`",
         "`/link <username>` · `/link_status` → Link your account (whitelist)",
@@ -45,7 +50,7 @@ STAFF_SECTION = ("🔐 Staff", [
     "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist` · `/unlink`",
     "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`",
     "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",
-    "`/boss_spawn` · `/drop_spawn`",
+    "`/boss_spawn` · `/drop_spawn` · `/team_remove`",
     "`/config` · `/mc <command>` · `/reload_config` · `/backup_now`",
 ])
 

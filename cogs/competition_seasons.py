@@ -6,9 +6,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from game import seasons
+from game import seasons, teams
 from utils.config import role_id
-from utils.ui import em
+from utils.ui import em, tag_prefix
 
 log = logging.getLogger("seasons")
 
@@ -39,6 +39,8 @@ class SeasonsCog(commands.Cog):
         if closed:
             champion = closed[-1]["podium"][0]["user_id"] if closed[-1]["podium"] else None
             await self.move_champion_role(champion)
+        for season in await self.bot.db.run(teams.close_finished):
+            await self.announce_teams(season)
 
     @close_loop.before_loop
     async def before_close_loop(self):
@@ -55,6 +57,26 @@ class SeasonsCog(commands.Cog):
         embed = discord.Embed(
             title=f"🏁 Season {season['season_id']} is over!",
             description="\n".join(lines) + f"\n\n👑 <@{podium[0]['user_id']}> is the new **champion**! A new season starts now.",
+            color=discord.Color.gold(),
+        )
+        await self.bot.announcer.send(embed=embed)
+
+    async def announce_teams(self, season: dict) -> None:
+        podium = season["podium"]
+        if not podium:
+            return
+        lines = []
+        for p in podium:
+            medal = MEDALS.get(p["rank"], f"#{p['rank']}")
+            shares = ", ".join(f"<@{uid}> +{amount:,}" for uid, amount in p["payout"][:10])
+            lines.append(
+                f"{medal} **[{p['tag']}] {p['name']}** — {em(p['score'])} earned · "
+                f"reward **{em(p['reward'])}**\n└ {shares}"
+            )
+        winner = podium[0]
+        embed = discord.Embed(
+            title=f"🛡️ Team season {season['season_id']} is over!",
+            description="\n".join(lines) + f"\n\n🚩 **[{winner['tag']}] {winner['name']}** wins the team season!",
             color=discord.Color.gold(),
         )
         await self.bot.announcer.send(embed=embed)
@@ -83,7 +105,7 @@ class SeasonsCog(commands.Cog):
     async def season(self, interaction: discord.Interaction):
         data = await self.bot.db.run(seasons.overview, interaction.user.id)
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} <@{uid}> — **{em(score)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid)}<@{uid}> — **{em(score)}**"
             for i, (uid, score) in enumerate(data["top"], start=1)
         ]
         rewards = " · ".join(f"{MEDALS[i]} {em(r)}" for i, r in enumerate(data["rewards"][:3], start=1))
