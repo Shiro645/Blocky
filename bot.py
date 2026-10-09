@@ -35,6 +35,7 @@ EXTENSIONS = [
     "cogs.economy_mining",
     "cogs.economy_market",
     "cogs.economy_craft",
+    "cogs.economy_enchant",
     "cogs.economy_xp",
     "cogs.economy_daily",
     "cogs.economy_exchange",
@@ -49,6 +50,7 @@ EXTENSIONS = [
     "cogs.events_progress",
     "cogs.events_drops",
     "cogs.events_boss",
+    "cogs.events_tournament",
     "cogs.help_command",
 ]
 

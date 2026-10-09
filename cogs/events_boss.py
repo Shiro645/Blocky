@@ -154,10 +154,14 @@ class BossCog(commands.Cog):
             self.schedule_refresh(res["boss_id"])
 
     async def announce_defeat(self, res: dict) -> None:
-        lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} <@{r['user_id']}> — {r['damage']:,} damage → **+{em(r['reward'])}**"
-            for i, r in enumerate(res["defeat"]["rewards"][:10], start=1)
-        ]
+        lines = []
+        for i, r in enumerate(res["defeat"]["rewards"][:10], start=1):
+            line = f"{MEDALS.get(i, f'`#{i}`')} <@{r['user_id']}> — {r['damage']:,} damage → **+{em(r['reward'])}**"
+            if r.get("looting"):
+                line += f" (Looting +{r['looting']:,})"
+            if r.get("book"):
+                line += f" + 📕 **{r['book']}** book"
+            lines.append(line)
         embed = discord.Embed(
             title=f"💀 {res['name']} has been defeated!",
             description="\n".join(lines) + f"\n\nEvery fighter also earned **{res['defeat']['xp']} XP**.",

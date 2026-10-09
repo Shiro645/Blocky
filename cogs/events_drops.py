@@ -30,13 +30,12 @@ class DropView(BaseView):
             )
         self.claimed_by = interaction.user.id
         try:
-            await self.cog.bot.db.run(events.claim_drop, interaction.user.id, self.drop)
+            reward = await self.cog.bot.db.run(events.claim_drop, interaction.user.id, self.drop)
         except Exception:
             self.claimed_by = None
             raise
         self.disable_all()
         self.stop()
-        reward = events.describe_reward(self.drop["reward"])
         await interaction.response.edit_message(
             embed=self.embed(f"🎉 {interaction.user.mention} was the fastest and got **{reward}**!", discord.Color.green()),
             view=self,

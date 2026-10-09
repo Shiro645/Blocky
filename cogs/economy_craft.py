@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import gear, shop
+from game import enchants, gear, shop
 from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES
 from game.db import Ctx
 from utils.ui import EMOJI, gear_icon, gear_label, join_lines, mat, progress_bar
@@ -56,10 +56,12 @@ class EconomyCraftCog(commands.Cog):
         choices = []
         for g in pieces:
             name = f"{g['material']} {g['item']} ({g['durability']}/{g['max_durability']})"
+            if g["enchants"]:
+                name += f" — {enchants.labels(g['enchants'])}"
             if g["equipped"]:
                 name += " — equipped"
             if current in name.lower():
-                choices.append(app_commands.Choice(name=name, value=g["gear_id"]))
+                choices.append(app_commands.Choice(name=name[:100], value=g["gear_id"]))
         return choices[:25]
 
     @app_commands.command(name="equip", description="Equip a piece of gear (one per slot).")

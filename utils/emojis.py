@@ -20,7 +20,7 @@ def gear_key(item: str, material: str) -> str:
 
 
 EXPECTED_NAMES: tuple[str, ...] = (
-    ("emerald", "stick", "xp")
+    ("emerald", "stick", "xp", "lapis", "enchanted_book")
     + MATERIALS
     + BLOCK_TYPES
     + tuple(gear_key(item, material) for material in MATERIALS for item in GEAR_ITEMS)

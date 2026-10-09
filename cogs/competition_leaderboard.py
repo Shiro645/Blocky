@@ -20,6 +20,7 @@ PROFILE_STATS = [
     ("items_crafted", "🛠️ Items crafted"),
     ("duels_won", "⚔️ Duels won"),
     ("duels_lost", "💀 Duels lost"),
+    ("tournaments_won", "🏟️ Tournaments won"),
     ("boss_damage", "🐉 Boss damage"),
     ("drops_claimed", "🎁 Drops claimed"),
     ("best_streak", "🔥 Best daily streak"),

@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import discord
 
+from game import enchants
 from game.errors import GameError
 from utils import emojis
 from utils.config import load_config
@@ -48,6 +49,14 @@ def gear_icon(item: str, material: str) -> str:
     return EMOJI.get(emojis.gear_key(item, material)) or mat(material)
 
 
+def book_icon() -> str:
+    return EMOJI.get("enchanted_book") or "📕"
+
+
+def lapis_icon() -> str:
+    return EMOJI.get("lapis") or "🔷"
+
+
 def block_icon(block: str) -> str:
     return EMOJI.get(block) or emojis.BLOCK_FALLBACK[block]
 
@@ -59,11 +68,15 @@ def asset_icon(key: str) -> str:
         return EMOJI.get("emerald", "")
     if parts[0] == "stick":
         return EMOJI.get("stick", "")
+    if parts[0] == "lapis":
+        return lapis_icon()
+    if parts[0] == "book":
+        return book_icon()
     if parts[0] == "block" and len(parts) == 2 and parts[1] in emojis.BLOCK_FALLBACK:
         return block_icon(parts[1])
     if parts[0] == "ingot" and len(parts) == 2:
         return mat(parts[1])
-    if parts[0] == "gear" and len(parts) == 3:
+    if parts[0] == "gear" and len(parts) in (3, 4):
         return gear_icon(parts[2], parts[1])
     return ""
 
@@ -71,6 +84,10 @@ def asset_icon(key: str) -> str:
 def item_label(item: str, material: str, amount: int | None = None) -> str:
     if item == "stick":
         text = f"{EMOJI['stick']} stick" + ("s" if amount != 1 else "")
+    elif item == "lapis":
+        text = f"{lapis_icon()} lapis lazuli"
+    elif item == "book":
+        text = f"{book_icon()} {enchants.label(*enchants.parse_book(material))} book"
     else:
         text = f"{mat(material)} {material} {item}".strip()
     return f"{amount} × {text}" if amount is not None else text
@@ -80,6 +97,8 @@ def gear_label(g: dict, show_durability: bool = True) -> str:
     text = f"{gear_icon(g['item'], g['material'])} **{g['material']} {g['item']}**".strip()
     if show_durability:
         text += f" `{g['durability']}/{g['max_durability']}`"
+    if g.get("enchants"):
+        text += f" ✨ *{enchants.labels(g['enchants'])}*"
     return text
 
 

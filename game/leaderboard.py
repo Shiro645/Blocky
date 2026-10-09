@@ -15,19 +15,19 @@ BOARDS: dict[str, tuple[str, str]] = {
     "obsidian_found": ("Obsidian found", ""),
     "items_crafted": ("Items crafted", ""),
     "duels_won": ("Duels won", ""),
+    "tournaments_won": ("Tournaments won", ""),
     "boss_damage": ("Boss damage", ""),
     "achievements": ("Achievements", ""),
 }
 
 
 def fortunes(ctx: Ctx) -> dict[int, int]:
-    """user_id -> emeralds + value of blocks, sticks, ingots and gear (worn gear is worth less)."""
+    """user_id -> emeralds + value of blocks, items (sticks, ingots, lapis, books) and gear (worn gear is worth less)."""
     total: dict[int, float] = {r["user_id"]: r["emeralds"] for r in ctx.all("SELECT user_id, emeralds FROM users;")}
     for r in ctx.all("SELECT user_id, block_type, amount FROM blocks;"):
         total[r["user_id"]] += r["amount"] * players.block_value(r["block_type"])
     for r in ctx.all("SELECT user_id, item, material, amount FROM items;"):
-        unit = shop.stick_value() if r["item"] == "stick" else shop.ingot_value(r["material"])
-        total[r["user_id"]] += r["amount"] * unit
+        total[r["user_id"]] += r["amount"] * shop.item_value(r["item"], r["material"])
     for r in ctx.all("SELECT user_id, item, material, durability, max_durability FROM gear;"):
         wear = r["durability"] / r["max_durability"] if r["max_durability"] else 0
         total[r["user_id"]] += shop.craft_cost(r["item"], r["material"]) * wear

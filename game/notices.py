@@ -32,6 +32,12 @@ class AchievementUnlocked:
 
 
 @dataclass(frozen=True)
+class AllChallengesCompleted:
+    user_id: int
+    book: str
+
+
+@dataclass(frozen=True)
 class ChallengeCompleted:
     user_id: int
     text: str

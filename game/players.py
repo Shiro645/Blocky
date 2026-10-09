@@ -181,7 +181,7 @@ def take_item(ctx: Ctx, user_id: int, item: str, material: str, amount: int) -> 
         (amount, user_id, item, material, amount),
     )
     if cur.rowcount == 0:
-        name = "stick(s)" if item == "stick" else f"{material} ingot(s)"
+        name = {"stick": "stick(s)", "lapis": "lapis lazuli"}.get(item) or f"{material} {item}(s)"
         have = item_amount(ctx, user_id, item, material)
         raise GameError(f"Not enough {name}: you have **{have}**, you need **{amount}**.")
 

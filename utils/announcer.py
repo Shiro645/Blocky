@@ -72,6 +72,11 @@ class Announcer:
             f"🎯 <@{notice.user_id}> completed a weekly challenge: **{notice.text}** (+{notice.reward} emeralds)"
         )
 
+    async def on_AllChallengesCompleted(self, notice: n.AllChallengesCompleted) -> None:
+        await self.send(
+            f"📕 <@{notice.user_id}> completed every weekly challenge and found a **{notice.book}** book!"
+        )
+
     async def on_GearBroken(self, notice: n.GearBroken) -> None:
         icon = gear_icon(notice.item, notice.material)
         await self.send(f"🔨 <@{notice.user_id}>'s {icon} **{notice.material} {notice.item}** broke! Time to craft a new one.")
