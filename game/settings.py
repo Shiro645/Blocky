@@ -100,6 +100,16 @@ DEFAULTS: dict[str, Any] = {
         "names": ["Wither", "Ender Dragon", "Elder Guardian", "Warden"],
     },
     "seasons": {"rewards": [300, 150, 75]},
+    "teams": {
+        "max_members": 5,
+        "create_cost": 0,
+        "invite_hours": 48,
+        # Mining XP bonus for each other member who mined today, capped.
+        "xp_bonus_per_active_member": 0.05,
+        "max_xp_bonus": 0.20,
+        # Weekly team season: top teams' rewards, shared by contribution.
+        "season_rewards": [600, 300, 150],
+    },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
     "challenges": {"per_week": 3},
 }

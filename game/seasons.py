@@ -70,12 +70,16 @@ def current_champion(ctx: Ctx) -> int | None:
 
 
 def overview(ctx: Ctx, user_id: int, limit: int = 10) -> dict:
+    # Imported here: teams depends on this module.
+    from game import teams
+
     rows = standings(ctx, ctx.week_id)
     rank = next((i for i, (uid, _) in enumerate(rows, start=1) if uid == user_id), None)
     return {
         "season_id": ctx.week_id,
         "ends_at": season_end(ctx),
         "top": rows[:limit],
+        "tags": teams.tags_of(ctx, [uid for uid, _ in rows[:limit]]),
         "rank": rank,
         "score": rows[rank - 1][1] if rank else 0,
         "champion": current_champion(ctx),

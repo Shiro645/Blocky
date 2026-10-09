@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import links, players, progress, seasons, shop
+from game import links, players, progress, seasons, shop, teams
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -67,6 +67,7 @@ def leaderboard(ctx: Ctx, board: str, user_id: int, limit: int = 10) -> dict:
     rank = next((i for i, (uid, _) in enumerate(rows, start=1) if uid == user_id), None)
     return {
         "top": rows[:limit],
+        "tags": teams.tags_of(ctx, [uid for uid, _ in rows[:limit]]),
         "rank": rank,
         "value": rows[rank - 1][1] if rank else 0,
         "players": len(rows),
@@ -88,4 +89,5 @@ def profile(ctx: Ctx, user_id: int) -> dict:
         "is_champion": seasons.current_champion(ctx) == user_id,
         "achievements": progress.achievements_overview(ctx, user_id),
         "link": links.get_link(ctx, user_id),
+        "team": teams.team_of(ctx, user_id),
     }

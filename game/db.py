@@ -170,6 +170,55 @@ MIGRATIONS: list[str] = [
     );
     CREATE UNIQUE INDEX idx_links_username ON links(mc_username COLLATE NOCASE);
     """,
+    # 7 - teams and the weekly team season
+    """
+    CREATE TABLE teams (
+        team_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        leader_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX idx_teams_name ON teams(name COLLATE NOCASE);
+    CREATE UNIQUE INDEX idx_teams_tag ON teams(tag COLLATE NOCASE);
+    CREATE TABLE team_members (
+        user_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+        team_id INTEGER NOT NULL REFERENCES teams(team_id) ON DELETE CASCADE,
+        joined_at INTEGER NOT NULL,
+        last_active TEXT  -- local date of the last mining, for the team bonus
+    );
+    CREATE INDEX idx_team_members_team ON team_members(team_id);
+    CREATE TABLE team_invites (
+        team_id INTEGER NOT NULL REFERENCES teams(team_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
+        invited_by INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        PRIMARY KEY (team_id, user_id)
+    );
+    -- emeralds earned by each member for their team, per week
+    CREATE TABLE team_season_scores (
+        season_id TEXT NOT NULL,
+        team_id INTEGER NOT NULL REFERENCES teams(team_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
+        score INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (season_id, team_id, user_id)
+    );
+    CREATE TABLE team_seasons_closed (
+        season_id TEXT PRIMARY KEY,
+        closed_at INTEGER NOT NULL
+    );
+    -- name and tag are copied: the team may be renamed or disbanded later
+    CREATE TABLE team_season_results (
+        season_id TEXT NOT NULL,
+        rank INTEGER NOT NULL,
+        team_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        reward INTEGER NOT NULL,
+        PRIMARY KEY (season_id, rank)
+    );
+    """,
 ]
 
 

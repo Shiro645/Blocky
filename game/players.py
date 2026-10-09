@@ -42,6 +42,10 @@ def earn_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
         """,
         (ctx.week_id, user_id, amount),
     )
+    # Imported here: teams depends on this module.
+    from game import teams
+
+    teams.add_score(ctx, user_id, amount)
 
 
 def give_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:

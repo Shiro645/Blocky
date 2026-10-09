@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from game import leaderboard, players
 from game.catalog import TALENT_BRANCHES
-from utils.ui import em, gear_label, join_lines, progress_bar
+from utils.ui import em, gear_label, join_lines, progress_bar, tag_prefix
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
@@ -53,7 +53,7 @@ class LeaderboardCog(commands.Cog):
         data = await self.bot.db.run(leaderboard.leaderboard, board, interaction.user.id)
 
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} <@{uid}> — **{format_value(board, value)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid)}<@{uid}> — **{format_value(board, value)}**"
             for i, (uid, value) in enumerate(data["top"], start=1)
         ]
         embed = discord.Embed(
@@ -83,6 +83,8 @@ class LeaderboardCog(commands.Cog):
         u = p["user"]
         req = players.xp_required_for_level(u["level"])
         title = f"{target.display_name}'s profile"
+        if p["team"]:
+            title = f"[{p['team']['tag']}] " + title
         if p["is_champion"]:
             title = "👑 " + title + " — Season champion"
         embed = discord.Embed(
@@ -98,6 +100,9 @@ class LeaderboardCog(commands.Cog):
         embed.add_field(name="Fortune", value=f"{em(p['fortune'])} ({rank_text(p['fortune_rank'])})", inline=True)
         if p["link"] and p["link"]["status"] == "approved":
             embed.add_field(name="Minecraft", value=f"🔗 {p['link']['mc_username']}", inline=True)
+        if p["team"]:
+            leader = " 👑" if p["team"]["leader_id"] == target.id else ""
+            embed.add_field(name="Team", value=f"🛡️ [{p['team']['tag']}] {p['team']['name']}{leader}", inline=True)
         talents = " · ".join(f"{b} {u[b + '_points']}" for b in TALENT_BRANCHES)
         embed.add_field(name="Talents", value=talents, inline=False)
 
