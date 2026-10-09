@@ -100,6 +100,7 @@ DEFAULTS: dict[str, Any] = {
         "names": ["Wither", "Ender Dragon", "Elder Guardian", "Warden"],
     },
     "seasons": {"rewards": [300, 150, 75]},
+    "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
     "challenges": {"per_week": 3},
 }
 

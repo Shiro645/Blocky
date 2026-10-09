@@ -69,6 +69,7 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item`, `/add_gear`, `/remove_gear`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
+- Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
 
@@ -107,9 +108,10 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `minecraft.public_ip_text` | Text shown by `/ip` |
 | `minecraft.modpack_text` | Text shown by `/modpacks` |
 | `minecraft.rcon_host` / `rcon_port` / `rcon_password` | RCON connection to the Minecraft server |
+| `minecraft.blocked_commands` | Optional list of console commands refused by `/mc`, e.g. `["stop", "op", "whitelist off"]` (replaces the default list) |
 | `emojis.<name>` | Optional: overrides an emoji (see *Emojis* below). Usually left empty: `{}` |
 | `balance` | Optional overrides of the game balance (see below) |
-| `database_path` | Optional, defaults to `economy.db` |
+| `database_path` | Where the database is stored. With Docker use `db/economy.db` (see below), otherwise it is lost when the container is recreated |
 
 To copy an ID in Discord, enable *Developer Mode* (Settings → Advanced), then right-click the server, channel or role → *Copy ID*.
 
@@ -128,7 +130,13 @@ At startup the logs show how many were found and list the missing names. A missi
 
 To use another emoji for a name, set it in `config.json`, e.g. `"emojis": {"emerald": "<:my_emerald:123456789012345678>"}` (send `\:emoji_name:` in Discord to get the code).
 
-Restart the bot after editing `config.json`.
+After editing `config.json`, run `/reload_config` (or restart the bot). Changing `database_path` or `guild_id` needs a restart.
+
+### Backups
+
+Every night at 04:00 (config timezone) the bot copies the database to a `backups/` folder next to it (`bot/db/backups/` with Docker) and keeps the last 7 copies. Change it with `"balance": {"backups": {"hour": 4, "keep": 7}}`. `/backup_now` makes an extra copy at any time.
+
+To restore one: stop the bot, replace `economy.db` with the backup (and delete `economy.db-wal` / `economy.db-shm`), start the bot.
 
 ### Game balance
 

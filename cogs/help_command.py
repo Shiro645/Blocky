@@ -46,6 +46,7 @@ STAFF_SECTION = ("🔐 Staff", [
     "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear`",
     "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",
     "`/boss_spawn` · `/drop_spawn`",
+    "`/mc <command>` · `/reload_config` · `/backup_now`",
 ])
 
 
