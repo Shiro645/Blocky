@@ -69,6 +69,7 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item`, `/add_gear`, `/remove_gear`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
+- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
