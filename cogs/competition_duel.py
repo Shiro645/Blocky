@@ -264,16 +264,17 @@ class DuelCog(commands.Cog):
     @app_commands.command(name="potions", description="Your potions and what they do in duels.")
     async def potions_cmd(self, interaction: discord.Interaction):
         owned = await self.bot.db.run(potions.owned, interaction.user.id)
+        keys = list(potions.POTIONS) + sorted(k for k in owned if k not in potions.POTIONS)
         lines = [
             f"{potion_icon(key)} **{potions.label(key)}** × {owned.get(key, 0)} — {potions.effect_text(key)}"
-            for key in potions.POTIONS
+            for key in keys
         ]
         embed = discord.Embed(
             title="🧪 Potions",
             description=(
                 "\n".join(lines)
                 + f"\n\nIn a duel, on your turn: drink one potion, then attack (up to {potions.max_per_duel()} per duel). "
-                "Potions come from drops and bosses."
+                "Potions come from drops and bosses; reinforced potions (II) only from the villager."
             ),
             color=discord.Color.purple(),
         )
@@ -284,8 +285,9 @@ class DuelCog(commands.Cog):
     @staff_only()
     async def add_potion(
         self, interaction: discord.Interaction, member: discord.Member, potion: str,
-        amount: app_commands.Range[int, 1, 100] = 1,
+        amount: app_commands.Range[int, 1, 100] = 1, level: app_commands.Range[int, 1, potions.MAX_LEVEL] = 1,
     ):
+        potion = potions.key_of(potion, level)
         await self.bot.db.run(potions.give, member.id, potion, amount)
         await interaction.response.send_message(
             f"✅ Gave {amount} × {potion_icon(potion)} **{potions.label(potion)}** to {member.mention}.", ephemeral=True
@@ -297,7 +299,7 @@ class DuelCog(commands.Cog):
         defender = view.members[t.defender].display_name
         bits = []
         if t.potion:
-            text = f"{potion_icon(t.potion)} {potions.POTIONS[t.potion].name}"
+            text = f"{potion_icon(t.potion)} {potions.name(t.potion)}"
             if t.healed:
                 text += f" (+{t.healed:g} HP)"
             if t.direct:

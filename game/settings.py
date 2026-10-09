@@ -83,7 +83,9 @@ DEFAULTS: dict[str, Any] = {
         "healing_hp": 6,
         "harming_damage": 4,  # direct damage, ignores armor
         "boss_top": 3,  # the top 3 damage dealers of a defeated boss get a random potion
-        "value": 40,  # reference value in emeralds (fortune, fair prices)
+        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2
+        "value": 40,  # reference values in emeralds (fortune, fair prices)
+        "value_ii": 120,
     },
     "drops": {
         "chance": 0.02,
@@ -146,6 +148,28 @@ DEFAULTS: dict[str, Any] = {
         # Reference values in emeralds (fortune, fair auction prices).
         "lapis_value": 10,
         "book_values": [50, 150, 400],
+    },
+    "villager": {
+        # Every day from arrive_hour to leave_hour (local time), 3 offers, one of each.
+        "arrive_hour": 18,
+        "leave_hour": 21,
+        "sell_discount": 0.30,  # his goods are 30% below their value
+        "buy_bonus": 0.50,  # he buys blocks 50% above the /sell price
+        # What he can sell: an asset key (game/assets.py) and an amount.
+        # "book" = a random level I/II book, "potion" = random potions.
+        "goods": [
+            {"asset": "ingot:iron", "amount": 8},
+            {"asset": "ingot:diamond", "amount": 4},
+            {"asset": "ingot:netherite", "amount": 1},
+            {"asset": "lapis", "amount": 10},
+            {"asset": "book", "amount": 1},
+            {"asset": "potion", "amount": 2},
+        ],
+        # Blocks he can buy, and how many at once.
+        "buys": {"gravel": 64, "deepslate": 48, "obsidian": 24, "bedrock": 16},
+        # Exclusive offer: a level III book or a reinforced potion (II).
+        "book_iii_price": 450,
+        "potion_ii_price": 120,
     },
     "tournament": {
         "entry_fee": 50,

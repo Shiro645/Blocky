@@ -74,7 +74,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn, click **Attack**, or pick a potion to drink first. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. Damage comes from the sword, armor reduces it, with random variance and critical hits. If the bot restarts during a duel, both stakes are refunded.
-- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel, the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one). They can be traded and sold at auction.
+- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel, the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
 
   | Potion | Effect |
   |---|---|
@@ -95,6 +95,15 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Prizes**: 60% of the pot for the winner, 25% for the runner-up, 15% shared by the semi-finalists, plus the tournament champion role until the next tournament ends. Only the server bonus part counts for the weekly seasons: the entry fees just move between players.
 - `/tournament info` (dates, pot, your status) and `/tournament bracket` (matches and results).
 
+### 🧑‍🌾 Wandering villager
+
+- Comes **every day from 18:00 to 21:00** (local time) in the events channel, pinging the events role, with **3 offers**:
+  - 🛒 a sale 30% below the value: iron, diamond or netherite ingots, lapis, a level I/II book or potions;
+  - 💰 a purchase: he buys a pile of blocks (gravel, deepslate, obsidian or bedrock) 50% above the /sell price (counts as earned, like /sell);
+  - ✨ an exclusive: a **level III book** or a **reinforced potion (II)**, whose effect is doubled (Strength +100%, Speed 40%, Healing 12 HP, Harming 8). Reinforced potions are only sold by the villager.
+- Each offer exists **once**: the first player to click gets it. The buttons keep working after a restart, and the message shows who took what.
+- `/villager` shows whether he is here and when he comes next.
+
 ### 🛡️ Teams
 
 - `/team create <name> <tag>` — Anyone can create a team (name 3–24 characters, tag 2–4 letters or numbers) and becomes its leader. Up to 5 members.
@@ -111,10 +120,11 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 Restricted to the staff role (or members with the *Manage Server* permission).
 
 - Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
-- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion`
+- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion [level]`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
+- Villager: `/villager_admin` makes him come now (for the usual visit length) or leave
 - Tournament: `/tournament_admin` opens registrations now, runs the next step now (draw, then the next round) or cancels and refunds. Handy to test without waiting for the weekend.
 - Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
@@ -207,6 +217,8 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
 
 Duels and potions are tuned with `balance.duel` (`turn_seconds`, `afk_turns`, `hp`, `min_stake`…) and `balance.potions`: `max_per_duel`, `strength_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `boss_top` and the reference `value`.
+
+The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sell_discount`, `buy_bonus`, `goods` (what he can sell), `buys` (blocks he buys and how many), `book_iii_price` and `potion_ii_price`. Reinforced potions use `balance.potions.level2_multiplier` and `value_ii`.
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
@@ -324,6 +336,7 @@ game/                        # game rules, no Discord code
 ├── tournament.py            # weekend tournament
 ├── enchants.py              # enchanted books, lapis and enchantment effects
 ├── potions.py               # duel potions
+├── villager.py              # the wandering villager
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links

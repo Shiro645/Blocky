@@ -6,7 +6,7 @@
     "ingot:<material>"  ingots
     "lapis"             lapis lazuli
     "book:<enchant>:<level>"   an enchanted book
-    "potion:<kind>"     a potion
+    "potion:<kind>"     a potion ("potion:<kind>:2" for a reinforced one)
     "gear:<material>:<item>"   one piece of gear without enchantments (the most worn spare piece is used)
     "gear:<material>:<item>:<enchantments>"   one piece with exactly these enchantments,
                         e.g. "gear:diamond:sword:sharpness2,unbreaking1" (they follow the piece)
@@ -27,11 +27,13 @@ def parse(key: str) -> tuple[str, ...]:
         or (kind == "block" and len(parts) == 2 and parts[1] in BLOCK_TYPES)
         or (kind == "ingot" and len(parts) == 2 and parts[1] in MATERIALS)
         or (kind == "book" and len(parts) == 3)
-        or (kind == "potion" and len(parts) == 2 and parts[1] in potions.POTIONS)
+        or (kind == "potion" and len(parts) in (2, 3))
         or (kind == "gear" and len(parts) in (3, 4) and parts[1] in MATERIALS and parts[2] in GEAR_ITEMS)
     )
     if ok and kind == "book":
         enchants.parse_book(f"{parts[1]}:{parts[2]}")
+    if ok and kind == "potion":
+        potions.parse(":".join(parts[1:]))
     if ok and kind == "gear" and len(parts) == 4:
         try:
             enchants.parse_signature(parts[3])
@@ -70,7 +72,7 @@ def describe(key: str, amount: int | None = None) -> str:
     elif kind == "book":
         name = f"{enchants.label(parts[1], int(parts[2]))} book"
     elif kind == "potion":
-        name = potions.label(parts[1])
+        name = potions.label(":".join(parts[1:]))
     else:
         name = f"{parts[1]} {parts[2]}"
         if len(parts) == 4:
@@ -99,7 +101,7 @@ def unit_value(key: str) -> float:
     if kind == "book":
         return shop.item_value("book", f"{parts[1]}:{parts[2]}")
     if kind == "potion":
-        return shop.item_value("potion", parts[1])
+        return shop.item_value("potion", ":".join(parts[1:]))
     books = sum(shop.item_value("book", enchants.book_material(n, lvl)) for n, lvl in gear_enchants(key).items())
     return shop.craft_cost(parts[2], parts[1]) + books
 
@@ -166,10 +168,11 @@ def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
             raise GameError(f"Not enough **{describe(key)}**: you have **{have}**, you need **{amount}**.")
         players.take_item(ctx, user_id, "book", material, amount)
     elif kind == "potion":
-        have = players.item_amount(ctx, user_id, "potion", parts[1])
+        material = ":".join(parts[1:])
+        have = players.item_amount(ctx, user_id, "potion", material)
         if have < amount:
             raise GameError(f"Not enough **{describe(key)}**: you have **{have}**, you need **{amount}**.")
-        players.take_item(ctx, user_id, "potion", parts[1], amount)
+        players.take_item(ctx, user_id, "potion", material, amount)
     elif kind == "block":
         players.take_blocks(ctx, user_id, parts[1], amount)
     else:
@@ -194,7 +197,7 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
     elif kind == "book":
         enchants.give_book(ctx, user_id, parts[1], int(parts[2]), amount)
     elif kind == "potion":
-        potions.give(ctx, user_id, parts[1], amount)
+        potions.give(ctx, user_id, ":".join(parts[1:]), amount)
     elif kind == "block":
         players.add_blocks(ctx, user_id, parts[1], amount)
     else:

@@ -51,6 +51,7 @@ EXTENSIONS = [
     "cogs.events_drops",
     "cogs.events_boss",
     "cogs.events_tournament",
+    "cogs.events_villager",
     "cogs.help_command",
 ]
 
