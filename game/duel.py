@@ -63,6 +63,9 @@ class Fight:
         self.rounds = 0
         self.log: list[Turn] = []
         self.winner: Fighter | None = None
+        # The turn being played: set when the current player drank a potion and hasn't attacked yet.
+        self.pending: Turn | None = None
+        self._multiplier = 1.0
 
     @property
     def current(self) -> Fighter:
@@ -93,8 +96,14 @@ class Fight:
         potions.check(key)
         if self.over:
             raise GameError("The duel is over.")
+        if self.pending is not None:
+            raise GameError("You already drank a potion this turn: now attack!")
         if self.potions_left(self.current) <= 0:
             raise GameError(f"You already drank {potions.max_per_duel()} potions in this duel.")
+
+    @property
+    def can_drink(self) -> bool:
+        return not self.over and self.pending is None and self.potions_left(self.current) > 0
 
     def _hit(self, rng: random.Random, multiplier: float = 1.0) -> Hit:
         d = settings.get()["duel"]
@@ -109,29 +118,39 @@ class Fight:
         defender.hits_taken += 1
         return Hit(damage, crit)
 
-    def play(self, rng: random.Random, potion: str | None = None) -> Turn:
-        """The current player drinks `potion` (optional), then attacks."""
-        if self.over:
-            raise GameError("The duel is over.")
+    def drink(self, potion: str) -> Turn:
+        """The current player drinks a potion. The turn goes on: they attack next (see play)."""
+        self.check_potion(potion)
         p = settings.get()["potions"]
         attacker, defender = self.current, self.other
         turn = Turn(attacker.user_id, defender.user_id, potion)
-        multiplier = 1.0
+        kind, _ = potions.parse(potion)
+        attacker.potions_used += 1
+        if kind == "healing":
+            turn.healed = min(potions.effect(potion, "healing_hp"), attacker.max_hp - attacker.hp)
+            attacker.hp += turn.healed
+        elif kind == "harming":
+            turn.direct = min(potions.effect(potion, "harming_damage"), defender.hp)
+            defender.hp -= turn.direct
+        elif kind == "speed":
+            attacker.speed_turns = int(p["speed_turns"])
+            attacker.speed_chance = potions.effect(potion, "speed_chance")
+        elif kind == "strength":
+            self._multiplier = 1.0 + potions.effect(potion, "strength_bonus")
+        turn.attacker_hp, turn.defender_hp = round(attacker.hp, 1), round(defender.hp, 1)
+        self.pending = turn
+        return turn
+
+    def play(self, rng: random.Random, potion: str | None = None) -> Turn:
+        """The current player attacks, with the potion drunk this turn (or `potion`, drunk first)."""
+        if self.over:
+            raise GameError("The duel is over.")
         if potion:
-            self.check_potion(potion)
-            kind, _ = potions.parse(potion)
-            attacker.potions_used += 1
-            if kind == "healing":
-                turn.healed = min(potions.effect(potion, "healing_hp"), attacker.max_hp - attacker.hp)
-                attacker.hp += turn.healed
-            elif kind == "harming":
-                turn.direct = min(potions.effect(potion, "harming_damage"), defender.hp)
-                defender.hp -= turn.direct
-            elif kind == "speed":
-                attacker.speed_turns = int(p["speed_turns"])
-                attacker.speed_chance = potions.effect(potion, "speed_chance")
-            elif kind == "strength":
-                multiplier += potions.effect(potion, "strength_bonus")
+            self.drink(potion)
+        attacker, defender = self.current, self.other
+        turn = self.pending or Turn(attacker.user_id, defender.user_id)
+        multiplier = self._multiplier
+        self.pending, self._multiplier = None, 1.0
 
         if defender.hp > 0:
             turn.hits.append(self._hit(rng, multiplier))

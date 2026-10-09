@@ -69,6 +69,38 @@ class FightEngineTests(unittest.TestCase):
         with self.assertRaisesRegex(GameError, "already drank"):
             fight.play(random.Random(9), "healing")
 
+    def test_drink_then_attack_in_the_same_turn(self):
+        plain = duel.Fight(random.Random(5), *fighters())
+        strong = duel.Fight(random.Random(5), *fighters())
+        normal_hit = plain.play(random.Random(7)).hits[0].damage
+        me = strong.current.user_id
+        drunk = strong.drink("strength")
+        self.assertEqual((drunk.potion, drunk.hits), ("strength", []))
+        self.assertEqual(strong.current.user_id, me)  # still my turn
+        self.assertFalse(strong.can_drink)
+        with self.assertRaisesRegex(GameError, "already drank a potion this turn"):
+            strong.drink("healing")
+        turn = strong.play(random.Random(7))
+        self.assertIs(turn, drunk)
+        self.assertAlmostEqual(turn.hits[0].damage, normal_hit * 1.5)
+        self.assertNotEqual(strong.current.user_id, me)
+        self.assertTrue(strong.can_drink)
+
+    def test_healing_shows_before_the_attack(self):
+        fight = duel.Fight(random.Random(1), *fighters(attack=1))
+        fight.current.hp = 10
+        self.assertEqual(fight.drink("healing").healed, 6)
+        self.assertEqual(fight.current.hp, 16)
+
+    def test_harming_can_finish_the_opponent(self):
+        fight = duel.Fight(random.Random(1), *fighters(attack=1))
+        fight.other.hp = 3
+        fight.drink("harming")
+        self.assertEqual(fight.other.hp, 0)
+        turn = fight.play(random.Random(1))
+        self.assertEqual(turn.hits, [])
+        self.assertTrue(fight.over)
+
     def test_a_fight_always_ends(self):
         fight = duel.Fight(random.Random(3), *fighters(attack=1, reduction=0.8))
         fight.auto_play(random.Random(3))

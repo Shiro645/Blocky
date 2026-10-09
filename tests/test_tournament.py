@@ -89,6 +89,24 @@ class RegistrationTests(TournamentTestCase):
         self.assertEqual(await self.run_game(players.get_emeralds, 1), 100)
         self.assertEqual((await self.run_game(tournament.active))["pot"], 200)
 
+    async def test_buttons_of_an_old_tournament_do_nothing(self):
+        t = await self.run_game(tournament.active)
+        await self.run_game(players.give_emeralds, 1, 100)
+        with self.assertRaisesRegex(GameError, "closed"):
+            await self.run_game(tournament.join, 1, t["tournament_id"] + 1)
+        res = await self.run_game(tournament.join, 1, t["tournament_id"])
+        self.assertEqual(res["players"], 1)
+        reg = await self.run_game(tournament.registration, t["tournament_id"])
+        self.assertEqual((reg["players"], reg["tournament"]["pot"]), (1, 250))
+        left = await self.run_game(tournament.leave, 1, t["tournament_id"])
+        self.assertEqual(left["tournament"]["pot"], 200)
+
+    async def test_registration_message_is_stored(self):
+        t = await self.run_game(tournament.active)
+        await self.run_game(tournament.set_message, t["tournament_id"], 10, 20)
+        t = await self.run_game(tournament.active)
+        self.assertEqual((t["channel_id"], t["message_id"]), (10, 20))
+
     async def test_max_players(self):
         settings.load({"tournament": {"max_players": 2}})
         await self.register(1, 2)
