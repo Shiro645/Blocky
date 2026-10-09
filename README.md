@@ -57,9 +57,17 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is turn based: sword damage, armor reduction, random variance and critical hits.
 - `/challenges` — 3 weekly challenges, the same for everyone.
-- `/achievements [member]` — 27 achievements with emerald rewards, announced publicly.
+- `/achievements [member]` — 28 achievements with emerald rewards, announced publicly.
 - **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock). The first player to click gets it.
 - **Server bosses** (`/boss`, `/attack` or the button) — A boss with shared HP. Everyone attacks once a minute, rewards are shared by damage dealt, and the top damage dealer gets a bonus. A boss escapes after 24h.
+
+### 🏟️ Weekend tournament
+
+- **Registrations** from Friday 18:00 to Saturday 21:00 with `/tournament join` (entry fee 50 emeralds, refunded with `/tournament leave` until the draw). The server adds 200 emeralds to the pot. 4 to 32 players: with fewer than 4 the tournament is cancelled and everyone is refunded.
+- **Draw** when registrations close: a random single elimination bracket. When the number of players isn't a power of 2, some players (drawn at random) skip the first round.
+- **Rounds** every hour from Sunday 18:00, announced in the events channel. Fights are automatic, with the duel rules and the gear equipped at that moment, and they don't wear the gear out. Each match won gives XP.
+- **Prizes**: 60% of the pot for the winner, 25% for the runner-up, 15% shared by the semi-finalists, plus the tournament champion role until the next tournament ends. Only the server bonus part counts for the weekly seasons: the entry fees just move between players.
+- `/tournament info` (dates, pot, your status) and `/tournament bracket` (matches and results).
 
 ### 🛡️ Teams
 
@@ -81,6 +89,7 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
 - Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
+- Tournament: `/tournament_admin` opens registrations now, runs the next step now (draw, then the next round) or cancels and refunds. Handy to test without waiting for the weekend.
 - Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
@@ -116,6 +125,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
+| `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
@@ -165,6 +175,8 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 ```
 
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
+
+The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
 Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
 
@@ -277,6 +289,7 @@ game/                        # game rules, no Discord code
 ├── daily.py · exchange.py · assets.py   # daily, pay/trade/auction
 ├── leaderboard.py · seasons.py · duel.py
 ├── teams.py                 # teams, team bonus and weekly team season
+├── tournament.py            # weekend tournament
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links

@@ -61,7 +61,7 @@ def simulate(rng: random.Random, a: Fighter, b: Fighter) -> FightResult:
     return FightResult(winner=winner, log=log, fighters=fighters)
 
 
-def _fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
+def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
     equipped = gear.get_equipped(ctx, user_id)
     hp = float(settings.get()["duel"]["hp"])
     return Fighter(user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp), equipped
@@ -85,8 +85,8 @@ def fight(ctx: Ctx, challenger_id: int, opponent_id: int, stake: int) -> dict:
     players.spend_emeralds(ctx, challenger_id, stake)
     players.spend_emeralds(ctx, opponent_id, stake)
 
-    a, a_gear = _fighter(ctx, challenger_id)
-    b, b_gear = _fighter(ctx, opponent_id)
+    a, a_gear = make_fighter(ctx, challenger_id)
+    b, b_gear = make_fighter(ctx, opponent_id)
     result = simulate(ctx.rng, a, b)
     winner, loser = (a, b) if result.winner == 0 else (b, a)
 

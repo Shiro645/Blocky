@@ -110,6 +110,20 @@ DEFAULTS: dict[str, Any] = {
         # Weekly team season: top teams' rewards, shared by contribution.
         "season_rewards": [600, 300, 150],
     },
+    "tournament": {
+        "entry_fee": 50,
+        "house_bonus": 200,  # emeralds the server adds to the pot
+        "min_players": 4,
+        "max_players": 32,
+        # Local time. Days: 0 = Monday ... 6 = Sunday.
+        "opens_day": 4, "opens_hour": 18,    # registrations open Friday 18:00
+        "closes_day": 5, "closes_hour": 21,  # and close Saturday 21:00 (draw)
+        "start_day": 6, "start_hour": 18,    # first round Sunday 18:00
+        "round_minutes": 60,
+        # % of the pot for the winner, the runner-up, and the semi-finalists (shared).
+        "prize_split": [60, 25, 15],
+        "xp_per_win": 20,
+    },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
     "challenges": {"per_week": 3},
 }

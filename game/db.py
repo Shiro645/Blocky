@@ -219,6 +219,45 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (season_id, rank)
     );
     """,
+    # 8 - weekend tournaments
+    """
+    CREATE TABLE tournaments (
+        tournament_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_id TEXT NOT NULL,
+        status TEXT NOT NULL,       -- open | running | finished | cancelled
+        closes_at INTEGER,          -- end of registrations (NULL = staff closes them)
+        starts_at INTEGER,          -- first round (NULL = right after the draw)
+        next_round_at INTEGER,
+        round INTEGER NOT NULL DEFAULT 0,   -- last round played
+        rounds INTEGER NOT NULL DEFAULT 0,
+        pot INTEGER NOT NULL DEFAULT 0,
+        house_bonus INTEGER NOT NULL DEFAULT 0,
+        winner_id INTEGER,
+        created_at INTEGER NOT NULL,
+        finished_at INTEGER
+    );
+    CREATE INDEX idx_tournaments_week ON tournaments(week_id);
+    CREATE TABLE tournament_players (
+        tournament_id INTEGER NOT NULL REFERENCES tournaments(tournament_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        paid INTEGER NOT NULL,
+        joined_at INTEGER NOT NULL,
+        eliminated_round INTEGER,   -- NULL while still in the tournament
+        prize INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (tournament_id, user_id)
+    );
+    CREATE TABLE tournament_matches (
+        tournament_id INTEGER NOT NULL REFERENCES tournaments(tournament_id) ON DELETE CASCADE,
+        round INTEGER NOT NULL,
+        slot INTEGER NOT NULL,      -- position in the round: slots 2k and 2k+1 feed slot k of the next round
+        player1 INTEGER NOT NULL,
+        player2 INTEGER,            -- NULL = bye, player1 goes through
+        winner INTEGER,
+        winner_hp REAL,
+        played_at INTEGER,
+        PRIMARY KEY (tournament_id, round, slot)
+    );
+    """,
 ]
 
 
