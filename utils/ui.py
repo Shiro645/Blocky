@@ -54,7 +54,8 @@ def book_icon() -> str:
 
 
 def potion_icon(key: str) -> str:
-    return EMOJI.get(f"potion_{key}") or potions.POTIONS[key].icon
+    kind = key.partition(":")[0]
+    return EMOJI.get(f"potion_{kind}") or potions.POTIONS[kind].icon
 
 
 def lapis_icon() -> str:
@@ -76,7 +77,7 @@ def asset_icon(key: str) -> str:
         return lapis_icon()
     if parts[0] == "book":
         return book_icon()
-    if parts[0] == "potion" and len(parts) == 2 and parts[1] in potions.POTIONS:
+    if parts[0] == "potion" and len(parts) >= 2 and parts[1] in potions.POTIONS:
         return potion_icon(parts[1])
     if parts[0] == "block" and len(parts) == 2 and parts[1] in emojis.BLOCK_FALLBACK:
         return block_icon(parts[1])

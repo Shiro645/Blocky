@@ -36,6 +36,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
         "`/challenges` · `/achievements [member]`",
         "`/boss` · `/attack` → Fight the server boss together",
         "`/tournament join · info · bracket` → Weekend tournament",
+        "`/villager` → The wandering villager (every day 18:00–21:00)",
     ]),
     ("🛡️ Teams", [
         "`/team create` · `/team invite` · `/team join` · `/team leave` → Play together",
@@ -52,7 +53,7 @@ STAFF_SECTION = ("🔐 Staff", [
     "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist` · `/unlink`",
     "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear` · `/add_book` · `/add_potion`",
     "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",
-    "`/boss_spawn` · `/drop_spawn` · `/tournament_admin` · `/team_remove`",
+    "`/boss_spawn` · `/drop_spawn` · `/tournament_admin` · `/villager_admin` · `/team_remove`",
     "`/config` · `/mc <command>` · `/reload_config` · `/backup_now`",
 ])
 

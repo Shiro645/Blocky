@@ -277,6 +277,31 @@ MIGRATIONS: list[str] = [
         started_at INTEGER NOT NULL
     );
     """,
+    # 11 - the wandering villager
+    """
+    CREATE TABLE villager_visits (
+        visit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        day TEXT NOT NULL,              -- local date of the visit
+        arrives_at INTEGER NOT NULL,
+        leaves_at INTEGER NOT NULL,
+        status TEXT NOT NULL,           -- here | gone
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX idx_villager_day ON villager_visits(day);
+    CREATE TABLE villager_offers (
+        visit_id INTEGER NOT NULL REFERENCES villager_visits(visit_id) ON DELETE CASCADE,
+        slot INTEGER NOT NULL,
+        kind TEXT NOT NULL,             -- sell | buy | exclusive
+        asset TEXT NOT NULL,            -- asset key (game/assets.py)
+        amount INTEGER NOT NULL,
+        price INTEGER NOT NULL,
+        value INTEGER NOT NULL,         -- reference value, to show the deal
+        taken_by INTEGER,
+        taken_at INTEGER,
+        PRIMARY KEY (visit_id, slot)
+    );
+    """,
 ]
 
 

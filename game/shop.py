@@ -1,7 +1,7 @@
 """NPC market and crafting."""
 from __future__ import annotations
 
-from game import enchants, gear, players, settings
+from game import enchants, gear, players, potions, settings
 from game.catalog import MATERIALS, RECIPES
 from game.db import Ctx
 from game.errors import GameError
@@ -74,7 +74,7 @@ def item_value(item: str, material: str) -> float:
     if item == "lapis":
         return float(e["lapis_value"])
     if item == "potion":
-        return float(settings.get()["potions"]["value"])
+        return potions.value(material)
     _, level = enchants.parse_book(material)
     return float(e["book_values"][level - 1])
 

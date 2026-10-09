@@ -30,6 +30,7 @@ class Fighter:
     hits_taken: int = 0
     potions_used: int = 0
     speed_turns: int = 0  # own turns left with the Speed potion
+    speed_chance: float = 0.0
 
     def __post_init__(self) -> None:
         self.max_hp = self.max_hp or self.hp
@@ -118,23 +119,25 @@ class Fight:
         multiplier = 1.0
         if potion:
             self.check_potion(potion)
+            kind, _ = potions.parse(potion)
             attacker.potions_used += 1
-            if potion == "healing":
-                turn.healed = min(float(p["healing_hp"]), attacker.max_hp - attacker.hp)
+            if kind == "healing":
+                turn.healed = min(potions.effect(potion, "healing_hp"), attacker.max_hp - attacker.hp)
                 attacker.hp += turn.healed
-            elif potion == "harming":
-                turn.direct = min(float(p["harming_damage"]), defender.hp)
+            elif kind == "harming":
+                turn.direct = min(potions.effect(potion, "harming_damage"), defender.hp)
                 defender.hp -= turn.direct
-            elif potion == "speed":
+            elif kind == "speed":
                 attacker.speed_turns = int(p["speed_turns"])
-            elif potion == "strength":
-                multiplier += float(p["strength_bonus"])
+                attacker.speed_chance = potions.effect(potion, "speed_chance")
+            elif kind == "strength":
+                multiplier += potions.effect(potion, "strength_bonus")
 
         if defender.hp > 0:
             turn.hits.append(self._hit(rng, multiplier))
         if attacker.speed_turns > 0:
             attacker.speed_turns -= 1
-            if defender.hp > 0 and rng.random() < float(p["speed_chance"]):
+            if defender.hp > 0 and rng.random() < attacker.speed_chance:
                 turn.hits.append(self._hit(rng))
 
         turn.attacker_hp, turn.defender_hp = round(attacker.hp, 1), round(defender.hp, 1)
