@@ -70,20 +70,20 @@ class AttackButton(discord.ui.Button):
         self.fight_view = fight_view
 
     async def callback(self, interaction: discord.Interaction):
-        await self.fight_view.play(interaction, None)
+        await self.fight_view.play(interaction, None)  # with the potion drunk this turn, if any
 
 
 class PotionSelect(discord.ui.Select):
     def __init__(self, fight_view: "FightView", options: list[discord.SelectOption]):
-        super().__init__(placeholder="🧪 Drink a potion, then attack…", options=options, row=1)
+        super().__init__(placeholder="🧪 Drink a potion first (then attack)…", options=options, row=1)
         self.fight_view = fight_view
 
     async def callback(self, interaction: discord.Interaction):
-        await self.fight_view.play(interaction, self.values[0])
+        await self.fight_view.drink(interaction, self.values[0])
 
 
 class FightView(discord.ui.View):
-    """A duel being fought: the player whose turn it is attacks, with or without a potion."""
+    """A duel being fought: on their turn, a player can drink a potion, then attacks."""
 
     def __init__(self, cog: "DuelCog", challenger: discord.Member, opponent: discord.Member, stake: int, setup: dict):
         super().__init__(timeout=None)
@@ -107,7 +107,7 @@ class FightView(discord.ui.View):
         self.clear_items()
         self.add_item(AttackButton(self))
         current = self.fight.current
-        if self.fight.potions_left(current) <= 0:
+        if not self.fight.can_drink:
             return
         options = [
             discord.SelectOption(
@@ -145,8 +145,36 @@ class FightView(discord.ui.View):
         except Exception:
             log.exception("Automatic duel turn failed")
 
+    async def show(self, interaction: discord.Interaction | None) -> None:
+        embed = self.cog.fight_embed(self)
+        if interaction is not None:
+            await interaction.response.edit_message(content=None, embed=embed, view=self)
+        elif self.message is not None:
+            await self.message.edit(content=None, embed=embed, view=self)
+
+    async def drink(self, interaction: discord.Interaction, potion: str) -> None:
+        """Drink a potion: its effect applies, and the player still has to attack this turn."""
+        async with self.lock:
+            if self.fight.over:
+                await interaction.response.defer()
+                return
+            uid = self.fight.current.user_id
+            self.fight.check_potion(potion)
+            await self.cog.bot.db.run(potions.drink, uid, potion)
+            self.owned[uid][potion] -= 1
+            self.missed[uid] = 0
+            self.fight.drink(potion)
+            if self.fight.other.hp <= 0:
+                # Harming finished the opponent off: the turn ends here.
+                self.fight.play(self.cog.rng)
+                self.turn_no += 1
+                await self.end(interaction)
+                return
+            self.build()
+            await self.show(interaction)
+
     async def play(self, interaction: discord.Interaction | None, potion: str | None, turn_no: int | None = None) -> None:
-        """Play the current player's turn (interaction None = they ran out of time on turn `turn_no`)."""
+        """Attack (interaction None = the player ran out of time on turn `turn_no`)."""
         async with self.lock:
             # A click may have played the turn while the timer was waiting for the lock.
             if self.fight.over or (turn_no is not None and turn_no != self.turn_no):
@@ -154,12 +182,8 @@ class FightView(discord.ui.View):
                     await interaction.response.defer()
                 return
             uid = self.fight.current.user_id
-            if potion:
-                self.fight.check_potion(potion)
-                await self.cog.bot.db.run(potions.drink, uid, potion)
-                self.owned[uid][potion] -= 1
             self.missed[uid] = self.missed[uid] + 1 if interaction is None else 0
-            self.fight.play(self.cog.rng, potion)
+            self.fight.play(self.cog.rng)
             if not self.fight.over and self.missed[uid] >= int(settings.get()["duel"]["afk_turns"]):
                 self.afk = uid
                 self.fight.auto_play(self.cog.rng)
@@ -169,11 +193,7 @@ class FightView(discord.ui.View):
                 return
             self.build()
             self.start_timer()
-            embed = self.cog.fight_embed(self)
-            if interaction is not None:
-                await interaction.response.edit_message(content=None, embed=embed, view=self)
-            elif self.message is not None:
-                await self.message.edit(content=None, embed=embed, view=self)
+            await self.show(interaction)
 
     async def end(self, interaction: discord.Interaction | None) -> None:
         if self.timer is not None and self.timer is not asyncio.current_task():
@@ -321,6 +341,14 @@ class DuelCog(commands.Cog):
     def fight_embed(self, view: FightView) -> discord.Embed:
         a, b = (view.members[f.user_id] for f in view.fight.fighters)
         lines = [self.turn_line(view, t) for t in view.fight.log[-6:]] or ["The fight begins!"]
+        pending = view.fight.pending
+        if pending is not None:
+            text = f"🧪 **{view.members[pending.attacker].display_name}** drinks a {potion_icon(pending.potion)} **{potions.label(pending.potion)}**"
+            if pending.healed:
+                text += f" (+{pending.healed:g} HP)"
+            if pending.direct:
+                text += f" ({pending.direct:g} damage)"
+            lines.append(text + "…")
         embed = discord.Embed(
             title=f"⚔️ {a.display_name} vs {b.display_name}",
             description=join_lines(lines, limit=3500),
@@ -330,9 +358,10 @@ class DuelCog(commands.Cog):
             name, value = self.fighter_field(view, fighter)
             embed.add_field(name=name, value=value, inline=True)
         current = view.members[view.fight.current.user_id]
+        todo = "now attack!" if pending is not None else "attack, or drink a potion first."
         embed.add_field(
             name=f"Turn {view.fight.rounds + 1} · pot {view.stake * 2:,} emeralds",
-            value=f"{current.mention}: attack, or drink a potion first. Auto attack <t:{view.deadline}:R>.",
+            value=f"{current.mention}: {todo} Auto attack <t:{view.deadline}:R>.",
             inline=False,
         )
         return embed

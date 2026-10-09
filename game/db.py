@@ -302,6 +302,11 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (visit_id, slot)
     );
     """,
+    # 12 - the tournament registration message (Join / Leave buttons)
+    """
+    ALTER TABLE tournaments ADD COLUMN channel_id INTEGER;
+    ALTER TABLE tournaments ADD COLUMN message_id INTEGER;
+    """,
 ]
 
 

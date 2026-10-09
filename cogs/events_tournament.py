@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import discord
 from discord import app_commands
@@ -10,7 +11,7 @@ from game import settings, tournament
 from game.tournament import round_name
 from utils.checks import staff_only
 from utils.config import role_id
-from utils.ui import em, join_lines
+from utils.ui import em, join_lines, report_error
 
 log = logging.getLogger("tournament")
 
@@ -37,6 +38,74 @@ def next_pairs(matches: list[dict]) -> list[str]:
     return [f"<@{winners[i]}> vs <@{winners[i + 1]}>" for i in range(0, len(winners) - 1, 2)]
 
 
+def registration_embed(t: dict, players: int, closed: bool = False) -> discord.Embed:
+    s = settings.get()["tournament"]
+    if closed:
+        state = "the tournament was cancelled" if t["status"] == "cancelled" else "see the bracket with `/tournament bracket`"
+        return discord.Embed(
+            title=f"{ARENA} Weekend tournament: registrations are closed",
+            description=f"**{players}** player(s) registered · pot **{em(t['pot'])}**: {state}.",
+            color=discord.Color.dark_grey(),
+        )
+    closes = (
+        f"before <t:{t['closes_at']}:F> (<t:{t['closes_at']}:R>)" if t["closes_at"]
+        else "until staff starts the tournament"
+    )
+    first = f"<t:{t['starts_at']}:F>" if t["starts_at"] else "right after the draw"
+    embed = discord.Embed(
+        title=f"{ARENA} Weekend tournament: registrations are open!",
+        description=(
+            f"Click **Join** (or `/tournament join`) {closes}.\n"
+            f"Entry: **{em(int(s['entry_fee']))}** · the server adds **{em(int(s['house_bonus']))}** to the pot. "
+            "Changed your mind? **Leave** refunds you until the draw.\n\n"
+            f"The bracket is drawn when registrations close. First round: {first}, then one round "
+            f"every {int(s['round_minutes'])} minutes. Fights are automatic, with the gear you have "
+            f"equipped (it doesn't wear out).\n\n**Prizes**: {prize_text(s)}, plus the tournament champion role."
+        ),
+        color=discord.Color.orange(),
+    )
+    embed.add_field(name="Registered", value=f"**{players}** player(s) · pot **{em(t['pot'])}**", inline=False)
+    return embed
+
+
+class RegistrationButton(
+    discord.ui.DynamicItem[discord.ui.Button], template=r"blocky:tournament:(?P<action>join|leave):(?P<tid>\d+)"
+):
+    """Join / Leave buttons of the registration message. They survive restarts."""
+
+    def __init__(self, action: str, tournament_id: int) -> None:
+        join = action == "join"
+        super().__init__(
+            discord.ui.Button(
+                label="Join" if join else "Leave",
+                style=discord.ButtonStyle.success if join else discord.ButtonStyle.secondary,
+                emoji="⚔️" if join else None,
+                custom_id=f"blocky:tournament:{action}:{tournament_id}",
+            )
+        )
+        self.action, self.tournament_id = action, tournament_id
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /):
+        return cls(match["action"], int(match["tid"]))
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        cog: TournamentCog | None = interaction.client.get_cog("TournamentCog")  # type: ignore[assignment]
+        if cog is None:
+            return
+        try:
+            await cog.register_click(interaction, self.action, self.tournament_id)
+        except Exception as error:
+            await report_error(interaction, error)
+
+
+def registration_view(tournament_id: int) -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(RegistrationButton("join", tournament_id))
+    view.add_item(RegistrationButton("leave", tournament_id))
+    return view
+
+
 class TournamentCog(commands.Cog):
     tournament_group = app_commands.Group(name="tournament", description="Weekend tournament: register and follow the bracket.")
 
@@ -44,10 +113,12 @@ class TournamentCog(commands.Cog):
         self.bot = bot
 
     async def cog_load(self) -> None:
+        self.bot.add_dynamic_items(RegistrationButton)
         self.tick_loop.start()
 
     async def cog_unload(self) -> None:
         self.tick_loop.cancel()
+        self.bot.remove_dynamic_items(RegistrationButton)
 
     # ---------- clock ----------
     @tasks.loop(minutes=1)
@@ -63,15 +134,18 @@ class TournamentCog(commands.Cog):
         await self.bot.wait_until_ready()
 
     # ---------- announcements ----------
-    async def post(self, embed: discord.Embed, ping: bool = False) -> None:
+    async def post(
+        self, embed: discord.Embed, ping: bool = False, view: discord.ui.View | None = None
+    ) -> discord.Message | None:
         channel = self.bot.announcer.channel("events") or self.bot.announcer.channel()
         if channel is None:
-            return
+            return None
         rid = role_id("event_ping") if ping else 0
         try:
-            await channel.send(
+            return await channel.send(
                 content=f"<@&{rid}>" if rid else None,
                 embed=embed,
+                view=view,
                 # Only the configured role is pinged, never @everyone / @here.
                 allowed_mentions=discord.AllowedMentions(
                     everyone=False, users=False, roles=[discord.Object(rid)] if rid else False
@@ -79,11 +153,43 @@ class TournamentCog(commands.Cog):
             )
         except discord.HTTPException:
             log.exception("Could not post the tournament announcement")
+            return None
+
+    async def refresh_registration(self, tournament_id: int, closed: bool = False) -> None:
+        """Update the registration message: number of players, or closed (no more buttons)."""
+        data = await self.bot.db.run(tournament.registration, tournament_id)
+        t = data["tournament"]
+        if not t["channel_id"] or not t["message_id"]:
+            return
+        channel = self.bot.get_channel(t["channel_id"])
+        if not isinstance(channel, discord.abc.Messageable):
+            return
+        view = None if closed else registration_view(tournament_id)
+        try:
+            await channel.get_partial_message(t["message_id"]).edit(
+                embed=registration_embed(t, data["players"], closed), view=view
+            )
+        except discord.HTTPException:
+            log.exception("Could not update the tournament registration message")
+
+    async def register_click(self, interaction: discord.Interaction, action: str, tournament_id: int) -> None:
+        if action == "join":
+            res = await self.bot.db.run(tournament.join, interaction.user.id, tournament_id)
+            text = f"✅ You are registered for the tournament ({em(res['fee'])} paid). Good luck!"
+        else:
+            res = await self.bot.db.run(tournament.leave, interaction.user.id, tournament_id)
+            text = f"You left the tournament: {em(res['refund'])} refunded."
+        data = await self.bot.db.run(tournament.registration, tournament_id)
+        await interaction.response.edit_message(
+            embed=registration_embed(data["tournament"], data["players"]), view=registration_view(tournament_id)
+        )
+        await interaction.followup.send(text, ephemeral=True)
 
     async def announce(self, event: dict) -> None:
         if event["type"] == "opened":
             await self.announce_opened(event["tournament"])
         elif event["type"] == "cancelled":
+            await self.refresh_registration(event["tournament"]["tournament_id"], closed=True)
             embed = discord.Embed(
                 title=f"{ARENA} Tournament cancelled",
                 description=(
@@ -95,29 +201,15 @@ class TournamentCog(commands.Cog):
             await self.post(embed)
             await self.move_champion_role(None)
         elif event["type"] == "drawn":
+            await self.refresh_registration(event["tournament"]["tournament_id"], closed=True)
             await self.announce_drawn(event)
         elif event["type"] == "round":
             await self.announce_round(event)
 
     async def announce_opened(self, t: dict) -> None:
-        s = settings.get()["tournament"]
-        closes = (
-            f"before <t:{t['closes_at']}:F> (<t:{t['closes_at']}:R>)" if t["closes_at"]
-            else "until staff starts the tournament"
-        )
-        first = f"<t:{t['starts_at']}:F>" if t["starts_at"] else "right after the draw"
-        embed = discord.Embed(
-            title=f"{ARENA} Weekend tournament: registrations are open!",
-            description=(
-                f"Register with `/tournament join` {closes}.\n"
-                f"Entry: **{em(int(s['entry_fee']))}** · the server adds **{em(int(s['house_bonus']))}** to the pot.\n\n"
-                f"The bracket is drawn when registrations close. First round: {first}, then one round "
-                f"every {int(s['round_minutes'])} minutes. Fights are automatic, with the gear you have "
-                f"equipped (it doesn't wear out).\n\n**Prizes**: {prize_text(s)}, plus the tournament champion role."
-            ),
-            color=discord.Color.orange(),
-        )
-        await self.post(embed, ping=True)
+        msg = await self.post(registration_embed(t, 0), ping=True, view=registration_view(t["tournament_id"]))
+        if msg is not None:
+            await self.bot.db.run(tournament.set_message, t["tournament_id"], msg.channel.id, msg.id)
 
     async def announce_drawn(self, event: dict) -> None:
         t = event["tournament"]
@@ -202,6 +294,7 @@ class TournamentCog(commands.Cog):
             f"({res['players']} players · pot {em(res['tournament']['pot'])})",
             allowed_mentions=discord.AllowedMentions.none(),
         )
+        await self.refresh_registration(res["tournament"]["tournament_id"])
 
     @tournament_group.command(name="leave", description="Cancel your registration (refunded until the draw).")
     async def leave(self, interaction: discord.Interaction):
@@ -209,6 +302,7 @@ class TournamentCog(commands.Cog):
         await interaction.response.send_message(
             f"You left the tournament: {em(res['refund'])} refunded.", ephemeral=True
         )
+        await self.refresh_registration(res["tournament"]["tournament_id"])
 
     @tournament_group.command(name="info", description="Weekend tournament: dates, pot, your status.")
     async def info(self, interaction: discord.Interaction):
@@ -297,6 +391,7 @@ class TournamentCog(commands.Cog):
             )
         else:
             res = await self.bot.db.run(tournament.staff_cancel)
+            await self.refresh_registration(res["tournament"]["tournament_id"], closed=True)
             embed = discord.Embed(
                 title=f"{ARENA} Tournament cancelled",
                 description="The staff cancelled the tournament. Every entry fee has been refunded.",

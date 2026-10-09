@@ -124,8 +124,15 @@ def staff_open(ctx: Ctx) -> dict:
     return open_registrations(ctx, closes, starts)
 
 
-def join(ctx: Ctx, user_id: int) -> dict:
+def _check_same(t: dict | None, tournament_id: int | None) -> None:
+    """Buttons of an old registration message must not act on another tournament."""
+    if tournament_id is not None and (t is None or t["tournament_id"] != tournament_id):
+        raise GameError("These registrations are closed.")
+
+
+def join(ctx: Ctx, user_id: int, tournament_id: int | None = None) -> dict:
     t = active(ctx)
+    _check_same(t, tournament_id)
     if t is None or t["status"] != "open":
         if t is not None:
             raise GameError("Registrations are closed: the tournament has started.")
@@ -148,8 +155,9 @@ def join(ctx: Ctx, user_id: int) -> dict:
     return {"tournament": get(ctx, t["tournament_id"]), "fee": fee, "players": count + 1}
 
 
-def leave(ctx: Ctx, user_id: int) -> dict:
+def leave(ctx: Ctx, user_id: int, tournament_id: int | None = None) -> dict:
     t = active(ctx)
+    _check_same(t, tournament_id)
     row = None
     if t is not None:
         row = ctx.one(
@@ -164,7 +172,19 @@ def leave(ctx: Ctx, user_id: int) -> dict:
     )
     players.give_emeralds(ctx, user_id, row["paid"])
     _update_pot(ctx, t["tournament_id"])
-    return {"refund": row["paid"]}
+    return {"refund": row["paid"], "tournament": get(ctx, t["tournament_id"])}
+
+
+def set_message(ctx: Ctx, tournament_id: int, channel_id: int, message_id: int) -> None:
+    ctx.execute(
+        "UPDATE tournaments SET channel_id=?, message_id=? WHERE tournament_id=?;",
+        (channel_id, message_id, tournament_id),
+    )
+
+
+def registration(ctx: Ctx, tournament_id: int) -> dict:
+    """What the registration message shows."""
+    return {"tournament": get(ctx, tournament_id), "players": len(entrants(ctx, tournament_id))}
 
 
 def _update_pot(ctx: Ctx, tournament_id: int) -> None:
