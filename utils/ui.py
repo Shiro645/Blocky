@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import discord
 
-from game import enchants
+from game import enchants, potions
 from game.errors import GameError
 from utils import emojis
 from utils.config import load_config
@@ -53,6 +53,10 @@ def book_icon() -> str:
     return EMOJI.get("enchanted_book") or "📕"
 
 
+def potion_icon(key: str) -> str:
+    return EMOJI.get(f"potion_{key}") or potions.POTIONS[key].icon
+
+
 def lapis_icon() -> str:
     return EMOJI.get("lapis") or "🔷"
 
@@ -72,6 +76,8 @@ def asset_icon(key: str) -> str:
         return lapis_icon()
     if parts[0] == "book":
         return book_icon()
+    if parts[0] == "potion" and len(parts) == 2 and parts[1] in potions.POTIONS:
+        return potion_icon(parts[1])
     if parts[0] == "block" and len(parts) == 2 and parts[1] in emojis.BLOCK_FALLBACK:
         return block_icon(parts[1])
     if parts[0] == "ingot" and len(parts) == 2:
@@ -88,6 +94,8 @@ def item_label(item: str, material: str, amount: int | None = None) -> str:
         text = f"{lapis_icon()} lapis lazuli"
     elif item == "book":
         text = f"{book_icon()} {enchants.label(*enchants.parse_book(material))} book"
+    elif item == "potion":
+        text = f"{potion_icon(material)} {potions.label(material)}"
     else:
         text = f"{mat(material)} {material} {item}".strip()
     return f"{amount} × {text}" if amount is not None else text

@@ -71,13 +71,27 @@ DEFAULTS: dict[str, Any] = {
         "request_timeout_seconds": 60,
         "xp_win": 30,
         "xp_loss": 10,
+        "turn_seconds": 30,  # time to play a turn, then the bot attacks for the player
+        "afk_turns": 2,  # turns missed in a row before the rest of the duel is played automatically
+    },
+    "potions": {
+        # Duels only, one potion per turn, effect on that turn.
+        "max_per_duel": 3,
+        "strength_bonus": 0.5,  # this turn's attack +50%
+        "speed_chance": 0.2,  # chance to strike twice...
+        "speed_turns": 3,  # ...during this turn and the next 2 turns of the player
+        "healing_hp": 6,
+        "harming_damage": 4,  # direct damage, ignores armor
+        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get a random potion
+        "value": 40,  # reference value in emeralds (fortune, fair prices)
     },
     "drops": {
         "chance": 0.02,
         "min_interval_seconds": 900,
         "claim_seconds": 60,
         # weight, reward. A reward is {"emeralds": n} or {"ingot": material, "amount": n}
-        # or {"block": type, "amount": n} or {"lapis": n} or {"book": true} (random book).
+        # or {"block": type, "amount": n} or {"lapis": n} or {"book": true} (random book)
+        # or {"potions": n} (random potions).
         "table": [
             {"weight": 40, "title": "An emerald pouch", "reward": {"emeralds": 50}},
             {"weight": 25, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 3}},
@@ -86,6 +100,7 @@ DEFAULTS: dict[str, Any] = {
             {"weight": 8, "title": "Ancient debris", "reward": {"ingot": "netherite", "amount": 1}},
             {"weight": 12, "title": "A lapis vein", "reward": {"lapis": 4}},
             {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
+            {"weight": 12, "title": "A witch's stash", "reward": {"potions": 2}},
         ],
     },
     "boss": {

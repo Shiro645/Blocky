@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import enchants, gear, players, settings
+from game import enchants, gear, players, potions, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -25,6 +25,8 @@ def describe_reward(reward: dict) -> str:
         return f"{reward['lapis']} lapis lazuli"
     if "book" in reward:
         return "an enchanted book"
+    if "potions" in reward:
+        return f"{reward['potions']} potion(s)"
     return f"{reward['amount']} {reward['block']}"
 
 
@@ -41,6 +43,9 @@ def claim_drop(ctx: Ctx, user_id: int, drop: dict) -> str:
     elif "book" in reward:
         name, level = enchants.give_random_book(ctx, user_id)
         text = f"a {enchants.label(name, level)} book"
+    elif "potions" in reward:
+        found = potions.give_random(ctx, user_id, int(reward["potions"]))
+        text = ", ".join(potions.label(k) for k in found)
     else:
         players.add_blocks(ctx, user_id, reward["block"], int(reward["amount"]))
     players.bump_stat(ctx, user_id, "drops_claimed")
@@ -132,7 +137,8 @@ def attack_boss(ctx: Ctx, user_id: int, boss_id: int | None = None) -> dict:
 
 
 def _defeat(ctx: Ctx, boss: dict) -> dict:
-    """Share the reward pool by damage dealt; the top damage dealer gets a bonus and a book.
+    """Share the reward pool by damage dealt; the top damage dealer gets a bonus and a book,
+    and the top damage dealers a potion.
 
     A sword with Looting adds a bonus on top of the player's share.
     """
@@ -155,10 +161,12 @@ def _defeat(ctx: Ctx, boss: dict) -> dict:
         players.earn_emeralds(ctx, r["user_id"], share + looting)
         players.add_xp(ctx, r["user_id"], int(b["xp_reward"]))
         players.bump_stat(ctx, r["user_id"], "bosses_defeated")
-        reward = {**r, "reward": share + looting, "looting": looting, "book": None}
+        reward = {**r, "reward": share + looting, "looting": looting, "book": None, "potion": None}
         if i == 0:
             book = enchants.give_random_book(ctx, r["user_id"], settings.get()["enchants"]["boss_book_weights"])
             reward["book"] = enchants.label(*book)
+        if i < int(settings.get()["potions"]["boss_top"]):
+            reward["potion"] = potions.label(potions.give_random(ctx, r["user_id"])[0])
         rewards.append(reward)
     return {"rewards": rewards, "xp": int(b["xp_reward"])}
 

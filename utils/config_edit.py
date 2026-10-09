@@ -30,6 +30,7 @@ CATEGORIES = {
     "teams": "🛡️ Teams",
     "tournament": "🏟️ Tournament",
     "enchants": "✨ Enchanting",
+    "potions": "🧪 Duels & potions",
     "minecraft": "🌍 Minecraft texts",
 }
 
@@ -101,6 +102,15 @@ FIELDS: list[Field] = [
     _balance("tn_xp", "tournament", "XP per match won", "tournament", "xp_per_win"),
     _balance("ench_lapis", "enchants", "Lapis chance per mining reward (0-1)", "enchants", "lapis_chance", kind="float", max=1),
     _balance("ench_lapis_value", "enchants", "Lapis value (fortune, fair prices)", "enchants", "lapis_value"),
+    _balance("duel_turn", "potions", "Duel: seconds per turn", "duel", "turn_seconds", min=10, max=300),
+    _balance("duel_afk", "potions", "Duel: missed turns before auto play", "duel", "afk_turns", min=1, max=10),
+    _balance("pot_max", "potions", "Potions per duel (per player)", "potions", "max_per_duel", max=20),
+    _balance("pot_strength", "potions", "Strength: attack bonus (0.5 = +50%)", "potions", "strength_bonus", kind="float", max=5),
+    _balance("pot_speed", "potions", "Speed: double hit chance (0-1)", "potions", "speed_chance", kind="float", max=1),
+    _balance("pot_speed_turns", "potions", "Speed: turns", "potions", "speed_turns", min=1, max=10),
+    _balance("pot_healing", "potions", "Healing: HP", "potions", "healing_hp", kind="float", max=100),
+    _balance("pot_harming", "potions", "Harming: direct damage", "potions", "harming_damage", kind="float", max=100),
+    _balance("pot_boss", "potions", "Boss: top N fighters get a potion", "potions", "boss_top", max=50),
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text"),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text"),
 ]
