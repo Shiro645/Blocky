@@ -8,13 +8,16 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 ## 🚀 Features
 
+### 📖 Manual
+
+- `/help` — A menu by category, and a page for every command: what it does, its options, its **current numbers** (read from the settings, so they follow `/config`), examples and related commands. `/help command:<name>` opens a page directly (`/help command:mining` explains chat mining). Staff commands are only shown to staff, and the answer is only visible to the player who asked.
+
 ### 🌍 Minecraft
 
 - `/server_status` — Server status (players & ping)
 - `/ip` — Join instructions
 - `/modpacks` — Modpack information
 - `/link <username>` — Link your Minecraft account. A staff member approves the request with a button, which whitelists the account. `/link_status` shows your link.
-- `/help` — List the available commands
 
 ### ⛏️ Mining & economy
 
@@ -332,6 +335,8 @@ The game logic (`game/`) doesn't depend on Discord and is covered by unit tests:
 python -m unittest discover -s tests -t .
 ```
 
+The tests also check that every slash command has a page in `utils/manual.py` (the `/help` manual) and a description for each of its options: when you add a command, add its page there.
+
 ---
 
 # 🏗️ Project Structure
@@ -360,7 +365,7 @@ game/                        # game rules, no Discord code
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature
-utils/                       # config, checks, announcer, RCON, Mojang, UI helpers
+utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages)
 tests/                       # unit tests
 ```
 

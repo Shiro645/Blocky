@@ -118,6 +118,7 @@ class AuctionCog(commands.Cog):
         )
 
     @auction.command(name="cancel", description="Take back one of your listings.")
+    @app_commands.describe(listing="The listing to take back")
     @app_commands.autocomplete(listing=own_listing_autocomplete)
     async def cancel(self, interaction: discord.Interaction, listing: int):
         r = await self.bot.db.run(exchange.cancel, interaction.user.id, listing)

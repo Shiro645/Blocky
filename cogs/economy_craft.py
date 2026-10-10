@@ -18,6 +18,7 @@ class EconomyCraftCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="craft", description="Craft tools and armor using ingots and sticks.")
+    @app_commands.describe(item="What to craft", material="Which material (you need its ingots)")
     @app_commands.choices(item=ITEM_CHOICES, material=MATERIAL_CHOICES)
     async def craft(self, interaction: discord.Interaction, item: str, material: str):
         res = await self.bot.db.run(shop.craft, interaction.user.id, item, material)
@@ -107,6 +108,7 @@ class EconomyCraftCog(commands.Cog):
         )
 
     @app_commands.command(name="unequip", description="Remove the piece of gear from a slot.")
+    @app_commands.describe(slot="The slot to empty")
     @app_commands.choices(slot=ITEM_CHOICES)
     async def unequip(self, interaction: discord.Interaction, slot: str):
         g = await self.bot.db.run(gear.unequip, interaction.user.id, slot)

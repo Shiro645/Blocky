@@ -301,6 +301,12 @@ class DuelCog(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="add_potion", description="STAFF: Give potions to a member.")
+    @app_commands.describe(
+        member="Who gets the potions",
+        potion="Which potion",
+        amount="How many (1-100)",
+        level="1 = normal, 2 = reinforced",
+    )
     @app_commands.choices(potion=POTION_CHOICES)
     @staff_only()
     async def add_potion(

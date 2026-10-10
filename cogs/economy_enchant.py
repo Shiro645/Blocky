@@ -102,6 +102,12 @@ class EnchantCog(commands.Cog):
 
     # ---------- staff ----------
     @app_commands.command(name="add_book", description="STAFF: Give enchanted books to a member.")
+    @app_commands.describe(
+        member="Who gets the books",
+        enchant="Which enchantment",
+        level="Book level",
+        amount="How many books (1-100)",
+    )
     @app_commands.choices(enchant=ENCHANT_CHOICES, level=LEVEL_CHOICES)
     @staff_only()
     async def add_book(

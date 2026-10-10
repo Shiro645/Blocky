@@ -130,7 +130,7 @@ CHALLENGE_POOL: list[Challenge] = [
 CHALLENGES_BY_CODE = {c.code: c for c in CHALLENGE_POOL}
 
 
-def _available(c: Challenge) -> bool:
+def available(c: Challenge) -> bool:
     # No boss challenge when bosses only come from /boss_spawn: the week may have none.
     return c.stat != "boss_damage" or float(settings.get()["boss"]["auto_spawn_hours"]) > 0
 
@@ -138,14 +138,14 @@ def _available(c: Challenge) -> bool:
 def challenges_of_week(week_id: str) -> list[Challenge]:
     """The same challenges for everyone, picked from the week id (no storage needed).
 
-    A challenge that can't be done this week (see _available) is replaced by
+    A challenge that can't be done this week (see available) is replaced by
     the next one of the week's shuffled pool, so the other picks don't change.
     """
-    pool = [c for c in CHALLENGE_POOL if _available(c)]
+    pool = [c for c in CHALLENGE_POOL if available(c)]
     count = min(int(settings.get()["challenges"]["per_week"]), len(pool))
     rng = random.Random(f"blocky-challenges-{week_id}")
-    picked = [c for c in rng.sample(CHALLENGE_POOL, min(count, len(CHALLENGE_POOL))) if _available(c)]
-    spare = [c for c in rng.sample(CHALLENGE_POOL, len(CHALLENGE_POOL)) if _available(c) and c not in picked]
+    picked = [c for c in rng.sample(CHALLENGE_POOL, min(count, len(CHALLENGE_POOL))) if available(c)]
+    spare = [c for c in rng.sample(CHALLENGE_POOL, len(CHALLENGE_POOL)) if available(c) and c not in picked]
     return (picked + spare)[:count]
 
 

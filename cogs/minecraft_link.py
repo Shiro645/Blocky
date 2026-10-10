@@ -152,6 +152,7 @@ class LinkCog(commands.Cog):
         await interaction.response.send_message(text, ephemeral=True)
 
     @app_commands.command(name="unlink", description="STAFF: Remove a member's Minecraft link (and whitelist entry).")
+    @app_commands.describe(member="Whose link to remove")
     @staff_only()
     async def unlink(self, interaction: discord.Interaction, member: discord.User):
         await interaction.response.defer(ephemeral=True)

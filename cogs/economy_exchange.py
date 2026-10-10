@@ -65,6 +65,7 @@ class ExchangeCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="pay", description="Send emeralds to another player.")
+    @app_commands.describe(member="Who gets the emeralds", amount="How many emeralds")
     async def pay(self, interaction: discord.Interaction, member: discord.Member, amount: app_commands.Range[int, 1]):
         if member.bot:
             raise GameError("Bots don't need emeralds.")
