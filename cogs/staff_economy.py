@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, players
+from game import assets, backups, players, reset, settings
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.checks import staff_only
-from utils.ui import ConfirmView, asset_icon, dm
+from utils.ui import BaseView, ConfirmView, asset_icon, dm, report_error
+
+log = logging.getLogger("staff_economy")
 
 Amount = app_commands.Range[int, 1, 1_000_000]
 Reason = app_commands.Range[str, 1, 300]
@@ -189,6 +196,129 @@ class StaffEconomyCog(commands.Cog):
         for user_id, level in levels:
             await self.bot.announcer.sync_level_role(user_id, level)
         await interaction.followup.send(f"✅ Level roles checked for **{len(levels)}** player(s).", ephemeral=True)
+
+
+    # ---------- /reset ----------
+    @app_commands.command(name="reset", description="STAFF: A fresh start: reset emeralds, gear, levels or stats of a player or of everyone.")
+    @app_commands.describe(member="Only this player (leave empty for the whole server)")
+    @staff_only()
+    async def reset_cmd(self, interaction: discord.Interaction, member: discord.Member | None = None):
+        view = ResetView(self, interaction.user.id, member)
+        await interaction.response.send_message(embed=view.embed(), view=view, ephemeral=True)
+        view.message = await interaction.original_response()
+
+    async def do_reset(self, interaction: discord.Interaction, member: discord.Member | None, parts: list[str]) -> discord.Embed:
+        """Back up the database, then reset. Nothing is reset if the backup fails."""
+        tools = self.bot.get_cog("AdminToolsCog")
+        if tools is None:
+            raise GameError("Backups aren't available right now: nothing was reset.")
+        now = datetime.now(ZoneInfo(settings.get()["timezone"]))
+        target = backups.manual_path(backups.backup_dir(self.bot.db.path), now)
+        try:
+            await tools.make_backup(target)  # type: ignore[attr-defined]
+        except Exception:
+            log.exception("Backup before /reset failed")
+            raise GameError("The backup failed, so nothing was reset. Check the bot logs.")
+        user_id = member.id if member else None
+
+        def run(ctx):
+            return reset.apply(ctx, parts, user_id), reset.affected_users(ctx, user_id)
+
+        result, user_ids = await self.bot.db.run(run)
+        who = member.mention if member else "**the whole server**"
+        what = "\n".join(f"• {reset.PARTS[p]}" for p in parts)
+
+        def summary() -> discord.Embed:
+            embed = discord.Embed(title="♻️ Reset done", color=discord.Color.dark_red(),
+                                  description=f"Reset for {who} ({result['players']} player(s)):\n{what}")
+            embed.add_field(name="Backup made just before", value=f"`{target.name}` (restore it to undo)", inline=False)
+            if "levels" in parts:
+                embed.add_field(name="Level roles", value="Being removed in the background.", inline=False)
+            return embed
+
+        if "levels" in parts:
+            # Level roles follow the level: everyone is level 1 again.
+            asyncio.create_task(self.sync_roles_of(user_ids))
+        log_embed = summary()
+        log_embed.add_field(name="By", value=f"{interaction.user.mention} (`{interaction.user}`)", inline=False)
+        await self.bot.announcer.send(embed=log_embed, channel="staff_log")
+        embed = summary()
+        log.warning("%s reset %s for %s", interaction.user, ", ".join(parts), member or "the whole server")
+        return embed
+
+    async def sync_roles_of(self, user_ids: list[int]) -> None:
+        try:
+            for user_id in user_ids:
+                await self.bot.announcer.sync_level_role(user_id, 1)
+        except Exception:  # a background task: log instead of losing the error
+            log.exception("Updating the level roles after /reset failed")
+
+
+class ResetView(BaseView):
+    """/reset: pick what to reset, then confirm by typing RESET."""
+
+    def __init__(self, cog: StaffEconomyCog, user_id: int, member: discord.Member | None):
+        super().__init__(allowed_ids={user_id}, timeout=300)
+        self.cog, self.member = cog, member
+        self.parts = list(reset.PARTS)
+        self.add_item(PartsSelect(self.parts))
+        self.add_item(ResetButton())
+
+    def embed(self) -> discord.Embed:
+        who = self.member.mention if self.member else "**every player of the server**"
+        lines = [f"{'☑️' if key in self.parts else '⬜'} {label}" for key, label in reset.PARTS.items()]
+        embed = discord.Embed(
+            title="♻️ Reset",
+            description=f"For {who}:\n" + "\n".join(lines) + "\n\nPick what to reset in the menu, then press **Reset…** "
+                        "and type `RESET` to confirm. A backup of the database is made just before.",
+            color=discord.Color.orange(),
+        )
+        embed.add_field(name="Never touched", value="Minecraft links, moderation, teams, settings, bosses, tournaments, "
+                                                    "villager, Blockdle.", inline=False)
+        return embed
+
+
+class PartsSelect(discord.ui.Select):
+    view: ResetView
+
+    def __init__(self, selected: list[str]):
+        options = [discord.SelectOption(label=label, value=key, default=key in selected) for key, label in reset.PARTS.items()]
+        super().__init__(placeholder="What to reset…", options=options, min_values=1, max_values=len(options), row=0)
+
+    async def callback(self, interaction: discord.Interaction):
+        self.view.parts = [key for key in reset.PARTS if key in self.values]
+        for option in self.options:
+            option.default = option.value in self.view.parts
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+
+
+class ResetButton(discord.ui.Button):
+    view: ResetView
+
+    def __init__(self):
+        super().__init__(label="Reset…", emoji="♻️", style=discord.ButtonStyle.danger, row=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(ResetModal(self.view))
+
+
+class ResetModal(discord.ui.Modal, title="Confirm the reset"):
+    confirm = discord.ui.TextInput(label="Type RESET to confirm", placeholder="RESET", max_length=10)
+
+    def __init__(self, view: ResetView):
+        super().__init__()
+        self.menu = view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if str(self.confirm.value).strip() != "RESET":
+            raise GameError("Not confirmed (type RESET in capitals): nothing was reset.")
+        await interaction.response.defer()
+        embed = await self.menu.cog.do_reset(interaction, self.menu.member, self.menu.parts)
+        self.menu.stop()
+        await interaction.edit_original_response(embed=embed, view=None)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        await report_error(interaction, error)
 
 
 async def setup(bot: commands.Bot):

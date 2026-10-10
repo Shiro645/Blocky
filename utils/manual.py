@@ -1034,6 +1034,17 @@ PAGES: list[Page] = [
         related=("give",),
     ),
     Page(
+        "reset", "staff_economy",
+        "A fresh start, for one player (`member`) or for **everyone** (leave `member` empty). Pick what to reset: "
+        "emeralds, blocks and items (with auction listings and robberies in progress), gear and enchantments, "
+        "levels, XP and talents (level roles are removed), stats, achievements and seasons (with challenges, "
+        "team season scores and the daily streak). Then press **Reset…** and type `RESET`.\n"
+        "A backup of the database is made just before (restore it to undo). Minecraft links, moderation, teams, "
+        "settings, bosses, tournaments, the villager and the Blockdle are never touched.",
+        examples=("/reset", "/reset member:@Steve"),
+        related=("take", "player level", "backup_now"),
+    ),
+    Page(
         "player xp_add", "staff_economy",
         "Gives XP to a member: levels and talent points follow, like normal XP. The member gets a DM.",
         examples=("/player xp_add member:@Steve amount:1000",),
