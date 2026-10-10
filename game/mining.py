@@ -95,6 +95,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         xp = int(round(xp * (1 + team_bonus)))
 
     players.add_blocks(ctx, user_id, block, amount)
+    players.add_score(ctx, user_id, players.block_value(block) * amount)
     players.bump_stat(ctx, user_id, "blocks_mined", amount)
     if block in ("bedrock", "obsidian"):
         players.bump_stat(ctx, user_id, f"{block}_found", amount)

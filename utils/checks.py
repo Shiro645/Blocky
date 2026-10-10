@@ -26,4 +26,9 @@ def staff_only():
             member = await interaction.guild.fetch_member(interaction.user.id)
         return is_staff(member)
 
+    predicate.blocky_staff = True  # type: ignore[attr-defined]  (see is_staff_command)
     return app_commands.check(predicate)
+
+
+def is_staff_command(command: object) -> bool:
+    return any(getattr(check, "blocky_staff", False) for check in getattr(command, "checks", []))

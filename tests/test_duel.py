@@ -52,8 +52,8 @@ class FightTests(GameTestCase):
         self.assertEqual(await self.run_game(players.get_emeralds, loser), 50)
         self.assertEqual(await self.run_game(players.get_stat, winner, "duels_won"), 1)
         self.assertEqual(await self.run_game(players.get_stat, loser, "duels_lost"), 1)
-        # Only the opponent's stake counts for the season.
-        self.assertEqual((await self.run_game(seasons.overview, winner))["score"], 50)
+        # The pot only moves between players: it doesn't count for the season.
+        self.assertEqual((await self.run_game(seasons.overview, winner))["score"], 0)
 
     async def test_stake_rules(self):
         with self.assertRaises(GameError):
@@ -63,6 +63,18 @@ class FightTests(GameTestCase):
         with self.assertRaises(GameError):
             await self.run_game(duel.fight, ALICE, ALICE, 10)
         self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 100)
+
+    async def test_unequipping_mid_duel_does_not_avoid_wear(self):
+        sword = await self.run_game(shop.create_gear, ALICE, "sword", "iron")
+        await self.run_game(gear.equip, ALICE, sword)
+        setup = await self.run_game(duel.start, ALICE, BOB, 10)
+        await self.run_game(gear.unequip, ALICE, "sword")  # during the fight
+        fight = setup["fight"]
+        fight.auto_play(random.Random(3))
+        await self.run_game(duel.finish, setup["duel_id"], fight)
+        piece = (await self.run_game(shop.get_gear, ALICE))[0]
+        self.assertGreater(fight.fighter(ALICE).attacks, 0)
+        self.assertLess(piece["durability"], piece["max_durability"])
 
     async def test_gear_wears_during_fight(self):
         sword = await self.run_game(shop.create_gear, ALICE, "sword", "iron")

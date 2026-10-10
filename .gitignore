@@ -1,5 +1,17 @@
+# secrets and server-specific settings
 .env
 config.json
-economy.db
+
+# databases, backups (they contain copies of config.json, with the RCON password)
+*.db
+*.db-wal
+*.db-shm
+*.db.legacy-*
+*.db.tmp
+backups/
+db/
+
+# Python
 __pycache__/
 venv/
+.venv/

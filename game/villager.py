@@ -147,8 +147,9 @@ def take(ctx: Ctx, user_id: int, visit_id: int, slot: int) -> dict:
         raise GameError(f"Too late! <@{offer['taken_by']}> got it first.")
     if offer["kind"] == "buy":
         assets.take(ctx, user_id, offer["asset"], offer["amount"])
-        # Like /sell, blocks sold to the villager count as earned.
-        players.earn_emeralds(ctx, user_id, offer["price"])
+        # Like /sell: the blocks' value was scored when mined, only his bonus is new.
+        players.give_emeralds(ctx, user_id, offer["value"])
+        players.earn_emeralds(ctx, user_id, offer["price"] - offer["value"])
     else:
         players.spend_emeralds(ctx, user_id, offer["price"])
         assets.give(ctx, user_id, offer["asset"], offer["amount"])

@@ -72,7 +72,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
 - `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
-- **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
+- **Weekly seasons** (`/season`) — The score is the value you *created* during the week (Monday to Sunday): the value of the blocks you mine (counted when mined, not when sold), daily rewards, drops, bosses, challenges, the server share of the tournament pot, and the trader/villager bonus when you sell. Spending doesn't lower it; emeralds or blocks received from other players, duel pots and auction sales don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. Damage comes from the sword, armor reduces it, with random variance and critical hits. If the bot restarts during a duel, both stakes are refunded.
 - **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel, the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
 
@@ -99,7 +99,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - Comes **every day from 18:00 to 21:00** (local time) in the events channel, pinging the events role, with **3 offers**:
   - 🛒 a sale 30% below the value: iron, diamond or netherite ingots, lapis, a level I/II book or potions;
-  - 💰 a purchase: he buys a pile of blocks (gravel, deepslate, obsidian or bedrock) 50% above the /sell price (counts as earned, like /sell);
+  - 💰 a purchase: he buys a pile of blocks (gravel, deepslate, obsidian or bedrock) 50% above the /sell price (his bonus counts for the season);
   - ✨ an exclusive: a **level III book** or a **reinforced potion (II)**, whose effect is doubled (Strength +100%, Speed 40%, Healing 12 HP, Harming 8). Reinforced potions are only sold by the villager.
 - Each offer exists **once**: the first player to click gets it. The buttons keep working after a restart, and the message shows who took what.
 - `/villager` shows whether he is here and when he comes next.
@@ -113,11 +113,11 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
 - **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
 - **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
-- **Weekly team season** (`/team top`) — A team's score is the emeralds its members earned while in the team (Monday to Sunday). The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
+- **Weekly team season** (`/team top`) — A team's score is the season score (see above) its members made while in the team (Monday to Sunday). The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
 
 ### 🔐 Staff commands
 
-Restricted to the staff role (or members with the *Manage Server* permission).
+Restricted to the staff role (or members with the *Manage Server* permission). **Every staff command is logged in the staff channel** (who, which command, which options).
 
 - Moderation (the member gets a DM with the reason; everything is logged in the staff channel):
   - `/warn <member> <reason>` — warnings count for 30 days; 3 warnings = automatic 1h mute, 5 = 1 day, 7 = 7 days. `/unwarn <#>` removes one, `/clearwarns` removes them all.
@@ -125,7 +125,7 @@ Restricted to the staff role (or members with the *Manage Server* permission).
   - `/mute <member> <duration> <reason>` (e.g. `30m`, `2h`, `3d`, `1w`, `perm`) and `/unmute`. Mutes use Discord timeouts; the bot renews them past Discord's 28-day limit (permanent mutes) and re-applies them if the member leaves and comes back.
   - `/kick`, `/ban <member> <reason> [duration] [delete_messages]` (permanent by default; temporary bans are lifted automatically) and `/unban <user_id>`.
   - `/clear <amount> [member]` (pinned messages are kept), `/lock` / `/unlock` (staff can still write), `/slowmode <seconds>`.
-  - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages* and *Manage Channels* permissions.
+  - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
 - Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion [level]`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
@@ -133,8 +133,8 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Villager: `/villager_admin` makes him come now (for the usual visit length) or leave
 - Tournament: `/tournament_admin` opens registrations now, runs the next step now (draw, then the next round) or cancels and refunds. Handy to test without waiting for the weekend.
-- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
-- Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
+- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Values are checked before being saved (an invalid one is refused with the reason). Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
 
@@ -204,9 +204,11 @@ After editing `config.json`, run `/reload_config` (or restart the bot). Changing
 
 Every night at 04:00 (config timezone) the bot copies the database to a `backups/` folder next to it (`bot/db/backups/` with Docker) and keeps the last 7 copies. Change it with `"balance": {"backups": {"hour": 4, "keep": 7}}`. `/backup_now` makes an extra copy at any time.
 
-To restore one: stop the bot, replace `economy.db` with the backup (and delete `economy.db-wal` / `economy.db-shm`), start the bot.
+`/backup_now` copies are named `manual-…` and are kept apart: they never replace a nightly backup. To restore one: stop the bot, replace `economy.db` with the backup (and delete `economy.db-wal` / `economy.db-shm`), start the bot.
 
 ### Game balance
+
+The `balance` section is checked when the bot starts and on `/reload_config`: an unknown key (typo), a wrong type, an invalid time zone or an incoherent schedule is reported. At startup the invalid values are ignored (logged as warnings); `/reload_config` refuses the whole file and keeps the current settings.
 
 Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, timezone…) has a default in [`game/settings.py`](game/settings.py). To change one, copy its path under `balance` in `config.json`, for example:
 
@@ -233,7 +235,7 @@ The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `
 
 Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
 
-> ⚠️ `.env`, `config.json` and `economy.db` contain secrets or user data. They are ignored by git — never commit them.
+> ⚠️ `.env`, `config.json`, the database files (`*.db`, `*.db-wal`, `*.db-shm`) and the `backups/` folder (it holds copies of `config.json`, with the RCON password) contain secrets or user data. They are ignored by git and Docker — never commit them.
 
 ---
 

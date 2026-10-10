@@ -12,6 +12,8 @@ from game import settings
 from game.db import Database
 from utils.announcer import Announcer
 from utils.config import balance_overrides, load_config
+from utils import staff_log
+from utils.checks import is_staff_command
 from utils.ui import load_application_emojis, report_error
 
 
@@ -71,9 +73,14 @@ class Bot(commands.Bot):
         super().__init__(
             command_prefix="!",
             intents=build_intents(),
+            # Safe default: never ping @everyone/@here or roles unless a message asks for it explicitly.
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
         )
         cfg = load_config()
-        settings.load(balance_overrides(cfg))
+        valid, problems = settings.clean(balance_overrides(cfg))
+        for problem in problems:
+            log.warning("config.json balance ignored: %s", problem.replace("`", ""))
+        settings.load(valid)
         self.db = Database(cfg.get("database_path", "economy.db"))
         self.announcer = Announcer(self)
         self.db.notice_handler = self.announcer.handle
@@ -114,6 +121,12 @@ class Bot(commands.Bot):
         if isinstance(error, app_commands.CommandInvokeError):
             error = error.original  # type: ignore[assignment]
         await report_error(interaction, error)
+
+    async def on_app_command_completion(self, interaction: discord.Interaction, command) -> None:
+        """Log every staff command that doesn't log itself (economy, events, whitelist...)."""
+        name = command.qualified_name
+        if is_staff_command(command) and staff_log.wanted(name):
+            await self.announcer.send(embed=staff_log.embed_for(interaction, name), channel="staff_log")
 
     async def on_ready(self) -> None:
         log.info("Connected as %s (%s)", self.user, self.user.id)

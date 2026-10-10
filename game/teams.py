@@ -240,7 +240,7 @@ def leave(ctx: Ctx, user_id: int) -> dict:
             result["new_leader"] = rest[0]["user_id"]
             ctx.execute("UPDATE teams SET leader_id=? WHERE team_id=?;", (rest[0]["user_id"], team["team_id"]))
         else:
-            ctx.execute("DELETE FROM teams WHERE team_id=?;", (team["team_id"],))
+            _drop_team(ctx, team)
             result["disbanded"] = True
     return result
 
@@ -277,10 +277,24 @@ def rename(ctx: Ctx, leader_id: int, name: str | None = None, tag: str | None = 
     return {"before": team, "after": get_team(ctx, team["team_id"])}
 
 
+def _drop_team(ctx: Ctx, team: dict) -> None:
+    """Delete a team (members and invitations go with it).
+
+    This week's score goes too (a team that no longer exists can't win the
+    current week), but finished weeks waiting to be closed keep it: disbanding
+    right after Sunday midnight must not take the reward away from the members.
+    """
+    ctx.execute(
+        "INSERT OR REPLACE INTO team_archive(team_id, name, tag) VALUES(?, ?, ?);",
+        (team["team_id"], team["name"], team["tag"]),
+    )
+    ctx.execute("DELETE FROM team_season_scores WHERE team_id=? AND season_id=?;", (team["team_id"], ctx.week_id))
+    ctx.execute("DELETE FROM teams WHERE team_id=?;", (team["team_id"],))
+
+
 def _delete(ctx: Ctx, team: dict) -> dict:
     team["members"] = [m["user_id"] for m in members(ctx, team["team_id"])]
-    # Members, invitations and this week's team scores go with it.
-    ctx.execute("DELETE FROM teams WHERE team_id=?;", (team["team_id"],))
+    _drop_team(ctx, team)
     return team
 
 
@@ -334,9 +348,12 @@ def add_score(ctx: Ctx, user_id: int, amount: int) -> None:
 def standings(ctx: Ctx, season_id: str) -> list[dict]:
     rows = ctx.all(
         """
-        SELECT s.team_id, t.name, t.tag, SUM(s.score) AS score
-        FROM team_season_scores s JOIN teams t USING(team_id)
-        WHERE s.season_id=? GROUP BY s.team_id HAVING SUM(s.score) > 0
+        SELECT s.team_id, COALESCE(t.name, a.name) AS name, COALESCE(t.tag, a.tag) AS tag, SUM(s.score) AS score
+        FROM team_season_scores s
+        LEFT JOIN teams t USING(team_id)
+        LEFT JOIN team_archive a USING(team_id)
+        WHERE s.season_id=? AND COALESCE(t.name, a.name) IS NOT NULL
+        GROUP BY s.team_id HAVING SUM(s.score) > 0
         ORDER BY score DESC, s.team_id;
         """,
         (season_id,),

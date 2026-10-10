@@ -18,6 +18,17 @@ def get_equipped(ctx: Ctx, user_id: int) -> dict[str, dict]:
     return {r["item"]: r for r in rows}
 
 
+def get_pieces(ctx: Ctx, gear_ids: dict[str, int]) -> dict[str, dict]:
+    """slot -> gear row for these gear ids (pieces destroyed since are left out)."""
+    if not gear_ids:
+        return {}
+    ids = list(gear_ids.values())
+    marks = ",".join("?" * len(ids))
+    rows = enchants.attach(ctx, [dict(r) for r in ctx.all(f"SELECT * FROM gear WHERE gear_id IN ({marks});", tuple(ids))])
+    by_id = {r["gear_id"]: r for r in rows}
+    return {slot: by_id[gid] for slot, gid in gear_ids.items() if gid in by_id}
+
+
 def equip(ctx: Ctx, user_id: int, gear_id: int) -> dict:
     row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
     if row is None:

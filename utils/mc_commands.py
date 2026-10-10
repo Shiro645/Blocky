@@ -34,14 +34,20 @@ def normalize(command: str) -> str:
     return " ".join([first] + [w.lower() for w in words[1:]])
 
 
-def blocked_by(command: str, blocked: list[str] | tuple[str, ...]) -> str | None:
-    """The blocked entry matching this command, or None if it is allowed."""
+def parts(command: str) -> list[str]:
+    """The command itself and every command chained after `run` ("execute ... run op Steve")."""
     cmd = normalize(command)
-    for entry in blocked:
-        rule = normalize(entry)
-        # "kill @e" also blocks "kill @e[type=...]"
-        if rule and (cmd == rule or cmd.startswith(rule + " ") or cmd.startswith(rule + "[")):
-            return entry
+    return [normalize(p) for p in re.split(r"\brun\b", cmd)] if " run " in f" {cmd} " else [cmd]
+
+
+def blocked_by(command: str, blocked: list[str] | tuple[str, ...]) -> str | None:
+    """The blocked entry matching this command (or a command it runs), or None if it is allowed."""
+    for cmd in parts(command):
+        for entry in blocked:
+            rule = normalize(entry)
+            # "kill @e" also blocks "kill @e[type=...]"
+            if rule and (cmd == rule or cmd.startswith(rule + " ") or cmd.startswith(rule + "[")):
+                return entry
     return None
 
 

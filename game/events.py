@@ -48,6 +48,7 @@ def claim_drop(ctx: Ctx, user_id: int, drop: dict) -> str:
         text = ", ".join(potions.label(k) for k in found)
     else:
         players.add_blocks(ctx, user_id, reward["block"], int(reward["amount"]))
+        players.add_score(ctx, user_id, players.block_value(reward["block"]) * int(reward["amount"]))
     players.bump_stat(ctx, user_id, "drops_claimed")
     return text
 

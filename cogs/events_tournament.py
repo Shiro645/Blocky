@@ -124,10 +124,16 @@ class TournamentCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def tick_loop(self):
         try:
-            for event in await self.bot.db.run(tournament.tick):
-                await self.announce(event)
+            events = await self.bot.db.run(tournament.tick)
         except Exception:  # an error must never stop the loop
             log.exception("Tournament loop failed")
+            return
+        for event in events:
+            # Each announcement on its own: one failing can't drop the others.
+            try:
+                await self.announce(event)
+            except Exception:
+                log.exception("Could not announce the tournament event %s", event.get("type"))
 
     @tick_loop.before_loop
     async def before_tick_loop(self):

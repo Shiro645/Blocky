@@ -75,7 +75,8 @@ class EconomyTests(GameTestCase):
         self.assertEqual(res["base"], 30)
         self.assertEqual(res["bonus"], 3)  # +10%
         self.assertEqual(res["balance"], 33)
-        self.assertEqual(await self.run_game(players.get_stat, ALICE, "emeralds_earned"), 33)
+        # Blocks are scored when mined (these were given): only the trader bonus is earned.
+        self.assertEqual(await self.run_game(players.get_stat, ALICE, "emeralds_earned"), 3)
 
     async def test_sell_nothing_is_an_error(self):
         with self.assertRaises(GameError):

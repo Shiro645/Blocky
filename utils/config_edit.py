@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -162,6 +163,8 @@ def parse(field: Field, text: str) -> Any:
         return text
     try:
         value: float = float(text.replace(",", ".")) if field.kind == "float" else int(text)
+        if not math.isfinite(value):
+            raise ValueError
     except ValueError:
         raise ValueError(f"“{text}” is not a {'number' if field.kind == 'float' else 'whole number'}.")
     if field.min is not None and value < field.min:

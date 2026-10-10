@@ -31,6 +31,7 @@ class Fighter:
     potions_used: int = 0
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
+    gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
         self.max_hp = self.max_hp or self.hp
@@ -194,7 +195,9 @@ def simulate(rng: random.Random, a: Fighter, b: Fighter) -> FightResult:
 def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
     equipped = gear.get_equipped(ctx, user_id)
     hp = float(settings.get()["duel"]["hp"])
-    return Fighter(user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp), equipped
+    fighter = Fighter(user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp)
+    fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
+    return fighter, equipped
 
 
 def check_stake(ctx: Ctx, user_id: int, stake: int) -> None:
@@ -238,9 +241,8 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
     stake = row["stake"]
     winner, loser = fight.winner, fight.loser
 
-    # The winner gets their stake back, and the opponent's stake counts as earned.
-    players.give_emeralds(ctx, winner.user_id, stake)
-    players.earn_emeralds(ctx, winner.user_id, stake)
+    # The pot only moves between the two players: it doesn't count for the seasons.
+    players.give_emeralds(ctx, winner.user_id, stake * 2)
     players.bump_stat(ctx, winner.user_id, "duels_won")
     players.bump_stat(ctx, loser.user_id, "duels_lost")
     players.bump_stat(ctx, winner.user_id, "duel_winnings", stake)
@@ -249,7 +251,8 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
 
     broken: list[tuple[int, str]] = []
     for fighter in fight.fighters:
-        equipped = gear.get_equipped(ctx, fighter.user_id)
+        # The pieces worn when the fight started, even if they were unequipped or traded since.
+        equipped = gear.get_pieces(ctx, fighter.gear_ids)
         sword = equipped.get("sword")
         if sword and fighter.attacks and gear.wear(ctx, sword, fighter.attacks):
             broken.append((fighter.user_id, f"{sword['material']} sword"))

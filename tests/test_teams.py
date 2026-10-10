@@ -213,6 +213,16 @@ class TeamSeasonTests(TeamTestCase):
         self.assertEqual(data["last_winner"]["team_id"], dig["team_id"])
         self.assertEqual((await self.run_game(teams.overview, dig["team_id"]))["wins"], 1)
 
+    async def test_disbanding_after_the_week_keeps_the_rewards(self):
+        team = await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB)
+        await self.run_game(players.earn_emeralds, BOB, 300)
+        self.advance(7 * DAY)  # the week is over, not closed yet
+        await self.run_game(teams.disband, ALICE)
+        closed = await self.run_game(teams.close_finished)
+        podium = closed[0]["podium"]
+        self.assertEqual((podium[0]["team_id"], podium[0]["tag"]), (team["team_id"], "DIG"))
+        self.assertEqual(podium[0]["payout"], [(BOB, 600)])
+
     async def test_disbanded_team_is_not_ranked(self):
         await self.make_team()
         await self.run_game(players.earn_emeralds, ALICE, 300)

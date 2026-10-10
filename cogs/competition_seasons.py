@@ -15,6 +15,10 @@ log = logging.getLogger("seasons")
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
+def medal(rank: int) -> str:
+    return MEDALS.get(rank, f"`#{rank}`")
+
+
 class SeasonsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -33,14 +37,23 @@ class SeasonsCog(commands.Cog):
             log.exception("Season loop failed")
 
     async def close_tick(self) -> None:
+        # Seasons are closed (and paid) in the database first: each announcement
+        # is isolated, so one that fails can't stop the champion role or the others.
         closed = await self.bot.db.run(seasons.close_finished)
-        for season in closed:
-            await self.announce(season)
         if closed:
             champion = closed[-1]["podium"][0]["user_id"] if closed[-1]["podium"] else None
-            await self.move_champion_role(champion)
+            await self.safely(self.move_champion_role(champion), "move the champion role")
+        for season in closed:
+            await self.safely(self.announce(season), f"announce season {season['season_id']}")
         for season in await self.bot.db.run(teams.close_finished):
-            await self.announce_teams(season)
+            await self.safely(self.announce_teams(season), f"announce team season {season['season_id']}")
+
+    @staticmethod
+    async def safely(coro, what: str) -> None:
+        try:
+            await coro
+        except Exception:
+            log.exception("Could not %s", what)
 
     @close_loop.before_loop
     async def before_close_loop(self):
@@ -51,7 +64,7 @@ class SeasonsCog(commands.Cog):
         if not podium:
             return
         lines = [
-            f"{MEDALS[p['rank']]} <@{p['user_id']}> — {em(p['score'])} earned · reward **+{em(p['reward'])}**"
+            f"{medal(p['rank'])} <@{p['user_id']}> — {em(p['score'])} earned · reward **+{em(p['reward'])}**"
             for p in podium
         ]
         embed = discord.Embed(
@@ -108,12 +121,12 @@ class SeasonsCog(commands.Cog):
             f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid)}<@{uid}> — **{em(score)}**"
             for i, (uid, score) in enumerate(data["top"], start=1)
         ]
-        rewards = " · ".join(f"{MEDALS[i]} {em(r)}" for i, r in enumerate(data["rewards"][:3], start=1))
+        rewards = " · ".join(f"{MEDALS.get(i, f'#{i}')} {em(r)}" for i, r in enumerate(data["rewards"], start=1))
         embed = discord.Embed(
             title=f"🏆 Season {data['season_id']}",
             description=(
-                "Score = emeralds earned this week (selling, daily, events, duels...).\n"
-                f"Ends <t:{data['ends_at']}:R>. Rewards: {rewards} + the champion role.\n\n"
+                "Score = value created this week: blocks mined, daily, drops, bosses, challenges...\n"
+                f"Ends <t:{data['ends_at']}:R>. Rewards: {rewards or 'none'} + the champion role.\n\n"
                 + ("\n".join(lines) or "Nobody has scored yet. Be the first!")
             ),
             color=discord.Color.gold(),

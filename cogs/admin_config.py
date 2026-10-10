@@ -45,6 +45,9 @@ class ConfigCog(commands.Cog):
         async with self.lock:
             try:
                 new = mutate(read_config_file())
+                problems = settings.problems(balance_overrides(new))
+                if problems:
+                    raise GameError("Not changed, this value isn't allowed:\n" + "\n".join(f"- {p}" for p in problems[:10]))
                 ce.write_config(CONFIG_PATH, new, backups.backup_dir(self.bot.db.path))
                 cfg = reload_config()
             except PermissionError as e:
