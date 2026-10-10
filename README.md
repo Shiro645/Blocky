@@ -119,6 +119,13 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 Restricted to the staff role (or members with the *Manage Server* permission).
 
+- Moderation (the member gets a DM with the reason; everything is logged in the staff channel):
+  - `/warn <member> <reason>` — warnings count for 30 days; 3 warnings = automatic 1h mute, 5 = 1 day, 7 = 7 days. `/unwarn <#>` removes one, `/clearwarns` removes them all.
+  - `/history <member>` — warnings, mutes, kicks and bans, with their numbers.
+  - `/mute <member> <duration> <reason>` (e.g. `30m`, `2h`, `3d`, `1w`, `perm`) and `/unmute`. Mutes use Discord timeouts; the bot renews them past Discord's 28-day limit (permanent mutes) and re-applies them if the member leaves and comes back.
+  - `/kick`, `/ban <member> <reason> [duration] [delete_messages]` (permanent by default; temporary bans are lifted automatically) and `/unban <user_id>`.
+  - `/clear <amount> [member]` (pinned messages are kept), `/lock` / `/unlock` (staff can still write), `/slowmode <seconds>`.
+  - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages* and *Manage Channels* permissions.
 - Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion [level]`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
@@ -217,6 +224,8 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
 
 Duels and potions are tuned with `balance.duel` (`turn_seconds`, `afk_turns`, `hp`, `min_stake`…) and `balance.potions`: `max_per_duel`, `strength_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `boss_top` and the reference `value`.
+
+Moderation is tuned with `balance.moderation`: `warn_expire_days` (0 = warnings never expire) and `warn_mutes`, e.g. `{"3": "1h", "5": "1d", "7": "7d"}` (automatic mute when a member reaches that many warnings).
 
 The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sell_discount`, `buy_bonus`, `goods` (what he can sell), `buys` (blocks he buys and how many), `book_iii_price` and `potion_ii_price`. Reinforced potions use `balance.potions.level2_multiplier` and `value_ii`.
 
@@ -337,6 +346,7 @@ game/                        # game rules, no Discord code
 ├── enchants.py              # enchanted books, lapis and enchantment effects
 ├── potions.py               # duel potions
 ├── villager.py              # the wandering villager
+├── moderation.py            # warnings, mutes, kicks and bans (records and timers)
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links

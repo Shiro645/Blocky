@@ -185,6 +185,11 @@ DEFAULTS: dict[str, Any] = {
         "prize_split": [60, 25, 15],
         "xp_per_win": 20,
     },
+    "moderation": {
+        "warn_expire_days": 30,  # warnings older than this stop counting (0 = never)
+        # Automatic mute when a member reaches N active warnings: {"N": "duration"}.
+        "warn_mutes": {"3": "1h", "5": "1d", "7": "7d"},
+    },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
     "challenges": {"per_week": 3},
 }
