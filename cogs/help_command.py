@@ -50,6 +50,8 @@ SECTIONS: list[tuple[str, list[str]]] = [
 ]
 
 STAFF_SECTION = ("🔐 Staff", [
+    "`/warn` · `/unwarn` · `/clearwarns` · `/history` · `/mute` · `/unmute` · `/kick` · `/ban` · `/unban`",
+    "`/clear` · `/lock` · `/unlock` · `/slowmode`",
     "`/add_whitelist` · `/remove_whitelist` · `/check_whitelist` · `/unlink`",
     "`/add_block` · `/add_emerald` · `/remove_emerald` · `/add_item` · `/add_gear` · `/remove_gear` · `/add_book` · `/add_potion`",
     "`/xp_add` · `/xp_set` · `/level_set` · `/talent_add` · `/talent_reset` · `/sync_level_roles`",

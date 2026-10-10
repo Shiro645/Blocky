@@ -307,6 +307,23 @@ MIGRATIONS: list[str] = [
     ALTER TABLE tournaments ADD COLUMN channel_id INTEGER;
     ALTER TABLE tournaments ADD COLUMN message_id INTEGER;
     """,
+    # 13 - moderation: warnings, mutes, kicks and bans
+    """
+    CREATE TABLE sanctions (
+        sanction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,             -- warn | mute | kick | ban
+        reason TEXT,
+        moderator_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER,             -- end of a temporary mute or ban (NULL = permanent)
+        active INTEGER NOT NULL DEFAULT 1,  -- warning still counted, mute or ban in force
+        applied_until INTEGER,          -- end of the Discord timeout currently set (mutes)
+        ended_at INTEGER,
+        ended_by INTEGER
+    );
+    CREATE INDEX idx_sanctions_user ON sanctions(user_id, kind, active);
+    """,
 ]
 
 
