@@ -218,6 +218,16 @@ DEFAULTS: dict[str, Any] = {
         "warn_mutes": {"3": "1h", "5": "1d", "7": "7d"},
     },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
+    # /rob: the victim has minutes_to_stop minutes to stop the thief, else the thief takes the loot.
+    "rob": {
+        "risky_min": 200, "risky_max": 500,  # risky: the victim is pinged, big loot
+        "discreet_min": 50, "discreet_max": 100,  # discreet: no ping, small loot
+        "minutes_to_stop": 60,
+        "fine_percent": 10,  # stopped in time: the thief pays the victim this % of the loot he aimed at
+        "cooldown_hours": 6,  # between two robberies of a thief
+        "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
+        "min_victim_level": 5,  # players below this level can't be robbed
+    },
     # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
     "games": {
         "min_bet": 1,
@@ -447,6 +457,12 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if merged["daily"]["weekly_bonus_item"] not in merged["gear"]["tier"]:
         out.append(("`balance.daily.weekly_bonus_item` must be gold, iron, diamond or netherite.", [("daily", "weekly_bonus_item")]))
 
+    r = merged["rob"]
+    for mode in ("risky", "discreet"):
+        if r[f"{mode}_min"] > r[f"{mode}_max"]:
+            out.append((f"`balance.rob.{mode}_min` must not be above `{mode}_max`.", [("rob", f"{mode}_min"), ("rob", f"{mode}_max")]))
+    if r["minutes_to_stop"] < 1:
+        out.append(("`balance.rob.minutes_to_stop` must be at least 1.", [("rob", "minutes_to_stop")]))
     g = merged["games"]
     if g["roulette_zeros"] not in (1, 2):
         out.append(("`balance.games.roulette_zeros` is 1 (0 only) or 2 (0 and 00).", [("games", "roulette_zeros")]))

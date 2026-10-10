@@ -60,6 +60,7 @@ EXTENSIONS = [
     "cogs.games_roulette",
     "cogs.games_blockdle",
     "cogs.games_quiz",
+    "cogs.games_rob",
     "cogs.help_command",
 ]
 

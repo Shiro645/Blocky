@@ -50,6 +50,7 @@ CATEGORIES = {
     "tournament": "🏟️ Tournament",
     "villager": "🧑‍🌾 Villager",
     "games": "🎲 Mini-games",
+    "rob": "🦹 Robberies",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -153,12 +154,15 @@ FIELDS: list[Field] = [
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
           help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
                "but no automatic quiz)."),
+    Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
+          help="The bot keeps one message there with every auction listing, always up to date, with a menu "
+               "to buy. Best as a channel where members can't write."),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
-          help="Given to the winner of the last weekly season."),
+          help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
-          help="Given to the winner of the last weekend tournament."),
+          help="Given to the winner of the last weekend tournament.", item="assign"),
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -366,6 +370,17 @@ FIELDS: list[Field] = [
     _b("games.quiz_seconds", "games", "Quiz: seconds to answer", min=10, max=600),
     _b("games.quiz_reward", "games", "Quiz: emeralds for the right answer"),
     _b("games.quiz_xp", "games", "Quiz: XP for the right answer"),
+    # ---- robberies ----
+    _b("rob.risky_min", "rob", "Risky robbery: minimum loot", "The victim is pinged. Never more than they have."),
+    _b("rob.risky_max", "rob", "Risky robbery: maximum loot"),
+    _b("rob.discreet_min", "rob", "Discreet robbery: minimum loot", "Nobody is pinged. Never more than they have."),
+    _b("rob.discreet_max", "rob", "Discreet robbery: maximum loot"),
+    _b("rob.minutes_to_stop", "rob", "Minutes the victim has to stop it", min=1, max=1440),
+    _b("rob.fine_percent", "rob", "Fine when stopped (% of the loot)",
+       "Paid by the thief to the victim (never more than the thief has).", max=1000),
+    _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
+    _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
+    _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
 ]
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 
