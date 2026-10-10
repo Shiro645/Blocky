@@ -131,7 +131,7 @@ CHALLENGES_BY_CODE = {c.code: c for c in CHALLENGE_POOL}
 
 
 def available(c: Challenge) -> bool:
-    # No boss challenge when bosses only come from /boss_spawn: the week may have none.
+    # No boss challenge when bosses only come from /event boss: the week may have none.
     return c.stat != "boss_damage" or float(settings.get()["boss"]["auto_spawn_hours"]) > 0
 
 

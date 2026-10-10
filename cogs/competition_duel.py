@@ -11,12 +11,9 @@ from discord.ext import commands
 
 from game import duel, potions, settings
 from game.errors import GameError
-from utils.checks import staff_only
-from utils.ui import BaseView, em, join_lines, potion_icon, progress_bar, report_error
+from utils.ui import BaseView, em, join_lines, mark_handled, potion_icon, progress_bar, report_error
 
 log = logging.getLogger("duel")
-
-POTION_CHOICES = [app_commands.Choice(name=p.name, value=p.key) for p in potions.POTIONS.values()]
 
 
 class DuelView(BaseView):
@@ -120,6 +117,7 @@ class FightView(discord.ui.View):
             self.add_item(PotionSelect(self, options[:25]))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        mark_handled(interaction)
         if interaction.user.id not in self.members:
             await interaction.response.send_message("❌ This isn't your duel.", ephemeral=True)
             return False
@@ -299,25 +297,6 @@ class DuelCog(commands.Cog):
             color=discord.Color.purple(),
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    @app_commands.command(name="add_potion", description="STAFF: Give potions to a member.")
-    @app_commands.describe(
-        member="Who gets the potions",
-        potion="Which potion",
-        amount="How many (1-100)",
-        level="1 = normal, 2 = reinforced",
-    )
-    @app_commands.choices(potion=POTION_CHOICES)
-    @staff_only()
-    async def add_potion(
-        self, interaction: discord.Interaction, member: discord.Member, potion: str,
-        amount: app_commands.Range[int, 1, 100] = 1, level: app_commands.Range[int, 1, potions.MAX_LEVEL] = 1,
-    ):
-        potion = potions.key_of(potion, level)
-        await self.bot.db.run(potions.give, member.id, potion, amount)
-        await interaction.response.send_message(
-            f"✅ Gave {amount} × {potion_icon(potion)} **{potions.label(potion)}** to {member.mention}.", ephemeral=True
-        )
 
     # ---------- embeds ----------
     def turn_line(self, view: FightView, t: duel.Turn) -> str:

@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 
 from game import settings, tournament
 from game.tournament import round_name
-from utils.checks import staff_only
 from utils.config import role_id
 from utils.ui import em, join_lines, report_error
 
@@ -374,15 +373,8 @@ class TournamentCog(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # ---------- staff ----------
-    @app_commands.command(name="tournament_admin", description="STAFF: Open, advance or cancel the tournament now.")
-    @app_commands.describe(action="What to do")
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Open registrations now", value="open"),
-        app_commands.Choice(name="Next step now (draw, then next round)", value="next"),
-        app_commands.Choice(name="Cancel and refund", value="cancel"),
-    ])
-    @staff_only()
-    async def tournament_admin(self, interaction: discord.Interaction, action: str):
+    async def staff_action(self, interaction: discord.Interaction, action: str) -> None:
+        """/event tournament (cogs/staff_events.py): open, advance or cancel the tournament now."""
         await interaction.response.defer(ephemeral=True, thinking=True)
         if action == "open":
             t = await self.bot.db.run(tournament.staff_open)

@@ -8,7 +8,6 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from game import assets, settings, villager
-from utils.checks import staff_only
 from utils.config import role_id
 from utils.ui import asset_icon, em, report_error
 
@@ -99,7 +98,7 @@ def visit_view(visit: dict) -> discord.ui.View:
 class VillagerCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._posting: set[int] = set()  # visits being posted (the loop and /villager_admin)
+        self._posting: set[int] = set()  # visits being posted (the loop and /event villager)
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(VillagerButton)
@@ -192,14 +191,8 @@ class VillagerCog(commands.Cog):
             embed.description += f"\n[Go to his stall]({url}) to buy."
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="villager_admin", description="STAFF: Make the villager come now, or leave.")
-    @app_commands.describe(action="What to do")
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Come now (usual visit length)", value="come"),
-        app_commands.Choice(name="Leave now", value="leave"),
-    ])
-    @staff_only()
-    async def villager_admin(self, interaction: discord.Interaction, action: str):
+    async def staff_action(self, interaction: discord.Interaction, action: str) -> None:
+        """/event villager (cogs/staff_events.py): make the villager come now, or leave."""
         await interaction.response.defer(ephemeral=True, thinking=True)
         if action == "come":
             visit = await self.bot.db.run(villager.arrive)

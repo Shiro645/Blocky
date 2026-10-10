@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Awaitable, Callable
 
 import discord
 from discord import app_commands
@@ -11,7 +10,7 @@ from discord.ext import commands
 from game import settings, teams
 from game.errors import GameError
 from utils.checks import staff_only
-from utils.ui import BaseView, em, report_error
+from utils.ui import ConfirmView, em, report_error
 
 log = logging.getLogger("teams")
 
@@ -62,25 +61,6 @@ def invite_view(team_id: int, user_id: int) -> discord.ui.View:
     view.add_item(TeamInviteButton("accept", team_id, user_id))
     view.add_item(TeamInviteButton("decline", team_id, user_id))
     return view
-
-
-class ConfirmView(BaseView):
-    """Confirm / Cancel before something that can't be undone."""
-
-    def __init__(self, user_id: int, label: str, action: Callable[[discord.Interaction], Awaitable[None]]):
-        super().__init__(allowed_ids={user_id}, timeout=60)
-        self.action = action
-        self.confirm.label = label
-
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.stop()
-        await self.action(interaction)
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.stop()
-        await interaction.response.edit_message(content="Cancelled.", view=None)
 
 
 class TeamsCog(commands.Cog):

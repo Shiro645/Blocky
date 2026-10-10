@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from game import enchants, potions, progress
+from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from utils.mc_commands import DEFAULT_BLOCKED
 
@@ -403,7 +404,8 @@ PAGES: list[Page] = [
         "Sells **all** your blocks at once for emeralds. The Trader talent adds a bonus on top.\n"
         "Blocks already counted for the season when you mined them, so selling only adds the Trader bonus to "
         "your season score. Ingots, gear, books and potions aren't sold here: use /auction or /trade. "
-        "The wandering villager sometimes buys a pile of blocks above this price (/villager).",
+        "The wandering villager sometimes buys a pile of blocks above this price (/villager).\n"
+        "Everyone in the channel sees your sale.",
         lambda s: [
             _block_values(s),
             f"Trader talent: **+{pct(s['talents']['trader_bonus_per_point'])}** per point "
@@ -423,7 +425,8 @@ PAGES: list[Page] = [
     Page(
         "daily", "basics",
         "Claims your daily reward, once per day. Claiming on consecutive days grows your **streak**: a bigger "
-        "reward each day up to the cap, and an ingot every 7th day in a row. Missing a day resets the streak.",
+        "reward each day up to the cap, and an ingot every 7th day in a row. Missing a day resets the streak.\n"
+        "Everyone in the channel sees your reward.",
         _daily,
         examples=("/daily",),
         related=("challenges", "profile"),
@@ -433,7 +436,8 @@ PAGES: list[Page] = [
         "craft", "gear",
         "Crafts a piece of gear from ingots and sticks (buy them with /market, or get them while mining, in "
         "drops or from other players). If that slot is empty, the new piece is equipped right away.\n"
-        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time.",
+        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time.\n"
+        "Everyone in the channel sees what you crafted.",
         lambda s: ["Durability: " + listing(s["gear"]["durability"]), "Recipes and prices: /craftlist"],
         examples=("/craft item:pickaxe material:iron",),
         related=("craftlist", "market", "equip_best", "repair"),
@@ -904,116 +908,92 @@ PAGES: list[Page] = [
     ),
     # ---- staff: economy ----
     Page(
-        "add_emerald", "staff_economy",
-        "Gives emeralds to a member. What staff gives doesn't count for the seasons.",
-        examples=("/add_emerald member:@Steve amount:500",),
-        related=("remove_emerald",),
+        "give", "staff_economy",
+        "Gives anything to a member: emeralds, blocks, sticks, ingots, lapis, books, potions or gear. Pick it in the "
+        "suggestions; for an enchanted piece, type its full key, e.g. `gear:diamond:sword:sharpness3,unbreaking2`.\n"
+        "The member gets a DM (with the reason, if any) and it's written in the staff log. What staff gives doesn't "
+        "count for the seasons.",
+        lambda s: [f"Gear: at most **{num(MAX_STAFF_GEAR)}** pieces at once (new, full durability)"],
+        examples=(
+            "/give member:@Steve item:emeralds amount:500 reason:Event winner",
+            "/give member:@Steve item:Sharpness III book",
+            "/give member:@Steve item:gear:netherite:sword:sharpness3",
+        ),
+        related=("take", "player xp_add"),
     ),
     Page(
-        "remove_emerald", "staff_economy",
-        "Removes emeralds from a member.",
-        examples=("/remove_emerald member:@Steve amount:500",),
-        related=("add_emerald",),
+        "take", "staff_economy",
+        "Removes something a member owns: the suggestions list what they really have. You confirm with a button "
+        "first, and it never removes more than they have (spare gear goes before equipped gear).\n"
+        "The member gets a DM (with the reason, if any) and it's written in the staff log.",
+        examples=("/take member:@Steve item:emeralds amount:200 reason:Bug abuse",),
+        related=("give",),
     ),
     Page(
-        "add_block", "staff_economy",
-        "Gives blocks to a member.",
-        examples=("/add_block member:@Steve block_type:bedrock amount:10",),
-        related=("add_item",),
+        "player xp_add", "staff_economy",
+        "Gives XP to a member: levels and talent points follow, like normal XP. The member gets a DM.",
+        examples=("/player xp_add member:@Steve amount:1000",),
+        related=("player xp_set", "player level"),
     ),
     Page(
-        "add_item", "staff_economy",
-        "Gives sticks, ingots or lapis lazuli to a member.",
-        examples=("/add_item member:@Steve resource:diamond ingot amount:5",),
-        related=("add_block", "add_gear"),
+        "player xp_set", "staff_economy",
+        "Sets a member's XP inside their current level. The member gets a DM.",
+        examples=("/player xp_set member:@Steve xp:50",),
+        related=("player xp_add", "player level"),
     ),
     Page(
-        "add_gear", "staff_economy",
-        "Gives a new piece of gear (full durability, no enchantment) to a member.",
-        examples=("/add_gear member:@Steve gear:sword material:netherite",),
-        related=("remove_gear", "add_book"),
+        "player level", "staff_economy",
+        "Sets a member's level: their unspent talent points are recomputed and their level role updated. "
+        "The member gets a DM.",
+        examples=("/player level member:@Steve level:25",),
+        related=("player xp_add", "player talents_reset", "player sync_roles"),
     ),
     Page(
-        "remove_gear", "staff_economy",
-        "Removes pieces of gear from a member (unequipped pieces first).",
-        examples=("/remove_gear member:@Steve gear:sword material:netherite count:1",),
-        related=("add_gear",),
+        "player talents_add", "staff_economy",
+        "Adds talent points to a member (a negative number removes some). The member gets a DM.",
+        examples=("/player talents_add member:@Steve points:2", "/player talents_add member:@Steve points:-1"),
+        related=("player talents_reset",),
     ),
     Page(
-        "add_book", "staff_economy",
-        "Gives enchanted books to a member.",
-        examples=("/add_book member:@Steve enchant:Sharpness level:III",),
-        related=("add_item", "add_potion"),
+        "player talents_reset", "staff_economy",
+        "Resets a member's talents: every spent point is refunded, to spend again with /talent_buy. "
+        "The member gets a DM.",
+        examples=("/player talents_reset member:@Steve",),
+        related=("player talents_add",),
     ),
     Page(
-        "add_potion", "staff_economy",
-        "Gives potions to a member (level 2 = reinforced).",
-        examples=("/add_potion member:@Steve potion:Strength amount:2",),
-        related=("add_book",),
-    ),
-    Page(
-        "xp_add", "staff_economy",
-        "Gives XP to a member: levels and talent points follow.",
-        examples=("/xp_add member:@Steve amount:1000",),
-        related=("xp_set", "level_set"),
-    ),
-    Page(
-        "xp_set", "staff_economy",
-        "Sets a member's XP inside their current level.",
-        examples=("/xp_set member:@Steve xp:50",),
-        related=("xp_add", "level_set"),
-    ),
-    Page(
-        "level_set", "staff_economy",
-        "Sets a member's level. Their unspent talent points are recomputed.",
-        examples=("/level_set member:@Steve level:25",),
-        related=("xp_add", "talent_reset", "sync_level_roles"),
-    ),
-    Page(
-        "talent_add", "staff_economy",
-        "Adds talent points to a member (a negative number removes some).",
-        examples=("/talent_add member:@Steve points:2",),
-        related=("talent_reset",),
-    ),
-    Page(
-        "talent_reset", "staff_economy",
-        "Resets a member's talents: every spent point is refunded.",
-        examples=("/talent_reset member:@Steve",),
-        related=("talent_add",),
-    ),
-    Page(
-        "sync_level_roles", "staff_economy",
+        "player sync_roles", "staff_economy",
         "Gives every member the level role matching their level (after changing the level roles in /config).",
-        examples=("/sync_level_roles",),
-        related=("config", "level_set"),
+        examples=("/player sync_roles",),
+        related=("config", "player level"),
     ),
     # ---- staff: events ----
     Page(
-        "boss_spawn", "staff_events",
+        "event boss", "staff_events",
         "Summons a boss now (only one at a time), with the name and HP you choose or the default ones.",
         lambda s: [f"Default HP: **{num(s['boss']['hp'])}**", "Names: " + ", ".join(s["boss"]["names"])] + _boss(s)[:1],
-        examples=("/boss_spawn", "/boss_spawn name:Herobrine hp:5000"),
-        related=("boss", "drop_spawn"),
+        examples=("/event boss", "/event boss name:Herobrine hp:5000"),
+        related=("boss", "event drop"),
     ),
     Page(
-        "drop_spawn", "staff_events",
+        "event drop", "staff_events",
         "Makes a drop appear in this channel right now: the first player to click it gets the reward.",
-        examples=("/drop_spawn",),
-        related=("boss_spawn",),
+        examples=("/event drop",),
+        related=("event boss",),
     ),
     Page(
-        "tournament_admin", "staff_events",
+        "event tournament", "staff_events",
         "Opens the registrations now, moves to the next step now (the draw, then the next round), or cancels the "
-        "tournament and refunds everyone.",
+        "tournament and refunds everyone. Handy to test without waiting for the weekend.",
         _tournament,
-        examples=("/tournament_admin action:Open registrations now",),
+        examples=("/event tournament action:Open registrations now",),
         related=("tournament info", "tournament bracket"),
     ),
     Page(
-        "villager_admin", "staff_events",
+        "event villager", "staff_events",
         "Makes the villager come now (for the usual visit length) or leave now.",
         _villager,
-        examples=("/villager_admin action:Come now (usual visit length)",),
+        examples=("/event villager action:Come now (usual visit length)",),
         related=("villager",),
     ),
     Page(
@@ -1027,15 +1007,17 @@ PAGES: list[Page] = [
         "config", "staff_server",
         "Opens the settings panel: channels, roles, level roles, prices, block values, gameplay, teams, "
         "tournament, enchantments, potions, villager and Minecraft texts. Changes are saved in config.json "
-        "(a copy of the old file is kept) and apply at once.\n"
+        "(a copy of the old file is kept) and apply at once. Settings in the file that the bot doesn't use "
+        "(left by an older version, or a typo) never block a change: they are removed from the file.\n"
         "The RCON password, the staff role and the database path can't be seen or changed from Discord.",
         examples=("/config",),
         related=("reload_config", "backup_now"),
     ),
     Page(
         "reload_config", "staff_server",
-        "Reads config.json again after you edited it by hand, without restarting the bot. If the file has an "
-        "error, nothing changes and the error is shown.",
+        "Reads config.json again after you edited it by hand, without restarting the bot. If the file isn't "
+        "valid JSON, nothing changes and the error is shown. Wrong values in `balance` are ignored (the default "
+        "is used) and listed.",
         examples=("/reload_config",),
         related=("config",),
     ),
@@ -1053,31 +1035,31 @@ PAGES: list[Page] = [
         "refused, also when hidden after `execute … run`.",
         lambda s: ["Blocked: " + ", ".join(f"`{c}`" for c in DEFAULT_BLOCKED)],
         examples=("/mc command:say Hello everyone", "/mc command:give Steve diamond 3"),
-        related=("check_whitelist", "server_status"),
+        related=("whitelist list", "server_status"),
     ),
     Page(
-        "add_whitelist", "staff_server",
+        "whitelist add", "staff_server",
         "Adds a Minecraft Java player to the server whitelist (the name is checked with Mojang).",
-        examples=("/add_whitelist username:Steve",),
-        related=("remove_whitelist", "check_whitelist"),
+        examples=("/whitelist add username:Steve",),
+        related=("whitelist remove", "whitelist list"),
     ),
     Page(
-        "remove_whitelist", "staff_server",
+        "whitelist remove", "staff_server",
         "Removes a player from the server whitelist.",
-        examples=("/remove_whitelist username:Steve",),
-        related=("add_whitelist", "check_whitelist"),
+        examples=("/whitelist remove username:Steve",),
+        related=("whitelist add", "whitelist list"),
     ),
     Page(
-        "check_whitelist", "staff_server",
+        "whitelist list", "staff_server",
         "Shows the current server whitelist.",
-        examples=("/check_whitelist",),
-        related=("add_whitelist", "remove_whitelist"),
+        examples=("/whitelist list",),
+        related=("whitelist add", "whitelist remove"),
     ),
     Page(
         "unlink", "staff_server",
         "Removes a member's Minecraft link, and their name from the whitelist.",
         examples=("/unlink member:@Steve",),
-        related=("link", "remove_whitelist"),
+        related=("link", "whitelist remove"),
     ),
 ]
 

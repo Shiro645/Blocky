@@ -79,5 +79,36 @@ class ConfigEditTests(unittest.TestCase):
             self.assertLessEqual(len(field.label), 45, field.label)
 
 
+
+class PrepareChangeTests(unittest.TestCase):
+    """/config: only the problems a change creates refuse it."""
+
+    def setUp(self):
+        settings.load()
+
+    def test_an_old_key_never_blocks_a_change_and_is_removed(self):
+        old = {**BASE, "balance": {"boss": {"ping_here": True, "hp": 2000}, "mining": {"cooldown_seconds": 15}}}
+        change = ce.prepare_change(old, lambda cfg: ce.set_value(cfg, ("channels", "spam"), [5]))
+        self.assertEqual(change.refused, [])
+        self.assertEqual(len(change.cleaned), 1)
+        self.assertIn("ping_here", change.cleaned[0])
+        self.assertEqual(change.config["balance"], {"boss": {"hp": 2000}, "mining": {"cooldown_seconds": 15}})
+        self.assertEqual(change.config["channels"]["spam"], [5])
+        self.assertIn("ping_here", old["balance"]["boss"])  # the original isn't touched
+
+    def test_a_bad_new_value_is_refused(self):
+        old = {**BASE, "balance": {"boss": {"ping_here": True}}}
+        change = ce.prepare_change(old, lambda cfg: ce.set_value(cfg, ("balance", "mining", "cooldown_seconds"), -3))
+        self.assertEqual(len(change.refused), 1)
+        self.assertIn("cooldown_seconds", change.refused[0])
+        self.assertEqual(change.cleaned, [])
+
+    def test_a_clean_file_stays_as_it_is(self):
+        old = {**BASE, "balance": {"mining": {"cooldown_seconds": 15}}}
+        change = ce.prepare_change(old, lambda cfg: ce.set_value(cfg, ("balance", "daily", "xp"), 30))
+        self.assertEqual((change.refused, change.cleaned), ([], []))
+        self.assertEqual(change.config["balance"], {"mining": {"cooldown_seconds": 15}, "daily": {"xp": 30}})
+
+
 if __name__ == "__main__":
     unittest.main()

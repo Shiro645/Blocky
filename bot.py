@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 
@@ -11,10 +12,10 @@ from dotenv import load_dotenv
 from game import settings
 from game.db import Database
 from utils.announcer import Announcer
-from utils.config import balance_overrides, load_config
-from utils import staff_log
+from utils.config import balance_overrides, load_config, staff_role_id
+from utils import staff_log, staff_visibility
 from utils.checks import is_staff_command
-from utils.ui import load_application_emojis, report_error
+from utils.ui import load_application_emojis, report_error, take_handled
 
 
 # -------- LOAD ENV --------
@@ -42,10 +43,11 @@ EXTENSIONS = [
     "cogs.economy_daily",
     "cogs.economy_exchange",
     "cogs.economy_auction",
-    "cogs.economy_admin",
+    "cogs.staff_economy",
     "cogs.admin_tools",
     "cogs.admin_config",
     "cogs.staff_moderation",
+    "cogs.staff_events",
     "cogs.competition_leaderboard",
     "cogs.competition_seasons",
     "cogs.competition_duel",
@@ -107,6 +109,7 @@ class Bot(commands.Bot):
         # Sync slash commands
         guild_id = int(load_config().get("guild_id", 0) or 0)
         if guild_id:
+            await self.hide_staff_commands(guild_id)
             guild = discord.Object(id=guild_id)
             self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
@@ -115,12 +118,58 @@ class Bot(commands.Bot):
             synced = await self.tree.sync()
             log.info("Synced %d global commands", len(synced))
 
+    async def hide_staff_commands(self, guild_id: int) -> None:
+        """Only members with a permission of the staff role see the staff commands (utils/staff_visibility.py)."""
+        try:
+            guild = await self.fetch_guild(guild_id)
+        except discord.HTTPException:
+            log.warning("Could not read the server roles: the staff commands stay visible to everyone")
+            return
+        staff = None
+        role_id = staff_role_id()
+        if role_id:
+            role = guild.get_role(role_id)
+            if role is None:
+                log.warning("Staff role %s not found: the staff commands stay visible to everyone", role_id)
+                return
+            staff = {name for name, allowed in role.permissions if allowed}
+        everyone = {name for name, allowed in guild.default_role.permissions if allowed}
+        permission = staff_visibility.pick(staff, everyone)
+        if permission is None:
+            log.warning(
+                "The staff role has no moderation permission (e.g. Timeout Members): "
+                "the staff commands stay visible to everyone"
+            )
+            return
+        hidden = [c for c in self.tree.get_commands() if is_staff_command(c)]
+        for command in hidden:
+            command.default_permissions = discord.Permissions(**{permission: True})
+        log.info("%d staff commands are only shown to members with the %s permission", len(hidden), permission)
+
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         if isinstance(error, app_commands.CommandInvokeError):
             error = error.original  # type: ignore[assignment]
         await report_error(interaction, error)
+
+    async def on_interaction(self, interaction: discord.Interaction) -> None:
+        """A button or menu that nothing handles any more (it expired, or the bot restarted since):
+        say so instead of Discord's "This interaction failed"."""
+        if interaction.type is not discord.InteractionType.component:
+            return
+        await asyncio.sleep(1)  # live views answer first (they mark the click as handled)
+        handled = take_handled(interaction)
+        custom_id = str((interaction.data or {}).get("custom_id", ""))
+        if handled or custom_id.startswith("blocky:") or interaction.response.is_done():
+            return  # "blocky:..." buttons are persistent: they always have a handler
+        try:
+            await interaction.response.send_message(
+                "⌛ These buttons don't work anymore (they expired, or the bot restarted). Use the command again.",
+                ephemeral=True,
+            )
+        except discord.HTTPException:
+            pass
 
     async def on_app_command_completion(self, interaction: discord.Interaction, command) -> None:
         """Log every staff command that doesn't log itself (economy, events, whitelist...)."""

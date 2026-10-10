@@ -211,3 +211,51 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
 def transfer(ctx: Ctx, from_id: int, to_id: int, key: str, amount: int) -> None:
     piece = take(ctx, from_id, key, amount)
     give(ctx, to_id, key, amount, durability=piece["durability"] if piece else None)
+
+
+# ---------------- staff ----------------
+MAX_STAFF_GEAR = 50  # pieces of gear given at once
+
+
+def catalog() -> list[str]:
+    """Every asset staff can give. Gear comes without enchantments (a full key such as
+    "gear:diamond:sword:sharpness3" gives an enchanted piece)."""
+    keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis"]
+    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.MAX_LEVEL + 1)]
+    keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
+    keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS]
+    return keys
+
+
+def amount_of(ctx: Ctx, user_id: int, key: str) -> int:
+    """How many of an asset the player has (gear: pieces with exactly these enchantments)."""
+    parse(key)
+    return dict(owned(ctx, user_id)).get(key, 0)
+
+
+def staff_give(ctx: Ctx, user_id: int, key: str, amount: int) -> int:
+    """Staff: give an asset. It doesn't count for the seasons. Returns how many the player has now."""
+    if amount <= 0:
+        raise GameError("Amount must be greater than 0.")
+    if is_gear(key) and amount > MAX_STAFF_GEAR:
+        raise GameError(f"At most **{MAX_STAFF_GEAR}** pieces of gear at once.")
+    players.ensure_user(ctx, user_id)
+    give(ctx, user_id, key, amount)
+    return amount_of(ctx, user_id, key)
+
+
+def staff_take(ctx: Ctx, user_id: int, key: str, amount: int) -> tuple[int, int]:
+    """Staff: remove up to `amount` (never more than the player has; spare gear goes first).
+    Returns (removed, left)."""
+    if amount <= 0:
+        raise GameError("Amount must be greater than 0.")
+    have = amount_of(ctx, user_id, key)
+    removed = min(amount, have)
+    if removed <= 0:
+        raise GameError(f"<@{user_id}> has no **{describe(key)}**.")
+    if is_gear(key):
+        for _ in range(removed):
+            take(ctx, user_id, key, 1)
+    else:
+        take(ctx, user_id, key, removed)
+    return removed, have - removed

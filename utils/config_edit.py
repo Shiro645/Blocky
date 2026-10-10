@@ -11,9 +11,10 @@ import math
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from game import settings
+from utils.config import balance_overrides
 
 PROTECTED = (
     ("minecraft", "rcon_password"),
@@ -207,6 +208,30 @@ def set_level_role(cfg: dict, level: int, role_id: int | None) -> dict:
         roles[str(level)] = role_id
     ordered = dict(sorted(roles.items(), key=lambda kv: int(kv[0])))
     return set_value(cfg, ("roles", "level_roles"), ordered)
+
+
+@dataclass
+class Change:
+    config: dict  # the config to write
+    refused: list[str]  # problems this change would create: nothing is written
+    cleaned: list[str]  # problems that were already in the file: removed from it
+
+
+def prepare_change(old: dict, mutate: Callable[[dict], dict]) -> Change:
+    """Apply `mutate` to a copy of config.json.
+
+    Only the problems the change itself creates refuse it. The ones already in the
+    file (a key from an older version of the bot, a typo…) never block a change:
+    the bot ignores them anyway, so they are removed from the file.
+    """
+    before = set(settings.problems(balance_overrides(old)))
+    new = mutate(copy.deepcopy(old))
+    after = settings.problems(balance_overrides(new))
+    refused = [p for p in after if p not in before]
+    if refused or not after:
+        return Change(new, refused, [])
+    new["balance"] = settings.clean(new.get("balance") or {})[0]
+    return Change(new, [], after)
 
 
 def write_config(path: Path, cfg: dict, backup_folder: Path, keep: int = 20) -> Path | None:

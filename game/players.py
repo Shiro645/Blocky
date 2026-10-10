@@ -82,16 +82,6 @@ def spend_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
         raise GameError(f"Not enough emeralds: you have **{have}**, you need **{amount}**.")
 
 
-def remove_emeralds_clamped(ctx: Ctx, user_id: int, amount: int) -> int:
-    """Staff only: remove up to `amount`, returns the new balance."""
-    ensure_user(ctx, user_id)
-    ctx.execute(
-        "UPDATE users SET emeralds = MAX(0, emeralds - ?) WHERE user_id=?;",
-        (amount, user_id),
-    )
-    return get_emeralds(ctx, user_id)
-
-
 # ---------------- blocks ----------------
 def get_blocks(ctx: Ctx, user_id: int) -> dict[str, int]:
     ensure_user(ctx, user_id)

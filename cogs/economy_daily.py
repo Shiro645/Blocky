@@ -29,7 +29,8 @@ class DailyCog(commands.Cog):
         lines.append(f"Tomorrow: **{em(res['next_reward'])}**")
 
         embed = discord.Embed(title="📅 Daily reward", description="\n".join(lines), color=discord.Color.green())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)  # public: rewards are shown to everyone
 
 
 async def setup(bot: commands.Bot):

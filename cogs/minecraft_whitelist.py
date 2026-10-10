@@ -28,13 +28,15 @@ async def run_rcon(command: str) -> str:
 
 
 class MinecraftWhitelistCog(commands.Cog):
+    whitelist = app_commands.Group(name="whitelist", description="STAFF: The Minecraft server whitelist.")
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="add_whitelist", description="STAFF: Add a player to the Minecraft whitelist.")
+    @whitelist.command(name="add", description="STAFF: Add a player to the Minecraft whitelist.")
     @app_commands.describe(username="Minecraft Java username")
     @staff_only()
-    async def add_whitelist(self, interaction: discord.Interaction, username: str):
+    async def add(self, interaction: discord.Interaction, username: str):
         if not USERNAME_RE.match(username):
             raise GameError("Invalid username (3-16 letters, numbers or _).")
         await interaction.response.defer(ephemeral=True)
@@ -43,19 +45,19 @@ class MinecraftWhitelistCog(commands.Cog):
         resp = await run_rcon(f"whitelist add {username}")
         await interaction.followup.send(f"✅ **{username}** added to the whitelist.\n```{resp}```", ephemeral=True)
 
-    @app_commands.command(name="remove_whitelist", description="STAFF: Remove a player from the Minecraft whitelist.")
+    @whitelist.command(name="remove", description="STAFF: Remove a player from the Minecraft whitelist.")
     @app_commands.describe(username="Minecraft Java username")
     @staff_only()
-    async def remove_whitelist(self, interaction: discord.Interaction, username: str):
+    async def remove(self, interaction: discord.Interaction, username: str):
         if not USERNAME_RE.match(username):
             raise GameError("Invalid username (3-16 letters, numbers or _).")
         await interaction.response.defer(ephemeral=True)
         resp = await run_rcon(f"whitelist remove {username}")
         await interaction.followup.send(f"✅ **{username}** removed from the whitelist.\n```{resp}```", ephemeral=True)
 
-    @app_commands.command(name="check_whitelist", description="STAFF: Show the current Minecraft whitelist.")
+    @whitelist.command(name="list", description="STAFF: Show the current Minecraft whitelist.")
     @staff_only()
-    async def check_whitelist(self, interaction: discord.Interaction):
+    async def list_players(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         resp = await run_rcon("whitelist list")
         await interaction.followup.send(f"📋 Whitelist:\n```{resp}```", ephemeral=True)

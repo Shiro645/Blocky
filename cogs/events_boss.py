@@ -11,7 +11,6 @@ from discord.ext import commands, tasks
 
 from game import events, settings
 from game.errors import GameError
-from utils.checks import staff_only
 from utils.config import role_id
 from utils.ui import em, progress_bar, report_error
 
@@ -100,7 +99,7 @@ class BossCog(commands.Cog):
 
     # ---------- boss message ----------
     async def post_boss(self, boss: dict, channel: discord.abc.Messageable) -> None:
-        # /boss_spawn and the loop can both try to post a new boss: only one does.
+        # /event boss and the loop can both try to post a new boss: only one does.
         if boss["boss_id"] in self._posting:
             return
         self._posting.add(boss["boss_id"])
@@ -195,13 +194,8 @@ class BossCog(commands.Cog):
             raise GameError("No boss right now. Stay tuned!")
         await interaction.response.send_message(embed=boss_embed(data), view=boss_view(data["boss_id"], True), ephemeral=True)
 
-    @app_commands.command(name="boss_spawn", description="STAFF: Summon a boss.")
-    @app_commands.describe(name="Boss name (random if empty)", hp="Health points (default from settings)")
-    @staff_only()
-    async def boss_spawn(
-        self, interaction: discord.Interaction, name: app_commands.Range[str, 1, 64] | None = None,
-        hp: app_commands.Range[int, 1, 10_000_000] | None = None,
-    ):
+    async def summon(self, interaction: discord.Interaction, name: str | None, hp: int | None) -> None:
+        """/event boss (cogs/staff_events.py): summon a boss now."""
         await interaction.response.defer(ephemeral=True)
         boss = await self.bot.db.run(events.spawn_boss, name, hp)
         channel = self.bot.announcer.channel("events") or interaction.channel

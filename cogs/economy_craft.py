@@ -33,7 +33,7 @@ class EconomyCraftCog(commands.Cog):
             text += "\nIt was equipped automatically (the slot was empty)."
         else:
             text += f"\nUse `/equip` to wear it instead of your current {item}."
-        await interaction.response.send_message(text, ephemeral=True)
+        await interaction.response.send_message(text)  # public: crafts are shown to everyone
 
     @app_commands.command(name="craftlist", description="Show all crafting recipes.")
     async def craftlist(self, interaction: discord.Interaction):
