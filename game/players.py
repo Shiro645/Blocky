@@ -237,7 +237,8 @@ def get_stat(ctx: Ctx, user_id: int, stat: str) -> int:
 
 # ---------------- XP / levels ----------------
 def xp_required_for_level(level: int) -> int:
-    return 100 + (level - 1) * 25
+    lv = settings.get()["levels"]
+    return max(1, int(lv["xp_first_level"]) + (level - 1) * int(lv["xp_increase_per_level"]))
 
 
 def talent_points_for_level(level: int) -> int:

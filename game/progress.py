@@ -26,53 +26,67 @@ class Achievement:
     check: Callable[[dict], bool]
 
 
-def _stat(name: str, at_least: int) -> Callable[[dict], bool]:
-    return lambda f: f["stats"].get(name, 0) >= at_least
+def _plural(n: int, word: str) -> str:
+    return f"{n:,} {word}{'' if n == 1 else 's'}"
 
 
-def _armor_set(min_tier: int) -> Callable[[dict], bool]:
-    def check(f: dict) -> bool:
-        eq = f["equipped"]
-        return all(s in eq and gear.tier(eq[s]["material"]) >= min_tier for s in ARMOR)
-
-    return check
-
-
-def _level(at_least: int) -> Callable[[dict], bool]:
-    return lambda f: f["level"] >= at_least
-
-
-ACHIEVEMENTS: list[Achievement] = [
-    Achievement("first_bedrock", "🟪", "Bedrock Breaker", "Find your first bedrock", 25, _stat("bedrock_found", 1)),
-    Achievement("bedrock_100", "💎", "Bedrock Collector", "Find 100 bedrock", 200, _stat("bedrock_found", 100)),
-    Achievement("first_obsidian", "🟣", "Into the Void", "Find your first obsidian", 15, _stat("obsidian_found", 1)),
-    Achievement("miner_1k", "⛏️", "Miner", "Mine 1,000 blocks", 100, _stat("blocks_mined", 1_000)),
-    Achievement("miner_10k", "🚧", "Excavator", "Mine 10,000 blocks", 500, _stat("blocks_mined", 10_000)),
-    Achievement("miner_50k", "🌋", "Quarry Master", "Mine 50,000 blocks", 1500, _stat("blocks_mined", 50_000)),
-    Achievement("first_craft", "🛠️", "First Craft", "Craft your first piece of gear", 10, _stat("items_crafted", 1)),
-    Achievement("blacksmith", "⚒️", "Blacksmith", "Craft 25 pieces of gear", 200, _stat("items_crafted", 25)),
-    Achievement("iron_set", "🛡️", "Suit Up", "Wear a full armor set (iron or better)", 100, _armor_set(2)),
-    Achievement("diamond_set", "💠", "Diamonds!", "Wear a full armor set (diamond or better)", 300, _armor_set(3)),
-    Achievement("netherite_set", "🔥", "Netherite Legend", "Wear a full netherite armor set", 1000, _armor_set(4)),
-    Achievement("level_10", "⭐", "Getting Started", "Reach level 10", 50, _level(10)),
-    Achievement("level_25", "🌟", "Experienced", "Reach level 25", 150, _level(25)),
-    Achievement("level_50", "✨", "Veteran", "Reach level 50", 400, _level(50)),
-    Achievement("level_100", "🌠", "Legend", "Reach level 100", 1000, _level(100)),
-    Achievement("first_blood", "🗡️", "First Blood", "Win your first duel", 20, _stat("duels_won", 1)),
-    Achievement("gladiator", "⚔️", "Gladiator", "Win 25 duels", 300, _stat("duels_won", 25)),
-    Achievement("streak_7", "📅", "Dedicated", "Reach a 7-day daily streak", 100, _stat("best_streak", 7)),
-    Achievement("streak_30", "🔥", "Unstoppable", "Reach a 30-day daily streak", 500, _stat("best_streak", 30)),
-    Achievement("merchant", "🤝", "Merchant", "Complete 10 trades", 100, _stat("trades_completed", 10)),
-    Achievement("auctioneer", "🏷️", "Auctioneer", "Sell 10 listings at the auction house", 100, _stat("auction_sales", 10)),
-    Achievement("treasure_hunter", "🎁", "Treasure Hunter", "Claim 10 drops", 150, _stat("drops_claimed", 10)),
-    Achievement("boss_slayer", "🐉", "Boss Slayer", "Help defeat a boss", 100, _stat("bosses_defeated", 1)),
-    Achievement("champion", "👑", "Champion", "Win a weekly season", 250, _stat("seasons_won", 1)),
-    Achievement("arena_champion", "🏟️", "Arena Champion", "Win a weekend tournament", 200, _stat("tournaments_won", 1)),
-    Achievement("team_champion", "🚩", "Squad Goals", "Win a team season with your team", 150, _stat("team_seasons_won", 1)),
-    Achievement("tycoon", "💰", "Emerald Tycoon", "Earn 10,000 emeralds", 500, _stat("emeralds_earned", 10_000)),
-    Achievement("wear_and_tear", "🔨", "Wear and Tear", "Break a piece of gear", 10, _stat("gear_broken", 1)),
+# code, icon, name, what is checked, description. The goal and the reward come from
+# settings "achievements"; achievements without a goal there count to 1 (or check an armor tier).
+_ACHIEVEMENTS: list[tuple[str, str, str, str, Callable[[int], str]]] = [
+    ("first_bedrock", "🟪", "Bedrock Breaker", "stat:bedrock_found", lambda n: "Find your first bedrock"),
+    ("bedrock_100", "💎", "Bedrock Collector", "stat:bedrock_found", lambda n: f"Find {n:,} bedrock"),
+    ("first_obsidian", "🟣", "Into the Void", "stat:obsidian_found", lambda n: "Find your first obsidian"),
+    ("miner_1k", "⛏️", "Miner", "stat:blocks_mined", lambda n: f"Mine {_plural(n, 'block')}"),
+    ("miner_10k", "🚧", "Excavator", "stat:blocks_mined", lambda n: f"Mine {_plural(n, 'block')}"),
+    ("miner_50k", "🌋", "Quarry Master", "stat:blocks_mined", lambda n: f"Mine {_plural(n, 'block')}"),
+    ("first_craft", "🛠️", "First Craft", "stat:items_crafted", lambda n: "Craft your first piece of gear"),
+    ("blacksmith", "⚒️", "Blacksmith", "stat:items_crafted", lambda n: f"Craft {_plural(n, 'piece')} of gear"),
+    ("iron_set", "🛡️", "Suit Up", "armor:2", lambda n: "Wear a full armor set (iron or better)"),
+    ("diamond_set", "💠", "Diamonds!", "armor:3", lambda n: "Wear a full armor set (diamond or better)"),
+    ("netherite_set", "🔥", "Netherite Legend", "armor:4", lambda n: "Wear a full netherite armor set"),
+    ("level_10", "⭐", "Getting Started", "level", lambda n: f"Reach level {n:,}"),
+    ("level_25", "🌟", "Experienced", "level", lambda n: f"Reach level {n:,}"),
+    ("level_50", "✨", "Veteran", "level", lambda n: f"Reach level {n:,}"),
+    ("level_100", "🌠", "Legend", "level", lambda n: f"Reach level {n:,}"),
+    ("first_blood", "🗡️", "First Blood", "stat:duels_won", lambda n: "Win your first duel"),
+    ("gladiator", "⚔️", "Gladiator", "stat:duels_won", lambda n: f"Win {_plural(n, 'duel')}"),
+    ("streak_7", "📅", "Dedicated", "stat:best_streak", lambda n: f"Reach a {n:,}-day daily streak"),
+    ("streak_30", "🔥", "Unstoppable", "stat:best_streak", lambda n: f"Reach a {n:,}-day daily streak"),
+    ("merchant", "🤝", "Merchant", "stat:trades_completed", lambda n: f"Complete {_plural(n, 'trade')}"),
+    ("auctioneer", "🏷️", "Auctioneer", "stat:auction_sales", lambda n: f"Sell {_plural(n, 'listing')} at the auction house"),
+    ("treasure_hunter", "🎁", "Treasure Hunter", "stat:drops_claimed", lambda n: f"Claim {_plural(n, 'drop')}"),
+    ("boss_slayer", "🐉", "Boss Slayer", "stat:bosses_defeated", lambda n: "Help defeat a boss"),
+    ("champion", "👑", "Champion", "stat:seasons_won", lambda n: "Win a weekly season"),
+    ("arena_champion", "🏟️", "Arena Champion", "stat:tournaments_won", lambda n: "Win a weekend tournament"),
+    ("team_champion", "🚩", "Squad Goals", "stat:team_seasons_won", lambda n: "Win a team season with your team"),
+    ("tycoon", "💰", "Emerald Tycoon", "stat:emeralds_earned", lambda n: f"Earn {_plural(n, 'emerald')}"),
+    ("wear_and_tear", "🔨", "Wear and Tear", "stat:gear_broken", lambda n: "Break a piece of gear"),
 ]
-ACHIEVEMENTS_BY_CODE = {a.code: a for a in ACHIEVEMENTS}
+ACHIEVEMENT_CODES = [a[0] for a in _ACHIEVEMENTS]
+
+
+def _checker(what: str, goal: int) -> Callable[[dict], bool]:
+    kind, _, arg = what.partition(":")
+    if kind == "stat":
+        return lambda f: f["stats"].get(arg, 0) >= goal
+    if kind == "level":
+        return lambda f: f["level"] >= goal
+
+    def armor_set(f: dict) -> bool:
+        eq = f["equipped"]
+        return all(s in eq and gear.tier(eq[s]["material"]) >= int(arg) for s in ARMOR)
+
+    return armor_set
+
+
+def achievements() -> list[Achievement]:
+    """Every achievement, with the goal and reward of the current settings."""
+    cfg = settings.get()["achievements"]
+    out = []
+    for code, icon, name, what, text in _ACHIEVEMENTS:
+        goal = int(cfg[code].get("goal", 1))
+        out.append(Achievement(code, icon, name, text(goal), int(cfg[code]["reward"]), _checker(what, goal)))
+    return out
 
 
 def unlocked_codes(ctx: Ctx, user_id: int) -> dict[str, int]:
@@ -83,7 +97,7 @@ def unlocked_codes(ctx: Ctx, user_id: int) -> dict[str, int]:
 
 def check_achievements(ctx: Ctx, user_id: int) -> list[Achievement]:
     done = unlocked_codes(ctx, user_id)
-    todo = [a for a in ACHIEVEMENTS if a.code not in done]
+    todo = [a for a in achievements() if a.code not in done]
     if not todo:
         return []
     facts = {
@@ -116,18 +130,29 @@ class Challenge:
     text: str
 
 
-CHALLENGE_POOL: list[Challenge] = [
-    Challenge("mine_blocks", "blocks_mined", 500, 150, "Mine 500 blocks"),
-    Challenge("find_bedrock", "bedrock_found", 5, 150, "Find 5 bedrock"),
-    Challenge("sell_blocks", "emeralds_from_sales", 1000, 150, "Earn 1,000 emeralds by selling blocks"),
-    Challenge("craft_gear", "items_crafted", 3, 100, "Craft 3 pieces of gear"),
-    Challenge("win_duels", "duels_won", 3, 150, "Win 3 duels"),
-    Challenge("claim_drops", "drops_claimed", 2, 100, "Claim 2 drops"),
-    Challenge("boss_damage", "boss_damage", 100, 150, "Deal 100 damage to bosses"),
-    Challenge("daily_rewards", "daily_claims", 5, 150, "Claim your daily reward 5 times"),
-    Challenge("trades", "trades_completed", 2, 75, "Complete 2 trades"),
+# code, stat it counts, text for a target. Targets and rewards come from settings "challenges.goals".
+_CHALLENGES: list[tuple[str, str, Callable[[int], str]]] = [
+    ("mine_blocks", "blocks_mined", lambda n: f"Mine {_plural(n, 'block')}"),
+    ("find_bedrock", "bedrock_found", lambda n: f"Find {n:,} bedrock"),
+    ("sell_blocks", "emeralds_from_sales", lambda n: f"Earn {_plural(n, 'emerald')} by selling blocks"),
+    ("craft_gear", "items_crafted", lambda n: f"Craft {_plural(n, 'piece')} of gear"),
+    ("win_duels", "duels_won", lambda n: f"Win {_plural(n, 'duel')}"),
+    ("claim_drops", "drops_claimed", lambda n: f"Claim {_plural(n, 'drop')}"),
+    ("boss_damage", "boss_damage", lambda n: f"Deal {n:,} damage to bosses"),
+    ("daily_rewards", "daily_claims", lambda n: f"Claim your daily reward {_plural(n, 'time')}"),
+    ("trades", "trades_completed", lambda n: f"Complete {_plural(n, 'trade')}"),
 ]
-CHALLENGES_BY_CODE = {c.code: c for c in CHALLENGE_POOL}
+CHALLENGE_CODES = [c[0] for c in _CHALLENGES]
+
+
+def challenge_pool() -> list[Challenge]:
+    """Every possible weekly challenge, with the target and reward of the current settings."""
+    goals = settings.get()["challenges"]["goals"]
+    out = []
+    for code, stat, text in _CHALLENGES:
+        target = int(goals[code]["target"])
+        out.append(Challenge(code, stat, target, int(goals[code]["reward"]), text(target)))
+    return out
 
 
 def available(c: Challenge) -> bool:
@@ -141,11 +166,12 @@ def challenges_of_week(week_id: str) -> list[Challenge]:
     A challenge that can't be done this week (see available) is replaced by
     the next one of the week's shuffled pool, so the other picks don't change.
     """
-    pool = [c for c in CHALLENGE_POOL if available(c)]
+    every = challenge_pool()
+    pool = [c for c in every if available(c)]
     count = min(int(settings.get()["challenges"]["per_week"]), len(pool))
     rng = random.Random(f"blocky-challenges-{week_id}")
-    picked = [c for c in rng.sample(CHALLENGE_POOL, min(count, len(CHALLENGE_POOL))) if available(c)]
-    spare = [c for c in rng.sample(CHALLENGE_POOL, len(CHALLENGE_POOL)) if available(c) and c not in picked]
+    picked = [c for c in rng.sample(every, min(count, len(every))) if available(c)]
+    spare = [c for c in rng.sample(every, len(every)) if available(c) and c not in picked]
     return (picked + spare)[:count]
 
 
@@ -222,7 +248,8 @@ def on_stat(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
 
 def achievements_overview(ctx: Ctx, user_id: int) -> dict:
     done = unlocked_codes(ctx, user_id)
+    every = achievements()
     return {
-        "unlocked": [(a, done[a.code]) for a in ACHIEVEMENTS if a.code in done],
-        "locked": [a for a in ACHIEVEMENTS if a.code not in done],
+        "unlocked": [(a, done[a.code]) for a in every if a.code in done],
+        "locked": [a for a in every if a.code not in done],
     }

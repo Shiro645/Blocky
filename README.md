@@ -142,7 +142,7 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
 - Events: `/event boss [name] [hp]`, `/event drop`, `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
 - Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
-- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament and villager. Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -232,6 +232,16 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 ```
 
 `/repair` uses `balance.repair.cost_percent` (60). Spam channels use `balance.mining.spam_reward` (0.01).
+
+Everything below can also be changed from Discord with `/config`.
+
+The XP curve is `balance.levels`: `xp_first_level` (100) and `xp_increase_per_level` (25).
+
+Mining odds: each mining reward is a pile of 1 to 6 blocks (each size as likely). `balance.mining.odds_6_blocks`, `odds_4_5_blocks`, `odds_2_3_blocks` and `odds_1_block` give the weight of each block for that pile size (chance = weight ÷ total). The talents add to them: `balance.talents.miner_gravel_4_5`, `miner_gravel_2_3`, `miner_deepslate_2_3` (per point, with a `_max` each), `miner_bonus_block_chance` / `miner_bonus_block_max` and `lucky_rare_weight`.
+
+Weekly challenges: `balance.challenges.per_week` and `balance.challenges.goals.<challenge>` (`target` and `reward`). Achievements: `balance.achievements.<achievement>` (`reward`, and `goal` for those that count something). Their texts follow the numbers (e.g. "Mine 2,500 blocks").
+
+`balance.moderation.warn_mutes` and `balance.villager.buys` are replaced as a whole when you set them (so you can remove a rule or a block).
 
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/event boss`).
 

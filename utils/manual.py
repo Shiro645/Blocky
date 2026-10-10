@@ -219,7 +219,8 @@ def _xp(s: Settings) -> list[str]:
     m, d, du, b, t = s["mining"], s["daily"], s["duel"], s["boss"], s["tournament"]
     lo, hi = m["xp_per_message"]
     return [
-        "XP for the next level: **100** at level 1, **+25** per level",
+        f"XP for the next level: **{num(s['levels']['xp_first_level'])}** at level 1, "
+        f"**+{num(s['levels']['xp_increase_per_level'])}** per level",
         f"1 talent point every **{num(s['talents']['points_every_levels'])}** levels",
         f"XP sources: mining **{num(lo)}–{num(hi)}** per reward · daily **{num(d['xp'])}** · "
         f"duel won **{num(du['xp_win'])}** / lost **{num(du['xp_loss'])}** · boss defeated **{num(b['xp_reward'])}** · "
@@ -286,7 +287,7 @@ def _challenges(s: Settings) -> list[str]:
     lines = [f"**{num(s['challenges']['per_week'])}** challenges per week"]
     if s["enchants"]["challenges_book"]:
         lines.append("All of them done: a random enchanted book")
-    lines += [f"{c.text}: {em(c.reward)}" for c in progress.CHALLENGE_POOL if progress.available(c)]
+    lines += [f"{c.text}: {em(c.reward)}" for c in progress.challenge_pool() if progress.available(c)]
     return lines
 
 
@@ -1005,10 +1006,13 @@ PAGES: list[Page] = [
     # ---- staff: server ----
     Page(
         "config", "staff_server",
-        "Opens the settings panel: channels, roles, level roles, prices, block values, gameplay, teams, "
-        "tournament, enchantments, potions, villager and Minecraft texts. Changes are saved in config.json "
-        "(a copy of the old file is kept) and apply at once. Settings in the file that the bot doesn't use "
-        "(left by an older version, or a typo) never block a change: they are removed from the file.\n"
+        "Opens the settings panel: **every setting of the bot**, in categories (channels, roles, mining and its "
+        "odds, XP and talents, market, gear, duels, potions, enchanting, drops, bosses, seasons, challenges, "
+        "achievements, teams, tournament, villager…). Each setting shows what it does, its value and its default, "
+        "with buttons to change it or to reset it. Lists, automatic mutes, the drop table and the villager's goods "
+        "have their own editors.\n"
+        "Changes are saved in config.json (a copy of the old file is kept) and apply at once. Settings in the file "
+        "that the bot doesn't use (left by an older version, or a typo) never block a change: they are removed.\n"
         "The RCON password, the staff role and the database path can't be seen or changed from Discord.",
         examples=("/config",),
         related=("reload_config", "backup_now"),

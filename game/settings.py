@@ -20,6 +20,12 @@ DEFAULTS: dict[str, Any] = {
         "xp_per_message": [5, 15],
         # Spam channels (config.json channels.spam): no blocks, XP or drops, only this many emeralds per message.
         "spam_reward": 0.01,
+        # Each mining reward is a pile of 1 to 6 blocks (each size as likely): the smaller the pile,
+        # the rarer the block can be. Weight of each block for each pile size (see talents for the bonuses).
+        "odds_6_blocks": {"cobblestone": 100, "gravel": 0, "deepslate": 0, "obsidian": 0, "bedrock": 0},
+        "odds_4_5_blocks": {"cobblestone": 70, "gravel": 30, "deepslate": 0, "obsidian": 0, "bedrock": 0},
+        "odds_2_3_blocks": {"cobblestone": 70, "gravel": 20, "deepslate": 10, "obsidian": 0, "bedrock": 0},
+        "odds_1_block": {"cobblestone": 70, "gravel": 20, "deepslate": 9, "obsidian": 3, "bedrock": 1},
     },
     "block_values": {"cobblestone": 1, "gravel": 3, "deepslate": 5, "obsidian": 7, "bedrock": 10},
     "market": {
@@ -32,7 +38,17 @@ DEFAULTS: dict[str, Any] = {
         "caps": {"miner": 8, "trader": 10, "lucky": 5, "efficiency": 10},
         "trader_bonus_per_point": 0.02,
         "efficiency_seconds_per_point": 2,
+        # Miner: weight added to gravel / deepslate per point (up to the max), and a chance of one
+        # bonus block on piles of 4 blocks or more.
+        "miner_gravel_4_5": 5, "miner_gravel_4_5_max": 40,
+        "miner_gravel_2_3": 3, "miner_gravel_2_3_max": 30,
+        "miner_deepslate_2_3": 2, "miner_deepslate_2_3_max": 30,
+        "miner_bonus_block_chance": 0.05, "miner_bonus_block_max": 0.25,
+        # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
+        "lucky_rare_weight": 1,
     },
+    # XP to go from a level to the next: xp_first_level at level 1, then xp_increase_per_level more each level.
+    "levels": {"xp_first_level": 100, "xp_increase_per_level": 25},
     "gear": {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
         "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
@@ -202,18 +218,65 @@ DEFAULTS: dict[str, Any] = {
         "warn_mutes": {"3": "1h", "5": "1d", "7": "7d"},
     },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
-    "challenges": {"per_week": 3},
+    "challenges": {
+        "per_week": 3,
+        # The pool the weekly challenges are picked from: what to reach, and the emeralds it pays.
+        "goals": {
+            "mine_blocks": {"target": 500, "reward": 150},
+            "find_bedrock": {"target": 5, "reward": 150},
+            "sell_blocks": {"target": 1000, "reward": 150},
+            "craft_gear": {"target": 3, "reward": 100},
+            "win_duels": {"target": 3, "reward": 150},
+            "claim_drops": {"target": 2, "reward": 100},
+            "boss_damage": {"target": 100, "reward": 150},
+            "daily_rewards": {"target": 5, "reward": 150},
+            "trades": {"target": 2, "reward": 75},
+        },
+    },
+    # Achievements: the emeralds each one pays once, and the goal of the ones that count something.
+    "achievements": {
+        "first_bedrock": {"reward": 25},
+        "bedrock_100": {"goal": 100, "reward": 200},
+        "first_obsidian": {"reward": 15},
+        "miner_1k": {"goal": 1000, "reward": 100},
+        "miner_10k": {"goal": 10000, "reward": 500},
+        "miner_50k": {"goal": 50000, "reward": 1500},
+        "first_craft": {"reward": 10},
+        "blacksmith": {"goal": 25, "reward": 200},
+        "iron_set": {"reward": 100},
+        "diamond_set": {"reward": 300},
+        "netherite_set": {"reward": 1000},
+        "level_10": {"goal": 10, "reward": 50},
+        "level_25": {"goal": 25, "reward": 150},
+        "level_50": {"goal": 50, "reward": 400},
+        "level_100": {"goal": 100, "reward": 1000},
+        "first_blood": {"reward": 20},
+        "gladiator": {"goal": 25, "reward": 300},
+        "streak_7": {"goal": 7, "reward": 100},
+        "streak_30": {"goal": 30, "reward": 500},
+        "merchant": {"goal": 10, "reward": 100},
+        "auctioneer": {"goal": 10, "reward": 100},
+        "treasure_hunter": {"goal": 10, "reward": 150},
+        "boss_slayer": {"reward": 100},
+        "champion": {"reward": 250},
+        "arena_champion": {"reward": 200},
+        "team_champion": {"reward": 150},
+        "tycoon": {"goal": 10000, "reward": 500},
+        "wear_and_tear": {"reward": 10},
+    },
 }
 
 
 _current: dict[str, Any] = copy.deepcopy(DEFAULTS)
 
 
-def _merge(base: dict, override: dict) -> dict:
+def _merge(base: dict, override: dict, path: tuple[str, ...] = ()) -> dict:
     out = copy.deepcopy(base)
     for key, value in override.items():
-        if isinstance(value, dict) and isinstance(out.get(key), dict):
-            out[key] = _merge(out[key], value)
+        here = path + (key,)
+        # A dict with free keys (see _FREE_KEYS) is replaced as a whole: keys can be removed.
+        if isinstance(value, dict) and isinstance(out.get(key), dict) and here not in _FREE_KEYS:
+            out[key] = _merge(out[key], value, here)
         else:
             out[key] = copy.deepcopy(value)
     return out
@@ -355,6 +418,11 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
 
     if any(block not in BLOCK_TYPES for block in v["buys"]):
         out.append((f"`balance.villager.buys` keys must be blocks: {', '.join(BLOCK_TYPES)}.", [("villager", "buys")]))
+    elif not v["buys"] or any(int(n) < 1 for n in v["buys"].values()):
+        out.append(("`balance.villager.buys` needs at least one block, each with a pile of 1 or more.", [("villager", "buys")]))
+    if not v["goods"] or any(not _good_ok(g) for g in v["goods"]):
+        out.append(("`balance.villager.goods`: each good is an item (book, potion, lapis, ingot:iron…) and an amount of 1 or more.",
+                    [("villager", "goods")]))
     if v["arrive_hour"] > 23 or v["leave_hour"] > 23 or v["arrive_hour"] == v["leave_hour"]:
         out.append(("Villager: hours go from 0 to 23, and he must leave at another hour than he arrives.",
                     [("villager", "arrive_hour"), ("villager", "leave_hour")]))
@@ -365,6 +433,17 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
         out.append(("`balance.daily.weekly_bonus_item` must be gold, iron, diamond or netherite.", [("daily", "weekly_bonus_item")]))
 
     m = merged["mining"]
+    for pile in ("odds_6_blocks", "odds_4_5_blocks", "odds_2_3_blocks", "odds_1_block"):
+        if sum(float(w) for w in m[pile].values()) <= 0:
+            out.append((f"`balance.mining.{pile}`: at least one block needs a weight above 0.", [("mining", pile)]))
+    if merged["levels"]["xp_first_level"] < 1:
+        out.append(("`balance.levels.xp_first_level` must be at least 1.", [("levels", "xp_first_level")]))
+    for code, goal in merged["challenges"]["goals"].items():
+        if goal["target"] < 1:
+            out.append((f"`balance.challenges.goals.{code}.target` must be at least 1.", [("challenges", "goals", code, "target")]))
+    for code, achievement in merged["achievements"].items():
+        if achievement.get("goal", 1) < 1:
+            out.append((f"`balance.achievements.{code}.goal` must be at least 1.", [("achievements", code, "goal")]))
     lo, hi = m["xp_per_message"]
     if lo > hi:
         out.append(("`balance.mining.xp_per_message`: the first value is the minimum, the second the maximum.", [("mining", "xp_per_message")]))
@@ -397,6 +476,22 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     return out
 
 
+def _good_ok(good: Any) -> bool:
+    """A villager good: {"asset": key, "amount": n}; "book" and "potion" are random ones."""
+    from game import assets  # assets depends on this module
+    from game.errors import GameError
+
+    if not isinstance(good, dict) or not isinstance(good.get("amount"), int) or good["amount"] < 1:
+        return False
+    asset = good.get("asset")
+    if asset in ("book", "potion"):
+        return True
+    try:
+        return isinstance(asset, str) and assets.parse(asset)[0] not in ("emeralds", "gear")
+    except GameError:
+        return False
+
+
 def _drop(overrides: dict, path: tuple[str, ...]) -> None:
     node = overrides
     for part in path[:-1]:
@@ -417,6 +512,16 @@ def clean(overrides: dict[str, Any] | None) -> tuple[dict[str, Any], list[str]]:
         for path in paths:
             _drop(valid, path)
     return valid, problems
+
+
+def merged(overrides: dict[str, Any] | None) -> dict[str, Any]:
+    """What the bot uses for these overrides: DEFAULTS with their valid part."""
+    return _merge(DEFAULTS, clean(overrides)[0])
+
+
+def is_free_dict(path: tuple[str, ...]) -> bool:
+    """A dict whose keys aren't fixed (it is replaced as a whole by an override)."""
+    return tuple(path) in _FREE_KEYS
 
 
 def problems(overrides: dict[str, Any] | None) -> list[str]:

@@ -36,7 +36,7 @@ class AchievementTests(GameTestCase):
         await self.run_game(players.bump_stat, ALICE, "items_crafted", 1)
         data = await self.run_game(progress.achievements_overview, ALICE)
         self.assertEqual([a.code for a, _ in data["unlocked"]], ["first_craft"])
-        self.assertEqual(len(data["locked"]), len(progress.ACHIEVEMENTS) - 1)
+        self.assertEqual(len(data["locked"]), len(progress.ACHIEVEMENT_CODES) - 1)
 
 
 class ChallengeTests(GameTestCase):
