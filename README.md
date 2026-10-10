@@ -74,6 +74,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/pay <member> <amount>` — Send emeralds
 - `/trade <member> <give> [give_amount] [get] [get_amount]` — Trade or gift emeralds, blocks, sticks, ingots or gear. The other player accepts with a button.
 - `/auction sell | browse | buy | cancel | mine` — Player auction house: 5% tax, 10 listings per player, unsold items come back after 7 days.
+- **Market channel** (`channels.market`, set in `/config`): the bot keeps one message there with every listing, always up to date (pages ◀ ▶ and a menu to buy, with a confirmation). It's updated on every sale, purchase, cancellation and expiry, and posted again if someone deletes it. Best as a channel where members can't write.
 
 ### 🏆 Competition
 
@@ -120,6 +121,7 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
 - `/roulette <bet> <amount> [number]` — A solo spin: red/black, even/odd, 1-18/19-36 (×2), a dozen (×3) or a number (×36). The green slots (0 and 00 by default) make the bank keep about 5% of the bets on average. Minimum/maximum bet and a few seconds between two spins. Winnings don't count for the seasons.
 - `/blockdle guess <block>` — Guess the Minecraft block of the day, the same for everyone (like Wordle / MCdle). After each guess you see how your block compares with the block of the day on 6 properties: tool, hardness, blast resistance, transparent, craftable and version added (🟩 same, 🟥 different, 🔼/🔽 higher or lower). Unlimited private guesses; the fewer you need, the bigger the reward, and the channel is told when you find it. `/blockdle today` shows your guesses, `/blockdle top` today's best (and yesterday's block). 190 blocks, with their real values from Minecraft 1.21.1.
 - **Minecraft quiz** — Every hour or so a question appears in a game channel with 4 answers; the first player to click the right one wins emeralds and XP (one try each). Staff can ask one now with `/event quiz`.
+- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, and stolen emeralds don't count for the seasons. All tuned with `balance.rob` (`/config` → Robberies).
 - Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_zeros` (1 = 0 only, 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `quiz_every_minutes` (0 = only `/event quiz`), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Mini-games.
 
 ### 🛡️ Teams
@@ -184,9 +186,10 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
+| `channels.market` | Market channel: the bot keeps one message there with every auction listing, always up to date, with a menu to buy |
 | `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
-| `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
+| `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |

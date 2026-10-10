@@ -404,6 +404,19 @@ def _quiz(s: Settings) -> list[str]:
                    f"**{num(g['quiz_xp'])}** XP"]
 
 
+def _rob(s: Settings) -> list[str]:
+    r = s["rob"]
+    return [
+        f"Risky: **{num(r['risky_min'])}–{num(r['risky_max'])}** emeralds, the victim is pinged · discreet: "
+        f"**{num(r['discreet_min'])}–{num(r['discreet_max'])}**, no ping (never more than they have)",
+        f"The victim has **{duration(int(r['minutes_to_stop']) * 60)}** to stop it; if they do, the thief pays them "
+        f"**{num(r['fine_percent'])}%** of the loot as a fine",
+        f"A robbery every **{num(r['cooldown_hours'])} h** · a robbed player is safe for "
+        f"**{num(r['victim_protection_hours'])} h** · players below level **{num(r['min_victim_level'])}** are safe",
+        "Stolen emeralds and fines don't count for the seasons",
+    ]
+
+
 DURATIONS = "Durations: `30m`, `2h`, `3d`, `1w`, `1d12h`… (1 minute to 1 year) or `perm`"
 
 
@@ -615,7 +628,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "auction browse", "trading",
-        "Lists what's for sale, page by page, with the listing #number, price and seller. Filter by name with `search`.",
+        "Lists what's for sale, page by page, with the listing #number, price and seller. Filter by name with `search`.\n"
+        "If the staff set a market channel, it always shows every listing, with a menu to buy.",
         examples=("/auction browse search:netherite", "/auction browse page:2"),
         related=("auction buy", "auction sell"),
     ),
@@ -786,6 +800,16 @@ PAGES: list[Page] = [
         "Today's ranking: who found the block of the day, with the fewest guesses first. Also tells yesterday's block.",
         examples=("/blockdle top",),
         related=("blockdle guess",),
+    ),
+    Page(
+        "rob", "games",
+        "Robs a player. **Risky**: they get pinged, but the loot is big. **Discreet**: nobody is pinged, but the loot "
+        "is small. The robbery is posted in the channel with a **Stop the thief!** button that only the victim can "
+        "use: if they click it in time the robbery fails and you pay them a fine; otherwise you take the loot and "
+        "they get a DM.",
+        _rob,
+        examples=("/rob member:@Steve mode:Risky: they get pinged, big loot", "/rob member:@Steve mode:Discreet: no ping, small loot"),
+        related=("roulette", "pay"),
     ),
     Page(
         "quiz", "games",

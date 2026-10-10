@@ -55,6 +55,23 @@ class Screen:
     page: int = 0
     field: str | None = None  # a key of ce.FIELDS_BY_KEY
     mode: str | None = None  # "add": picking what a new table line gives
+    role_page: int = 0  # page of the role list (level roles, role settings)
+
+
+def role_list(guild: discord.Guild | None, assignable: bool) -> list[discord.Role]:
+    """The server's roles for a menu, the highest first.
+
+    Discord's own role menu only shows some of the roles, so the bot lists them itself.
+    Bot and integration roles are left out, and for roles the bot gives (level and champion
+    roles) the ones above the bot's own role too: it couldn't give them.
+    """
+    if guild is None:
+        return []
+    roles = [r for r in reversed(guild.roles) if not r.is_default() and not r.managed]
+    top = guild.me.top_role if guild.me is not None else None
+    if assignable and top is not None:
+        roles = [r for r in roles if r < top]
+    return roles
 
 
 class ConfigCog(commands.Cog):
@@ -128,6 +145,13 @@ class ConfigCog(commands.Cog):
         if category == "level_roles":
             roles = ce.level_roles(cfg)
             embed.description = "\n".join(f"Level **{lvl}** → <@&{rid}>" for lvl, rid in roles.items()) or "No level role yet."
+            embed.add_field(
+                name="Add or change one",
+                value="Pick the role in the menu below, then type the level. Members keep the highest role reached.\n"
+                      "Roles above the bot's own role aren't listed (it couldn't give them): move the bot's role "
+                      "higher in Server Settings → Roles.",
+                inline=False,
+            )
             return embed
         used = ce.used_settings(cfg)
         fields = ce.fields_in(category)
@@ -186,7 +210,7 @@ class ConfigCog(commands.Cog):
     @app_commands.command(name="config", description="STAFF: Change the bot settings (channels, roles, prices, gameplay…).")
     @staff_only()
     async def config_cmd(self, interaction: discord.Interaction):
-        view = ConfigView(self, interaction.user.id, Screen())
+        view = ConfigView(self, interaction.user.id, Screen(), interaction.guild)
         await interaction.response.send_message(embed=self.home_embed(), view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
@@ -195,15 +219,15 @@ class ConfigCog(commands.Cog):
 class ConfigView(BaseView):
     """The whole /config message: it is rebuilt for every screen."""
 
-    def __init__(self, cog: ConfigCog, user_id: int, screen: Screen):
+    def __init__(self, cog: ConfigCog, user_id: int, screen: Screen, guild: discord.Guild | None = None):
         super().__init__(allowed_ids={user_id}, timeout=600)
-        self.cog, self.user_id, self.screen = cog, user_id, screen
+        self.cog, self.user_id, self.screen, self.guild = cog, user_id, screen, guild
         self.add_item(CategorySelect(screen.category))
         field = ce.FIELDS_BY_KEY.get(screen.field) if screen.field else None
         if field is not None:
             self.field_controls(field)
         elif screen.category == "level_roles":
-            self.add_item(AddLevelRoleButton())
+            self.role_controls(assignable=True)
             if ce.level_roles(load_config()):
                 self.add_item(RemoveLevelRoleSelect())
         elif screen.category:
@@ -221,7 +245,7 @@ class ConfigView(BaseView):
             self.add_item(ChannelPicker(field))
             self.add_item(ClearButton(disabled=not value))
         elif field.kind == "role":
-            self.add_item(RolePicker())
+            self.role_controls(assignable=field.item == "assign")
             self.add_item(ClearButton(disabled=not value))
         elif field.typed:
             self.add_item(ChangeButton())
@@ -245,6 +269,17 @@ class ConfigView(BaseView):
             self.add_item(ResetButton(disabled=not modified))
         self.add_item(BackButton())
 
+    def role_controls(self, assignable: bool) -> None:
+        """A page of the server's roles (row 1) and the page buttons (row 2)."""
+        roles = role_list(self.guild, assignable)
+        pages = max(1, -(-len(roles) // PAGE_SIZE))
+        page = min(self.screen.role_page, pages - 1)
+        if roles:
+            self.add_item(RoleChoiceSelect(roles[page * PAGE_SIZE:(page + 1) * PAGE_SIZE], page, pages))
+        if pages > 1:
+            self.add_item(RolePageButton(-1, disabled=page == 0))
+            self.add_item(RolePageButton(+1, disabled=page >= pages - 1))
+
     def table_controls(self, field: ce.Field, rows: list) -> None:
         if self.screen.mode == "add":
             choices = ce.DROP_REWARDS if field.item == "drops" else ce.GOODS
@@ -263,13 +298,15 @@ class ConfigView(BaseView):
 
     async def show(self, interaction: discord.Interaction, screen: Screen, note: str | None = None) -> None:
         """Replace the message with another screen."""
-        view = ConfigView(self.cog, self.user_id, screen)
+        view = ConfigView(self.cog, self.user_id, screen, self.guild)
         view.message = self.message
         self.stop()  # the old menu must not come back when it times out
         if screen.field:
             embed = self.cog.field_embed(ce.FIELDS_BY_KEY[screen.field], note)
         elif screen.category:
             embed = self.cog.category_embed(screen.category, screen.page)
+            if note:
+                embed.description = f"{note}\n\n{embed.description or ''}"[:4096]
         else:
             embed = self.cog.home_embed()
         await interaction.response.edit_message(embed=embed, view=view)
@@ -445,15 +482,40 @@ class ChannelPicker(discord.ui.ChannelSelect):
         await self.view.saved(interaction, note)
 
 
-class RolePicker(discord.ui.RoleSelect):
+class RoleChoiceSelect(discord.ui.Select):
+    """A page of the server's roles: for a role setting, or a new level role."""
+
     view: ConfigView
 
-    def __init__(self):
-        super().__init__(placeholder="Choose a role…", row=1)
+    def __init__(self, roles: list[discord.Role], page: int, pages: int):
+        levels = {rid: lvl for lvl, rid in ce.level_roles(load_config()).items()}
+        options = []
+        for role in roles:
+            note = f"Now given at level {levels[role.id]}" if role.id in levels else None
+            options.append(discord.SelectOption(label=role.name[:100] or str(role.id), value=str(role.id), description=note))
+        where = f" (page {page + 1}/{pages})" if pages > 1 else ""
+        super().__init__(placeholder=f"Choose a role…{where}", options=options, row=1)
 
     async def callback(self, interaction: discord.Interaction):
-        note = await self.view.cog.save(interaction.user, self.view.field, self.values[0].id)
-        await self.view.saved(interaction, note)
+        role_id = int(self.values[0])
+        if self.view.screen.field:
+            note = await self.view.cog.save(interaction.user, self.view.field, role_id)
+            await self.view.saved(interaction, note)
+        else:  # a level role: ask the level
+            await interaction.response.send_modal(LevelModal(self.view, role_id))
+
+
+class RolePageButton(discord.ui.Button):
+    view: ConfigView
+
+    def __init__(self, step: int, disabled: bool):
+        super().__init__(label="More roles" if step > 0 else "Previous roles", emoji="▶️" if step > 0 else "◀️",
+                         style=discord.ButtonStyle.secondary, row=2, disabled=disabled)
+        self.step = step
+
+    async def callback(self, interaction: discord.Interaction):
+        screen = self.view.screen
+        await self.view.show(interaction, replace(screen, role_page=max(0, screen.role_page + self.step)))
 
 
 class ClearButton(discord.ui.Button):
@@ -685,22 +747,15 @@ class DeleteLineSelect(discord.ui.Select):
 
 
 # ---------- level roles ----------
-class AddLevelRoleButton(discord.ui.Button):
-    view: ConfigView
-
-    def __init__(self):
-        super().__init__(label="Add / replace a level role", style=discord.ButtonStyle.success, emoji="➕", row=1)
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(LevelModal(self.view.cog))
-
-
 class LevelModal(discord.ui.Modal, title="Level role"):
     level = discord.ui.TextInput(label="Level at which the role is given", placeholder="e.g. 10", max_length=5)
 
-    def __init__(self, cog: ConfigCog):
+    def __init__(self, view: ConfigView, role_id: int):
         super().__init__()
-        self.cog = cog
+        self.menu, self.role_id = view, role_id
+        current = {rid: lvl for lvl, rid in ce.level_roles(load_config()).items()}.get(role_id)
+        if current is not None:
+            self.level.default = str(current)
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -709,30 +764,25 @@ class LevelModal(discord.ui.Modal, title="Level role"):
             raise GameError("The level must be a whole number.")
         if level < 1:
             raise GameError("The level must be at least 1.")
-        view = BaseView(allowed_ids={interaction.user.id}, timeout=300)
-        view.add_item(LevelRolePicker(self.cog, level))
-        await interaction.response.send_message(f"Choose the role given at level **{level}**:", view=view, ephemeral=True)
+        roles = ce.level_roles(load_config())
+        before = roles.get(level)
+        role_id = self.role_id
+
+        def change(cfg: dict) -> dict:
+            # A role is given at one level only: moving it frees its old level.
+            for lvl, rid in ce.level_roles(cfg).items():
+                if rid == role_id and lvl != level:
+                    cfg = ce.set_level_role(cfg, lvl, None)
+            return ce.set_level_role(cfg, level, role_id)
+
+        note = await self.menu.cog.apply(
+            interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", f"<@&{role_id}>", change,
+        )
+        note += "\nRun `/player sync_roles` to update the members who already passed this level."
+        await self.menu.show(interaction, self.menu.screen, note)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await report_error(interaction, error)
-
-
-class LevelRolePicker(discord.ui.RoleSelect):
-    def __init__(self, cog: ConfigCog, level: int):
-        self.cog, self.level = cog, level
-        super().__init__(placeholder="Choose a role…")
-
-    async def callback(self, interaction: discord.Interaction):
-        role = self.values[0]
-        before = ce.level_roles(load_config()).get(self.level)
-        text = await self.cog.apply(
-            interaction.user, f"Level {self.level} role",
-            f"<@&{before}>" if before else "*none*", role.mention,
-            lambda cfg: ce.set_level_role(cfg, self.level, role.id),
-        )
-        await interaction.response.edit_message(
-            content=text + "\nRun `/player sync_roles` to update members who already passed this level.", view=None
-        )
 
 
 class RemoveLevelRoleSelect(discord.ui.Select):
@@ -743,16 +793,16 @@ class RemoveLevelRoleSelect(discord.ui.Select):
             discord.SelectOption(label=f"Remove the level {lvl} role", value=str(lvl))
             for lvl in ce.level_roles(load_config())
         ][:25]
-        super().__init__(placeholder="Remove a level role…", options=options, row=2)
+        super().__init__(placeholder="Remove a level role…", options=options, row=3)
 
     async def callback(self, interaction: discord.Interaction):
         level = int(self.values[0])
         before = ce.level_roles(load_config()).get(level)
-        await self.view.cog.apply(
+        note = await self.view.cog.apply(
             interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", "*removed*",
             lambda cfg: ce.set_level_role(cfg, level, None),
         )
-        await self.view.show(interaction, self.view.screen)
+        await self.view.show(interaction, self.view.screen, note)
 
 
 async def setup(bot: commands.Bot):

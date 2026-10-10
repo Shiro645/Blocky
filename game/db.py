@@ -376,6 +376,30 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (day, user_id)
     );
     """,
+    # 16 - robberies (the victim has some time to stop them) and small bot state (the market board message)
+    """
+    CREATE TABLE robberies (
+        rob_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        thief_id INTEGER NOT NULL,
+        victim_id INTEGER NOT NULL,
+        mode TEXT NOT NULL,             -- risky | discreet
+        amount INTEGER NOT NULL,        -- the loot aimed at, rolled at the start
+        started_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',  -- active | stopped | done
+        stolen INTEGER NOT NULL DEFAULT 0,
+        fine INTEGER NOT NULL DEFAULT 0,
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX idx_robberies_status ON robberies(status, ends_at);
+    CREATE INDEX idx_robberies_thief ON robberies(thief_id, started_at);
+    CREATE INDEX idx_robberies_victim ON robberies(victim_id, status);
+    CREATE TABLE bot_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
+    """,
 ]
 
 
