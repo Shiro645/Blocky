@@ -6,7 +6,8 @@
   "channels": {
     "announcements": 0,
     "events": 0,
-    "staff_log": 0
+    "staff_log": 0,
+    "spam": []
   },
   "roles": {
     "level_roles": {

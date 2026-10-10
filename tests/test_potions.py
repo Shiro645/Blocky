@@ -16,7 +16,8 @@ def fighters(attack: float = 10, reduction: float = 0.0) -> tuple[duel.Fighter, 
 
 class FightEngineTests(unittest.TestCase):
     def setUp(self):
-        settings.load({"duel": {"crit_chance": 0}})
+        # Exact numbers: no crits, no dodges, no bonus HP for the second player.
+        settings.load({"duel": {"crit_chance": 0, "dodge_chance": 0, "second_player_bonus_hp": 0}})
 
     def test_turns_alternate(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
@@ -30,23 +31,25 @@ class FightEngineTests(unittest.TestCase):
         strong = duel.Fight(random.Random(5), *fighters())
         normal_hit = plain.play(random.Random(7)).hits[0].damage
         boosted = strong.play(random.Random(7), "strength")
-        self.assertAlmostEqual(boosted.hits[0].damage, normal_hit * 1.5)
+        # Same roll r: 1 + 9r without the potion, (1 + 5) + 4r with it (the maximum stays 10).
+        r = (normal_hit - 1) / 9
+        self.assertAlmostEqual(boosted.hits[0].damage, 6 + 4 * r)
         self.assertEqual(strong.fighter(boosted.attacker).potions_used, 1)
 
     def test_healing_never_goes_over_max_hp(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
         fight.current.hp = 10
-        self.assertEqual(fight.play(random.Random(1), "healing").healed, 6)
+        self.assertEqual(fight.play(random.Random(1), "healing").healed, 3)
         fight.play(random.Random(1))
-        fight.current.hp = 18
-        self.assertEqual(fight.play(random.Random(1), "healing").healed, 2)
+        fight.current.hp = 19
+        self.assertEqual(fight.play(random.Random(1), "healing").healed, 1)
 
-    def test_harming_ignores_armor(self):
-        fight = duel.Fight(random.Random(1), *fighters(attack=1, reduction=0.8))
+    def test_harming_is_reduced_by_armor(self):
+        fight = duel.Fight(random.Random(1), *fighters(attack=1, reduction=0.3))
         defender = fight.other
         turn = fight.play(random.Random(1), "harming")
-        self.assertEqual(turn.direct, 4)
-        self.assertAlmostEqual(defender.hp, 20 - 4 - turn.hits[0].damage)
+        self.assertAlmostEqual(turn.direct, 2.1)  # 3 x (1 - 0.3)
+        self.assertAlmostEqual(defender.hp, 20 - 2.1 - turn.hits[0].damage)
 
     def test_speed_lasts_three_turns(self):
         settings.load({"duel": {"crit_chance": 0}, "potions": {"speed_chance": 1}})
@@ -82,15 +85,15 @@ class FightEngineTests(unittest.TestCase):
             strong.drink("healing")
         turn = strong.play(random.Random(7))
         self.assertIs(turn, drunk)
-        self.assertAlmostEqual(turn.hits[0].damage, normal_hit * 1.5)
+        self.assertAlmostEqual(turn.hits[0].damage, 6 + 4 * (normal_hit - 1) / 9)
         self.assertNotEqual(strong.current.user_id, me)
         self.assertTrue(strong.can_drink)
 
     def test_healing_shows_before_the_attack(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
         fight.current.hp = 10
-        self.assertEqual(fight.drink("healing").healed, 6)
-        self.assertEqual(fight.current.hp, 16)
+        self.assertEqual(fight.drink("healing").healed, 3)
+        self.assertEqual(fight.current.hp, 13)
 
     def test_harming_can_finish_the_opponent(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
@@ -100,6 +103,43 @@ class FightEngineTests(unittest.TestCase):
         turn = fight.play(random.Random(1))
         self.assertEqual(turn.hits, [])
         self.assertTrue(fight.over)
+
+    def test_damage_is_between_min_and_max(self):
+        fight = duel.Fight(random.Random(1), *fighters(attack=10))
+        for i in range(30):
+            fight.current.hp = fight.other.hp = 1000  # keep the fight going
+            hit = fight.play(random.Random(i)).hits[0]
+            self.assertTrue(1 <= hit.damage <= 10, hit.damage)
+
+    def test_dodges(self):
+        settings.load({"duel": {"dodge_chance": 1, "second_player_bonus_hp": 0}})
+        fight = duel.Fight(random.Random(1), *fighters())
+        turn = fight.play(random.Random(1))
+        self.assertTrue(turn.hits[0].dodged)
+        self.assertEqual(fight.current.hp, 20)
+
+    def test_second_player_starts_with_bonus_hp(self):
+        settings.load({"duel": {"second_player_bonus_hp": 2}})
+        fight = duel.Fight(random.Random(1), *fighters())
+        self.assertEqual((fight.current.hp, fight.other.hp, fight.other.max_hp), (20, 22, 22))
+
+    def test_one_reinforced_potion_per_duel(self):
+        fight = duel.Fight(random.Random(1), *fighters(attack=0.1))
+        fight.play(random.Random(1), "healing:2")
+        fight.play(random.Random(2))
+        with self.assertRaisesRegex(GameError, "one reinforced"):
+            fight.drink("strength:2")
+        fight.drink("strength")  # level I is fine
+
+    def test_better_gear_wins_more_often_not_always(self):
+        settings.load()
+        wins = 0
+        rng = random.Random(4)
+        for _ in range(3000):
+            strong = duel.Fighter(ALICE, 14, 0.288, 20)  # netherite
+            weak = duel.Fighter(BOB, 10, 0.18, 20)  # iron
+            wins += duel.simulate(rng, strong, weak).winner == 0
+        self.assertTrue(0.65 < wins / 3000 < 0.92, wins / 3000)
 
     def test_a_fight_always_ends(self):
         fight = duel.Fight(random.Random(3), *fighters(attack=1, reduction=0.8))

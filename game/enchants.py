@@ -84,7 +84,7 @@ def effect_text(name: str, level: int) -> str:
     if name == "unbreaking":
         return f"{v:.0%} chance to keep durability"
     if name == "sharpness":
-        return f"+{v:g} damage"
+        return f"+{v:g} maximum damage"
     if name == "looting":
         return f"+{v:.0%} boss reward"
     return f"+{v:g} armor points"

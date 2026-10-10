@@ -346,6 +346,7 @@ def add_score(ctx: Ctx, user_id: int, amount: int) -> None:
 
 
 def standings(ctx: Ctx, season_id: str) -> list[dict]:
+    """Teams ranked for a season: at least `min_members_ranked` members scored for them."""
     rows = ctx.all(
         """
         SELECT s.team_id, COALESCE(t.name, a.name) AS name, COALESCE(t.tag, a.tag) AS tag, SUM(s.score) AS score
@@ -353,10 +354,11 @@ def standings(ctx: Ctx, season_id: str) -> list[dict]:
         LEFT JOIN teams t USING(team_id)
         LEFT JOIN team_archive a USING(team_id)
         WHERE s.season_id=? AND COALESCE(t.name, a.name) IS NOT NULL
-        GROUP BY s.team_id HAVING SUM(s.score) > 0
+        GROUP BY s.team_id
+        HAVING SUM(s.score) > 0 AND COUNT(DISTINCT CASE WHEN s.score > 0 THEN s.user_id END) >= ?
         ORDER BY score DESC, s.team_id;
         """,
-        (season_id,),
+        (season_id, int(_cfg()["min_members_ranked"])),
     )
     return [dict(r) for r in rows]
 

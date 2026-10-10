@@ -29,13 +29,13 @@ TALENT_INFO = {
 }
 
 GEAR_EFFECTS = {
-    "pickaxe": "More blocks per message + chance to upgrade the block",
+    "pickaxe": "Extra cobblestone each time you mine + chance to upgrade the block",
     "shovel": "Extra gravel when you mine gravel",
     "axe": "Chance to collect sticks while mining",
     "hoe": "More XP per message",
-    "sword": "Damage in duels and against bosses",
-    "helmet": "Damage reduction in duels",
-    "chestplate": "Damage reduction in duels",
-    "leggings": "Damage reduction in duels",
-    "boots": "Damage reduction in duels",
+    "sword": "Higher maximum damage (duels, bosses, tournament)",
+    "helmet": "Damage reduction in duels (capped)",
+    "chestplate": "Damage reduction in duels (capped)",
+    "leggings": "Damage reduction in duels (capped)",
+    "boots": "Damage reduction in duels (capped)",
 }

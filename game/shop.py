@@ -1,6 +1,8 @@
 """NPC market and crafting."""
 from __future__ import annotations
 
+import math
+
 from game import enchants, gear, players, potions, settings
 from game.catalog import MATERIALS, RECIPES
 from game.db import Ctx
@@ -133,6 +135,31 @@ def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
         (user_id,),
     )
     return enchants.attach(ctx, [dict(r) for r in rows])
+
+
+def repair_cost(piece: dict) -> int:
+    """Emeralds to bring a piece back to full durability (in proportion to what is missing)."""
+    missing = piece["max_durability"] - piece["durability"]
+    if missing <= 0:
+        return 0
+    pct = float(settings.get()["repair"]["cost_percent"]) / 100
+    return max(1, math.ceil(craft_cost(piece["item"], piece["material"]) * pct * missing / piece["max_durability"]))
+
+
+def repair(ctx: Ctx, user_id: int, gear_id: int) -> dict:
+    """Repair a piece of gear for emeralds. It keeps its enchantments."""
+    row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
+    if row is None:
+        raise GameError("You don't own this piece of gear.")
+    piece = enchants.attach(ctx, [dict(row)])[0]
+    cost = repair_cost(piece)
+    if cost == 0:
+        raise GameError(f"Your {piece['material']} {piece['item']} is already at full durability.")
+    players.spend_emeralds(ctx, user_id, cost)
+    ctx.execute("UPDATE gear SET durability = max_durability WHERE gear_id=?;", (gear_id,))
+    players.bump_stat(ctx, user_id, "items_repaired")
+    piece["durability"] = piece["max_durability"]
+    return {"piece": piece, "cost": cost, "balance": players.get_emeralds(ctx, user_id)}
 
 
 def remove_gear(ctx: Ctx, user_id: int, item: str, material: str, count: int) -> int:

@@ -40,7 +40,7 @@ class ConfigEditTests(unittest.TestCase):
         field = ce.FIELDS_BY_KEY["diamond_price"]
         cfg = ce.set_value(BASE, field.path, 40)
         cfg = ce.set_value(cfg, field.path, None)
-        self.assertEqual(ce.current_value(cfg, field), 25)  # default
+        self.assertEqual(ce.current_value(cfg, field), 60)  # default
 
     def test_parse(self):
         price = ce.FIELDS_BY_KEY["diamond_price"]

@@ -48,6 +48,14 @@ def channel_id(name: str) -> int:
     return int(load_config().get("channels", {}).get(name, 0) or 0)
 
 
+def channel_ids(name: str) -> set[int]:
+    """IDs of a list of channels from the "channels" section (e.g. "spam")."""
+    raw = load_config().get("channels", {}).get(name) or []
+    if not isinstance(raw, list):
+        raw = [raw]
+    return {int(c) for c in raw if str(c).isdigit() and int(c)}
+
+
 def role_id(name: str) -> int:
     """ID of a role from the "roles" section (0 if not set)."""
     return int(load_config().get("roles", {}).get(name, 0) or 0)

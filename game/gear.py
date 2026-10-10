@@ -94,7 +94,8 @@ def _number(value: float) -> int | float:
 
 
 def attack_damage(equipped: dict[str, dict]) -> int | float:
-    dmg = settings.get()["gear"]["sword_damage"]
+    """Maximum damage of a hit: the sword's maximum, plus Sharpness."""
+    dmg = settings.get()["gear"]["sword_max_damage"]
     sword = equipped.get("sword")
     base = float(dmg[sword["material"]] if sword else dmg["none"])
     return _number(base + enchants.bonus("sharpness", enchants.level_of(sword, "sharpness")))

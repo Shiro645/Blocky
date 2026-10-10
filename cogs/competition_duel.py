@@ -326,7 +326,11 @@ class DuelCog(commands.Cog):
                 text += f" ({t.direct:g} damage)"
             bits.append(text)
         for i, hit in enumerate(t.hits):
-            bits.append(("⚡ again " if i else "") + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
+            prefix = "⚡ again " if i else ""
+            if hit.dodged:
+                bits.append(prefix + "💨 dodged")
+            else:
+                bits.append(prefix + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
         return f"**{attacker}** → {defender}: " + " · ".join(bits) + f" — {defender} {t.defender_hp:g} HP"
 
     def fighter_field(self, view: FightView, fighter: duel.Fighter) -> tuple[str, str]:
@@ -334,7 +338,7 @@ class DuelCog(commands.Cog):
         speed = f" · ⚡ {fighter.speed_turns} turn(s)" if fighter.speed_turns else ""
         value = (
             f"`{progress_bar(int(fighter.hp), int(fighter.max_hp), 12)}` {fighter.hp:.1f}/{fighter.max_hp:g} HP\n"
-            f"⚔️ {fighter.attack:g} · 🛡️ {fighter.reduction:.0%} · 🧪 {view.fight.potions_left(fighter)} left{speed}"
+            f"⚔️ {fighter.min_attack:g}–{fighter.attack:g} · 🛡️ {fighter.reduction:.0%} · 🧪 {view.fight.potions_left(fighter)} left{speed}"
         )
         return marker + view.members[fighter.user_id].display_name, value
 

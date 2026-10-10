@@ -4,10 +4,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import enchants, gear, shop
+from game import enchants, gear, settings, shop
 from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES
 from game.db import Ctx
-from utils.ui import EMOJI, gear_icon, gear_label, join_lines, mat, progress_bar
+from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
@@ -73,6 +73,30 @@ class EconomyCraftCog(commands.Cog):
             f"✅ Equipped {gear_label(g)} in the **{g['item']}** slot.", ephemeral=True
         )
 
+    async def repair_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[int]]:
+        pieces = await self.bot.db.run(shop.get_gear, interaction.user.id)
+        choices = []
+        for g in pieces:
+            cost = shop.repair_cost(g)
+            if not cost:
+                continue
+            name = f"{g['material']} {g['item']} ({g['durability']}/{g['max_durability']}) — {cost} emeralds"
+            if g["enchants"]:
+                name += f" — {enchants.labels(g['enchants'])}"
+            if current.lower() in name.lower():
+                choices.append(app_commands.Choice(name=name[:100], value=g["gear_id"]))
+        return choices[:25]
+
+    @app_commands.command(name="repair", description="Repair a piece of gear for emeralds (it keeps its enchantments).")
+    @app_commands.describe(piece="The piece to repair (the cost is shown)")
+    @app_commands.autocomplete(piece=repair_autocomplete)
+    async def repair(self, interaction: discord.Interaction, piece: int):
+        res = await self.bot.db.run(shop.repair, interaction.user.id, piece)
+        await interaction.response.send_message(
+            f"🔧 {gear_label(res['piece'])} repaired for **{em(res['cost'])}**. Balance: {em(res['balance'])}.",
+            ephemeral=True,
+        )
+
     @app_commands.command(name="equip_best", description="Fill every empty slot with your best piece of gear.")
     async def equip_best(self, interaction: discord.Interaction):
         done = await self.bot.db.run(gear.equip_best, interaction.user.id)
@@ -104,7 +128,10 @@ class EconomyCraftCog(commands.Cog):
                 lines.append(f"**{slot}**: — *({GEAR_EFFECTS[slot]})*")
 
         embed = discord.Embed(title=f"{interaction.user.display_name}'s equipment", description="\n".join(lines), color=discord.Color.dark_teal())
-        embed.add_field(name="⚔️ Attack", value=str(gear.attack_damage(equipped)), inline=True)
+        d = settings.get()["duel"]
+        embed.add_field(
+            name="⚔️ Damage per hit", value=f"{d['min_damage']:g}–{gear.attack_damage(equipped):g}", inline=True
+        )
         embed.add_field(name="🛡️ Damage reduction", value=f"{gear.damage_reduction(equipped):.0%}", inline=True)
         spare = [g for g in owned if not g["equipped"]]
         if spare:

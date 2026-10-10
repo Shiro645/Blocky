@@ -109,22 +109,22 @@ class OfferTests(VillagerTestCase):
 
 class PotionLevelTests(unittest.TestCase):
     def setUp(self):
-        settings.load({"duel": {"crit_chance": 0}})
+        settings.load({"duel": {"crit_chance": 0, "dodge_chance": 0, "second_player_bonus_hp": 0}})
 
     def test_reinforced_potions(self):
         self.assertEqual(potions.label("healing:2"), "Potion of Healing II")
-        self.assertEqual(potions.effect("healing:2", "healing_hp"), 12)
+        self.assertEqual(potions.effect("healing:2", "healing_hp"), 6)
         self.assertEqual(potions.value("speed:2"), 120)
         for bad in ("healing:3", "magic", "healing:x"):
             with self.subTest(bad=bad), self.assertRaises(GameError):
                 potions.parse(bad)
 
-    def test_strength_ii_doubles_the_bonus(self):
+    def test_strength_ii_gives_full_hits(self):
         a = duel.Fight(random.Random(5), duel.Fighter(ALICE, 10, 0, 20), duel.Fighter(BOB, 10, 0, 20))
         b = duel.Fight(random.Random(5), duel.Fighter(ALICE, 10, 0, 20), duel.Fighter(BOB, 10, 0, 20))
-        plain = a.play(random.Random(7)).hits[0].damage
+        a.play(random.Random(7))
         boosted = b.play(random.Random(7), "strength:2").hits[0].damage
-        self.assertAlmostEqual(boosted, plain * 2)
+        self.assertEqual(boosted, 10)  # minimum 1 + 10, capped at the maximum: always a full hit
 
 
 if __name__ == "__main__":

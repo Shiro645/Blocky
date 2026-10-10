@@ -4,7 +4,7 @@ import asyncio
 import random
 import unittest
 
-from game import mining, players, shop
+from game import gear, mining, players, settings, shop
 from game.errors import GameError
 from game.notices import LevelUp
 from tests.helpers import GameTestCase
@@ -158,6 +158,51 @@ class MiningTests(GameTestCase):
             block, amount = mining.roll_blocks(rng, 8, 5)
             self.assertIn(block, ("cobblestone", "gravel", "deepslate", "obsidian", "bedrock"))
             self.assertTrue(1 <= amount <= 7)
+
+
+
+class BalanceTests(GameTestCase):
+    async def test_spam_channel_reward_adds_up(self):
+        settings.load({"mining": {"spam_reward": 0.25}})
+        got = [await self.run_game(mining.spam_mine, ALICE) for _ in range(8)]
+        self.assertEqual(got, [0, 0, 0, 1, 0, 0, 0, 1])
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 2)
+        blocks = await self.run_game(players.get_blocks, ALICE)
+        self.assertEqual(sum(blocks.values()), 0)  # no blocks in spam channels
+
+    async def test_default_spam_reward_is_tiny(self):
+        got = sum([await self.run_game(mining.spam_mine, ALICE) for _ in range(99)])
+        self.assertEqual(got, 0)
+        self.assertEqual(await self.run_game(mining.spam_mine, ALICE), 1)  # the 100th message
+
+    async def test_pickaxe_bonus_is_cobblestone(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "pickaxe", "netherite")
+        await self.run_game(gear.equip, ALICE, gid)
+        seen = set()
+        for seed in range(60):
+            self.db.rng = random.Random(seed)
+            before = await self.run_game(players.get_blocks, ALICE)
+            res = await self.run_game(mining.mine, ALICE)
+            after = await self.run_game(players.get_blocks, ALICE)
+            self.assertEqual(res["bonus"], 4)  # netherite = tier 4
+            if res["block"] != "cobblestone":
+                self.assertEqual(after[res["block"]] - before[res["block"]], res["amount"])
+                self.assertEqual(after["cobblestone"] - before["cobblestone"], 4)
+                seen.add(res["block"])
+        self.assertTrue(seen)
+
+    async def test_repair(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "iron")  # crafting value 20.25
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability = max_durability / 2 WHERE gear_id=?;", (gid,)))
+        with self.assertRaisesRegex(GameError, "Not enough emeralds"):
+            await self.run_game(shop.repair, ALICE, gid)
+        await self.run_game(players.give_emeralds, ALICE, 100)
+        res = await self.run_game(shop.repair, ALICE, gid)
+        self.assertEqual(res["cost"], 7)  # 60% of 20.25 for half the durability, rounded up
+        piece = (await self.run_game(shop.get_gear, ALICE))[0]
+        self.assertEqual(piece["durability"], piece["max_durability"])
+        with self.assertRaisesRegex(GameError, "full durability"):
+            await self.run_game(shop.repair, ALICE, gid)
 
 
 if __name__ == "__main__":

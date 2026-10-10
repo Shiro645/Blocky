@@ -43,7 +43,7 @@ class Field:
     category: str
     label: str
     path: tuple[str, ...]
-    kind: str  # channel | role | int | float | text
+    kind: str  # channel | channels (a list) | role | int | float | text
     min: float | None = None
     max: float | None = None
 
@@ -60,6 +60,7 @@ FIELDS: list[Field] = [
     Field("ch_announcements", "channels", "Announcements channel", ("channels", "announcements"), "channel"),
     Field("ch_events", "channels", "Events channel (drops, bosses)", ("channels", "events"), "channel"),
     Field("ch_staff_log", "channels", "Staff channel (/link, logs)", ("channels", "staff_log"), "channel"),
+    Field("ch_spam", "channels", "Spam channels (tiny reward, no blocks)", ("channels", "spam"), "channels"),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role"),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role"),
@@ -75,6 +76,8 @@ FIELDS: list[Field] = [
     _balance("obsidian_value", "blocks", "Obsidian", "block_values", "obsidian"),
     _balance("bedrock_value", "blocks", "Bedrock", "block_values", "bedrock"),
     _balance("mining_cooldown", "gameplay", "Mining cooldown (seconds)", "mining", "cooldown_seconds", max=3600),
+    _balance("spam_reward", "gameplay", "Emeralds per message in spam channels", "mining", "spam_reward", kind="float", max=100),
+    _balance("repair_pct", "gameplay", "/repair cost (% of the crafting value)", "repair", "cost_percent", max=1000),
     _balance("daily_base", "gameplay", "Daily: base reward", "daily", "base_reward"),
     _balance("daily_streak", "gameplay", "Daily: bonus per streak day", "daily", "streak_bonus_per_day"),
     _balance("duel_min_stake", "gameplay", "Duel: minimum stake", "duel", "min_stake", min=1),
@@ -108,7 +111,7 @@ FIELDS: list[Field] = [
     _balance("duel_turn", "potions", "Duel: seconds per turn", "duel", "turn_seconds", min=10, max=300),
     _balance("duel_afk", "potions", "Duel: missed turns before auto play", "duel", "afk_turns", min=1, max=10),
     _balance("pot_max", "potions", "Potions per duel (per player)", "potions", "max_per_duel", max=20),
-    _balance("pot_strength", "potions", "Strength: attack bonus (0.5 = +50%)", "potions", "strength_bonus", kind="float", max=5),
+    _balance("pot_strength", "potions", "Strength: minimum damage bonus", "potions", "strength_min_bonus", kind="float", max=100),
     _balance("pot_speed", "potions", "Speed: double hit chance (0-1)", "potions", "speed_chance", kind="float", max=1),
     _balance("pot_speed_turns", "potions", "Speed: turns", "potions", "speed_turns", min=1, max=10),
     _balance("pot_healing", "potions", "Healing: HP", "potions", "healing_hp", kind="float", max=100),

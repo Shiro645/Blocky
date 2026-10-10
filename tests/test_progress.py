@@ -46,6 +46,18 @@ class ChallengeTests(GameTestCase):
         self.assertEqual(len(a), 3)
         self.assertEqual(len({c.code for c in a}), 3)
 
+    def test_no_boss_challenge_without_automatic_bosses(self):
+        from game import settings
+
+        weeks = [f"2026-W{w:02d}" for w in range(1, 53)]
+        settings.load()  # bosses only from /boss_spawn
+        for week in weeks:
+            picks = progress.challenges_of_week(week)
+            self.assertEqual(len(picks), 3)
+            self.assertNotIn("boss_damage", [c.code for c in picks])
+        settings.load({"boss": {"auto_spawn_hours": 24}})
+        self.assertTrue(any("boss_damage" in [c.code for c in progress.challenges_of_week(w)] for w in weeks))
+
     async def test_challenge_completes_once(self):
         challenge = progress.challenges_of_week(self.week())[0]
         await self.run_game(players.bump_stat, ALICE, challenge.stat, challenge.target - 1)

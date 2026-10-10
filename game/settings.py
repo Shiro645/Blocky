@@ -16,13 +16,15 @@ DEFAULTS: dict[str, Any] = {
     "timezone": "Europe/Paris",
     "mining": {
         "cooldown_seconds": 30,
-        "min_cooldown_seconds": 5,
+        "min_cooldown_seconds": 10,  # talents and the Efficiency enchant never go below this
         "xp_per_message": [5, 15],
+        # Spam channels (config.json channels.spam): no blocks, XP or drops, only this many emeralds per message.
+        "spam_reward": 0.01,
     },
     "block_values": {"cobblestone": 1, "gravel": 3, "deepslate": 5, "obsidian": 7, "bedrock": 10},
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
-        "ingots": {"gold": 5, "iron": 10, "diamond": 25, "netherite": 100},
+        "ingots": {"gold": 5, "iron": 10, "diamond": 60, "netherite": 300},
     },
     "talents": {
         "points_every_levels": 5,
@@ -34,7 +36,7 @@ DEFAULTS: dict[str, Any] = {
     "gear": {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
         "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
-        # Pickaxe: extra blocks per mining event, and a chance per tier to
+        # Pickaxe: extra cobblestone per mining event, and a chance per tier to
         # upgrade the mined block (cobblestone -> gravel -> deepslate -> obsidian -> bedrock).
         "pickaxe_extra_blocks_per_tier": 1,
         "pickaxe_upgrade_chance_per_tier": 0.05,
@@ -44,16 +46,19 @@ DEFAULTS: dict[str, Any] = {
         "axe_stick_chance": 0.3,
         # Hoe: XP bonus per tier.
         "hoe_xp_bonus_per_tier": 0.10,
-        "sword_damage": {"none": 1, "gold": 4, "iron": 6, "diamond": 7, "netherite": 8},
+        # Maximum damage of a hit (duels, bosses, tournament): a better sword raises the maximum.
+        "sword_max_damage": {"none": 6, "gold": 8, "iron": 10, "diamond": 12, "netherite": 14},
         "armor_points": {
             "gold": {"helmet": 2, "chestplate": 5, "leggings": 3, "boots": 1},
             "iron": {"helmet": 2, "chestplate": 6, "leggings": 5, "boots": 2},
             "diamond": {"helmet": 3, "chestplate": 8, "leggings": 6, "boots": 3},
             "netherite": {"helmet": 4, "chestplate": 9, "leggings": 7, "boots": 4},
         },
-        "damage_reduction_per_armor_point": 0.03,
-        "max_damage_reduction": 0.8,
+        "damage_reduction_per_armor_point": 0.012,
+        "max_damage_reduction": 0.35,
     },
+    # /repair: a piece with no durability left costs this % of its crafting value to repair.
+    "repair": {"cost_percent": 60},
     "daily": {
         "base_reward": 30,
         "streak_bonus_per_day": 10,
@@ -66,8 +71,12 @@ DEFAULTS: dict[str, Any] = {
     "duel": {
         "min_stake": 10,
         "hp": 20,
-        "crit_chance": 0.1,
-        "crit_multiplier": 1.5,
+        # A hit deals between min_damage and the sword's maximum (gear.sword_max_damage).
+        "min_damage": 1,
+        "dodge_chance": 0.10,
+        "crit_chance": 0.15,
+        "crit_multiplier": 2.0,
+        "second_player_bonus_hp": 2,  # makes up for not striking first
         "max_rounds": 40,
         "cooldown_seconds": 60,
         "request_timeout_seconds": 60,
@@ -79,13 +88,13 @@ DEFAULTS: dict[str, Any] = {
     "potions": {
         # Duels only, one potion per turn, effect on that turn.
         "max_per_duel": 3,
-        "strength_bonus": 0.5,  # this turn's attack +50%
-        "speed_chance": 0.2,  # chance to strike twice...
+        "strength_min_bonus": 5,  # this turn's attack: minimum damage +5 (never above the maximum)
+        "speed_chance": 0.4,  # chance to strike twice...
         "speed_turns": 3,  # ...during this turn and the next 2 turns of the player
-        "healing_hp": 6,
-        "harming_damage": 4,  # direct damage, ignores armor
+        "healing_hp": 3,
+        "harming_damage": 3,  # direct damage, reduced by armor
         "boss_top": 3,  # the top 3 damage dealers of a defeated boss get a random potion
-        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2
+        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2, one per duel
         "value": 40,  # reference values in emeralds (fortune, fair prices)
         "value_ii": 120,
     },
@@ -112,7 +121,6 @@ DEFAULTS: dict[str, Any] = {
         "duration_hours": 24,
         "hp": 1000,
         "attack_cooldown_seconds": 60,
-        "damage_variance": 0.25,
         "crit_chance": 0.1,
         "crit_multiplier": 2.0,
         "reward_pool": 600,  # emeralds shared proportionally to damage
@@ -123,7 +131,8 @@ DEFAULTS: dict[str, Any] = {
     "seasons": {"rewards": [300, 150, 75]},
     "teams": {
         "max_members": 5,
-        "create_cost": 0,
+        "create_cost": 500,
+        "min_members_ranked": 2,  # members who scored for the team, to be ranked in the team season
         "invite_hours": 48,
         # Mining XP bonus for each other member who mined today, capped.
         "xp_bonus_per_active_member": 0.05,

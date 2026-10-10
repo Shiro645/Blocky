@@ -28,7 +28,7 @@ class LeaderboardTests(GameTestCase):
 
     async def test_fortune_counts_inventory(self):
         data = await self.run_game(leaderboard.leaderboard, "fortune", CAROL)
-        self.assertEqual(data["top"], [(BOB, 150), (ALICE, 100), (CAROL, 25)])
+        self.assertEqual(data["top"], [(BOB, 150), (ALICE, 100), (CAROL, 60)])  # a diamond is worth 60
         self.assertEqual(data["rank"], 3)
 
     async def test_worn_gear_is_worth_less(self):
@@ -38,7 +38,7 @@ class LeaderboardTests(GameTestCase):
 
         await self.run_game(setup)
         fortunes = await self.run_game(leaderboard.fortunes)
-        self.assertEqual(fortunes[CAROL], 25 + 25)
+        self.assertEqual(fortunes[CAROL], 60 + 25)
 
     async def test_stat_board_and_unranked_player(self):
         data = await self.run_game(leaderboard.leaderboard, "blocks_mined", ALICE)

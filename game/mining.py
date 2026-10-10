@@ -46,6 +46,31 @@ def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tup
     return block, amount
 
 
+def spam_mine(ctx: Ctx, user_id: int) -> int:
+    """A mining reward in a spam channel: a tiny amount of emeralds (spam_reward), no blocks.
+
+    Fractions are saved (in thousandths) until they make a whole emerald.
+    Returns the whole emeralds given now. They don't count for the seasons.
+    """
+    milli = round(float(settings.get()["mining"]["spam_reward"]) * 1000)
+    if milli <= 0:
+        return 0
+    players.ensure_user(ctx, user_id)
+    ctx.execute(
+        """
+        INSERT INTO stats(user_id, stat, value) VALUES(?, 'spam_milli', ?)
+        ON CONFLICT(user_id, stat) DO UPDATE SET value = value + excluded.value;
+        """,
+        (user_id, milli),
+    )
+    total = ctx.one("SELECT value FROM stats WHERE user_id=? AND stat='spam_milli';", (user_id,))["value"]
+    whole = total // 1000
+    if whole:
+        ctx.execute("UPDATE stats SET value = value - ? WHERE user_id=? AND stat='spam_milli';", (whole * 1000, user_id))
+        players.give_emeralds(ctx, user_id, whole)
+    return whole
+
+
 def upgrade_block(block: str) -> str:
     i = BLOCK_TYPES.index(block)
     return BLOCK_TYPES[min(i + 1, len(BLOCK_TYPES) - 1)]
@@ -64,9 +89,11 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         return int(enchants.bonus("fortune", enchants.level_of(piece, "fortune")))
 
     pickaxe = tools.get("pickaxe")
+    bonus = 0  # extra cobblestone from the pickaxe and its Fortune
     if pickaxe:
         t = gear.tier(pickaxe["material"])
-        amount += g["pickaxe_extra_blocks_per_tier"] * t + fortune(pickaxe)
+        # Extra cobblestone, not copies of the block: a rare bedrock stays a single bedrock.
+        bonus = g["pickaxe_extra_blocks_per_tier"] * t + fortune(pickaxe)
         if ctx.rng.random() < g["pickaxe_upgrade_chance_per_tier"] * t:
             block = upgrade_block(block)
         used.append(pickaxe)
@@ -95,8 +122,9 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         xp = int(round(xp * (1 + team_bonus)))
 
     players.add_blocks(ctx, user_id, block, amount)
-    players.add_score(ctx, user_id, players.block_value(block) * amount)
-    players.bump_stat(ctx, user_id, "blocks_mined", amount)
+    players.add_blocks(ctx, user_id, "cobblestone", bonus)
+    players.add_score(ctx, user_id, players.block_value(block) * amount + players.block_value("cobblestone") * bonus)
+    players.bump_stat(ctx, user_id, "blocks_mined", amount + bonus)
     if block in ("bedrock", "obsidian"):
         players.bump_stat(ctx, user_id, f"{block}_found", amount)
     players.add_xp(ctx, user_id, xp)
@@ -114,6 +142,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     return {
         "block": block,
         "amount": amount,
+        "bonus": bonus,
         "sticks": sticks,
         "xp": xp,
         "team_bonus": team_bonus,
