@@ -49,6 +49,7 @@ CATEGORIES = {
     "teams": "🛡️ Teams",
     "tournament": "🏟️ Tournament",
     "villager": "🧑‍🌾 Villager",
+    "games": "🎲 Mini-games",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -149,6 +150,9 @@ FIELDS: list[Field] = [
           help="/link requests and the log of every staff action."),
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
+    Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
+          help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
+               "but no automatic quiz)."),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
@@ -348,6 +352,20 @@ FIELDS: list[Field] = [
       for b in BLOCK_TYPES],
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
+    # ---- mini-games ----
+    _b("games.min_bet", "games", "Roulette: minimum bet", min=1),
+    _b("games.max_bet", "games", "Roulette: maximum bet", min=1),
+    _b("games.cooldown_seconds", "games", "Roulette: seconds between two spins", max=3600),
+    _b("games.roulette_zeros", "games", "Roulette: green slots", "The green slots make the bank win a little "
+       "on average.", kind="choice", min=None, choices=(("0 only (the bank keeps 2.7%)", 1), ("0 and 00 (the bank keeps 5.3%)", 2))),
+    *[_b(f"games.blockdle_rewards.{i}", "games", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
+         "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
+    _b("games.blockdle_xp", "games", "Blockdle: XP for finding the block"),
+    _b("games.quiz_every_minutes", "games", "Quiz: a question every X minutes",
+       "Posted in a game channel. 0 = only with /event quiz.", max=10_080),
+    _b("games.quiz_seconds", "games", "Quiz: seconds to answer", min=10, max=600),
+    _b("games.quiz_reward", "games", "Quiz: emeralds for the right answer"),
+    _b("games.quiz_xp", "games", "Quiz: XP for the right answer"),
 ]
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 

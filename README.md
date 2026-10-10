@@ -113,6 +113,15 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - Each offer exists **once**: the first player to click gets it. The buttons keep working after a restart, and the message shows who took what.
 - `/villager` shows whether he is here and when he comes next.
 
+### 🎲 Mini-games
+
+They work in the game channels set in `/config` (`channels.games`), or anywhere when there are none.
+
+- `/roulette <bet> <amount> [number]` — A solo spin: red/black, even/odd, 1-18/19-36 (×2), a dozen (×3) or a number (×36). The green slots (0 and 00 by default) make the bank keep about 5% of the bets on average. Minimum/maximum bet and a few seconds between two spins. Winnings don't count for the seasons.
+- `/blockdle guess <block>` — Guess the Minecraft block of the day, the same for everyone (like Wordle / MCdle). After each guess you see how your block compares with the block of the day on 6 properties: tool, hardness, blast resistance, transparent, craftable and version added (🟩 same, 🟥 different, 🔼/🔽 higher or lower). Unlimited private guesses; the fewer you need, the bigger the reward, and the channel is told when you find it. `/blockdle today` shows your guesses, `/blockdle top` today's best (and yesterday's block). 190 blocks, with their real values from Minecraft 1.21.1.
+- **Minecraft quiz** — Every hour or so a question appears in a game channel with 4 answers; the first player to click the right one wins emeralds and XP (one try each). Staff can ask one now with `/event quiz`.
+- Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_zeros` (1 = 0 only, 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `quiz_every_minutes` (0 = only `/event quiz`), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Mini-games.
+
 ### 🛡️ Teams
 
 - `/team create <name> <tag>` — Anyone can create a team for **500 emeralds** (name 3–24 characters, tag 2–4 letters or numbers) and becomes its leader. Up to 5 members.
@@ -139,7 +148,7 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
   - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
 - Economy: `/give <member> <item> [amount] [reason]` gives anything (emeralds, blocks, sticks, ingots, lapis, books, potions, gear; type e.g. `gear:diamond:sword:sharpness3` for an enchanted piece). `/take <member> <item> [amount] [reason]` removes anything the member owns (the suggestions are what they have), after a confirmation button, and never more than they have. The member gets a DM with the reason. Staff gifts don't count for the seasons.
 - Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
-- Events: `/event boss [name] [hp]`, `/event drop`, `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
+- Events: `/event boss [name] [hp]`, `/event drop`, `/event quiz` (a quiz question in this channel now), `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
 - Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament and villager. Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
@@ -175,6 +184,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
+| `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
@@ -372,6 +382,7 @@ game/                        # game rules, no Discord code
 ├── enchants.py              # enchanted books, lapis and enchantment effects
 ├── potions.py               # duel potions
 ├── villager.py              # the wandering villager
+├── roulette.py · blockdle.py · quiz.py   # mini-games (blockdle_blocks.py: the blocks and their values)
 ├── moderation.py            # warnings, mutes, kicks and bans (records and timers)
 ├── progress.py              # achievements and weekly challenges
 ├── events.py                # drops and bosses

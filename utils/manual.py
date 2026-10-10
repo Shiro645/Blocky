@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import enchants, potions, progress
+from game import blockdle, enchants, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from utils.mc_commands import DEFAULT_BLOCKED
@@ -25,6 +25,7 @@ CATEGORIES: dict[str, tuple[str, bool]] = {
     "trading": ("🤝 Trading", False),
     "competition": ("🏆 Competition", False),
     "events": ("🎉 Events", False),
+    "games": ("🎲 Mini-games", False),
     "teams": ("🛡️ Teams", False),
     "minecraft": ("🌍 Minecraft", False),
     "staff_moderation": ("🔨 Staff · moderation", True),
@@ -364,6 +365,43 @@ def _moderation(s: Settings) -> list[str]:
         f"Warnings count for **{days} days**" if days else "Warnings count forever",
         "Automatic mutes: " + (" · ".join(f"{n} warnings → {d}" for n, d in mutes) or "none"),
     ]
+
+
+def _games(s: Settings) -> list[str]:
+    g = s["games"]
+    return [
+        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds · **{duration(g['cooldown_seconds'])}** between two spins",
+        "Played in the game channels set by the staff (anywhere when there are none)",
+    ]
+
+
+def _roulette(s: Settings) -> list[str]:
+    zeros = "0 and 00" if s["games"]["roulette_zeros"] == 2 else "0"
+    rate = 36 / (36 + int(s["games"]["roulette_zeros"]))
+    return [
+        "Red, black, even, odd, 1-18, 19-36: **×2** · a dozen: **×3** · a number: **×36** (your bet included)",
+        f"Green slots: **{zeros}**: every bet loses on them (except a bet on that number). On average a bet gives "
+        f"back **{pct(rate)}**",
+    ] + _games(s) + ["Winnings don't count for the seasons"]
+
+
+def _blockdle(s: Settings) -> list[str]:
+    g = s["games"]
+    rewards = " · ".join(f"{i + 1}{'+' if i == len(g['blockdle_rewards']) - 1 else ''}: {num(r)}"
+                         for i, r in enumerate(g["blockdle_rewards"]))
+    return [
+        f"Rewards by number of guesses: {rewards}",
+        f"XP for finding it: **{num(g['blockdle_xp'])}** · **{len(blockdle.BLOCKS)}** possible blocks",
+        f"A new block every day at midnight ({s['timezone']})",
+    ]
+
+
+def _quiz(s: Settings) -> list[str]:
+    g = s["games"]
+    every = f"A question every **{duration(int(g['quiz_every_minutes']) * 60)}** or so, in a game channel" \
+        if g["quiz_every_minutes"] else "Questions only come when the staff asks one (/event quiz)"
+    return [every, f"**{duration(g['quiz_seconds'])}** to answer · reward: {em(g['quiz_reward'])} and "
+                   f"**{num(g['quiz_xp'])}** XP"]
 
 
 DURATIONS = "Durations: `30m`, `2h`, `3d`, `1w`, `1d12h`… (1 minute to 1 year) or `perm`"
@@ -716,6 +754,47 @@ PAGES: list[Page] = [
         examples=("/villager",),
         related=("potions", "enchant info", "sell"),
     ),
+    # ---- mini-games ----
+    Page(
+        "roulette", "games",
+        "Spins the roulette for you alone. Bet on red or black, even or odd, 1-18 or 19-36, a dozen, or a number "
+        "(add the `number` option). The wheel has the numbers 1 to 36 and green slots (0, and 00): the bank wins a "
+        "little on average.",
+        _roulette,
+        examples=("/roulette bet:Red amount:50", "/roulette bet:A number amount:10 number:17"),
+        related=("blockdle guess", "quiz"),
+    ),
+    Page(
+        "blockdle guess", "games",
+        "Guess the Minecraft block of the day (the same for everyone, like Wordle). After each guess you see, for "
+        "6 properties, how your block compares with the block of the day: 🟩 same, 🟥 different, 🔼 the block of "
+        "the day is higher / newer, 🔽 lower / older. The properties: the tool that mines it, its hardness, its "
+        "blast resistance, if it's transparent, if it can be crafted, and the version it was added in.\n"
+        "Guesses are unlimited and private; the fewer you need, the bigger the reward.",
+        _blockdle,
+        examples=("/blockdle guess block:Stone",),
+        related=("blockdle today", "blockdle top"),
+    ),
+    Page(
+        "blockdle today", "games",
+        "Shows your guesses of the day so far, how many players found the block and when the next one comes.",
+        examples=("/blockdle today",),
+        related=("blockdle guess", "blockdle top"),
+    ),
+    Page(
+        "blockdle top", "games",
+        "Today's ranking: who found the block of the day, with the fewest guesses first. Also tells yesterday's block.",
+        examples=("/blockdle top",),
+        related=("blockdle guess",),
+    ),
+    Page(
+        "quiz", "games",
+        "Now and then a Minecraft question appears in a game channel with 4 answers. The first player to click the "
+        "right one wins emeralds and XP. One try per player: a wrong answer leaves the others a chance.",
+        _quiz,
+        related=("roulette", "blockdle guess"),
+        title="❓ Minecraft quiz",
+    ),
     # ---- teams ----
     Page(
         "team create", "teams",
@@ -989,6 +1068,13 @@ PAGES: list[Page] = [
         _tournament,
         examples=("/event tournament action:Open registrations now",),
         related=("tournament info", "tournament bracket"),
+    ),
+    Page(
+        "event quiz", "staff_events",
+        "Posts a Minecraft quiz question in this channel right now.",
+        _quiz,
+        examples=("/event quiz",),
+        related=("event drop",),
     ),
     Page(
         "event villager", "staff_events",

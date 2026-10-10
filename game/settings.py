@@ -218,6 +218,21 @@ DEFAULTS: dict[str, Any] = {
         "warn_mutes": {"3": "1h", "5": "1d", "7": "7d"},
     },
     "backups": {"hour": 4, "keep": 7},  # daily database copy at 04:00, 7 kept
+    # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
+    "games": {
+        "min_bet": 1,
+        "max_bet": 1000,
+        "cooldown_seconds": 5,  # between two roulette spins of a player
+        # Green slots of the roulette: 2 (0 and 00) = the bank keeps 5.3% of the bets on average, 1 (0 only) = 2.7%.
+        "roulette_zeros": 2,
+        # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).
+        "blockdle_rewards": [300, 250, 200, 160, 130, 100, 80, 60, 50, 40],
+        "blockdle_xp": 50,
+        "quiz_every_minutes": 60,  # a question in a games channel every X minutes (0 = only /event quiz)
+        "quiz_seconds": 30,  # time to answer
+        "quiz_reward": 50,
+        "quiz_xp": 20,
+    },
     "challenges": {
         "per_week": 3,
         # The pool the weekly challenges are picked from: what to reach, and the emeralds it pays.
@@ -432,6 +447,14 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if merged["daily"]["weekly_bonus_item"] not in merged["gear"]["tier"]:
         out.append(("`balance.daily.weekly_bonus_item` must be gold, iron, diamond or netherite.", [("daily", "weekly_bonus_item")]))
 
+    g = merged["games"]
+    if g["roulette_zeros"] not in (1, 2):
+        out.append(("`balance.games.roulette_zeros` is 1 (0 only) or 2 (0 and 00).", [("games", "roulette_zeros")]))
+    if g["min_bet"] < 1 or g["min_bet"] > g["max_bet"]:
+        out.append(("Games: the minimum bet must be at least 1 and not above the maximum bet.",
+                    [("games", "min_bet"), ("games", "max_bet")]))
+    if g["quiz_seconds"] < 10 or g["quiz_seconds"] > 600:
+        out.append(("`balance.games.quiz_seconds` goes from 10 to 600.", [("games", "quiz_seconds")]))
     m = merged["mining"]
     for pile in ("odds_6_blocks", "odds_4_5_blocks", "odds_2_3_blocks", "odds_1_block"):
         if sum(float(w) for w in m[pile].values()) <= 0:
