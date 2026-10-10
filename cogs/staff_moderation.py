@@ -188,6 +188,7 @@ class ModerationCog(commands.Cog):
         await self.log_action(f"🧽 Warning #{warning} removed", row["user_id"], interaction.user, row["reason"], discord.Color.light_grey())
 
     @app_commands.command(name="clearwarns", description="STAFF: Remove all the warnings of a member.")
+    @app_commands.describe(member="Whose warnings to remove")
     @staff_only()
     async def clearwarns(self, interaction: discord.Interaction, member: discord.Member):
         n = await self.bot.db.run(moderation.clear_warns, member.id, interaction.user.id)
@@ -195,6 +196,7 @@ class ModerationCog(commands.Cog):
         await self.log_action(f"🧽 {n} warning(s) cleared", member, interaction.user, None, discord.Color.light_grey())
 
     @app_commands.command(name="history", description="STAFF: A member's warnings and sanctions.")
+    @app_commands.describe(member="Whose history to show (works for users who left)")
     @staff_only()
     async def history(self, interaction: discord.Interaction, member: discord.User):
         h = await self.bot.db.run(moderation.history, member.id)
@@ -238,6 +240,7 @@ class ModerationCog(commands.Cog):
         await interaction.followup.send(f"🔇 {member.mention} is muted ({format_duration(seconds)}).", ephemeral=True)
 
     @app_commands.command(name="unmute", description="STAFF: End a member's mute.")
+    @app_commands.describe(member="Who to unmute", reason="Why (sent to the member)")
     @staff_only()
     async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: Reason | None = None):
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -251,6 +254,7 @@ class ModerationCog(commands.Cog):
 
     # ---------- kick and ban ----------
     @app_commands.command(name="kick", description="STAFF: Kick a member (they can come back with an invite).")
+    @app_commands.describe(member="Who to kick", reason="Why (sent to the member)")
     @staff_only()
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: Reason):
         check_target(interaction, member)
@@ -291,7 +295,7 @@ class ModerationCog(commands.Cog):
         await interaction.followup.send(f"🔨 {member.mention} is banned ({length}).", ephemeral=True)
 
     @app_commands.command(name="unban", description="STAFF: Lift a ban (use the user ID shown in /history or the logs).")
-    @app_commands.describe(user_id="The banned user's ID")
+    @app_commands.describe(user_id="The banned user's ID", reason="Why (saved in the history)")
     @staff_only()
     async def unban(self, interaction: discord.Interaction, user_id: str, reason: Reason | None = None):
         try:

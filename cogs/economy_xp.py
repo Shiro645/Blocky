@@ -60,6 +60,7 @@ class EconomyXPCog(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="talent_buy", description="Spend talent points into a branch.")
+    @app_commands.describe(branch="The talent branch", points="How many points to spend")
     @app_commands.choices(branch=BRANCH_CHOICES)
     async def talent_buy(
         self, interaction: discord.Interaction, branch: str, points: app_commands.Range[int, 1, 100] = 1

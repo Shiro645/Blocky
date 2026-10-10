@@ -30,6 +30,7 @@ class EconomyAdminCog(commands.Cog):
 
     # ---------- economy ----------
     @app_commands.command(name="add_block", description="STAFF: Add blocks to a member.")
+    @app_commands.describe(member="Who gets the blocks", block_type="Which block", amount="How many blocks")
     @app_commands.choices(block_type=BLOCK_CHOICES)
     @staff_only()
     async def add_block(self, interaction: discord.Interaction, member: discord.Member, block_type: str, amount: Amount):
@@ -41,6 +42,7 @@ class EconomyAdminCog(commands.Cog):
         await self._done(interaction, f"Added **{amount} {block_type}** to {member.mention} (now {total}).")
 
     @app_commands.command(name="add_emerald", description="STAFF: Give emeralds to a member.")
+    @app_commands.describe(member="Who gets the emeralds", amount="How many emeralds")
     @staff_only()
     async def add_emerald(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
         def run(ctx):
@@ -51,12 +53,14 @@ class EconomyAdminCog(commands.Cog):
         await self._done(interaction, f"Added **{em(amount)}** to {member.mention}. Balance: **{em(balance)}**.")
 
     @app_commands.command(name="remove_emerald", description="STAFF: Remove emeralds from a member.")
+    @app_commands.describe(member="Whose emeralds to remove", amount="How many emeralds")
     @staff_only()
     async def remove_emerald(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
         balance = await self.bot.db.run(players.remove_emeralds_clamped, member.id, amount)
         await self._done(interaction, f"Removed up to **{em(amount)}** from {member.mention}. Balance: **{em(balance)}**.")
 
     @app_commands.command(name="add_item", description="STAFF: Give sticks, ingots or lapis to a member.")
+    @app_commands.describe(member="Who gets the items", resource="Sticks, an ingot or lapis lazuli", amount="How many")
     @app_commands.choices(resource=RESOURCE_CHOICES)
     @staff_only()
     async def add_item(self, interaction: discord.Interaction, member: discord.Member, resource: str, amount: Amount):
@@ -65,6 +69,7 @@ class EconomyAdminCog(commands.Cog):
         await self._done(interaction, f"Gave **{item_label(item, material, amount)}** to {member.mention} (now {total}).")
 
     @app_commands.command(name="add_gear", description="STAFF: Give a piece of gear to a member.")
+    @app_commands.describe(member="Who gets the piece", gear="Which piece", material="Which material")
     @app_commands.choices(gear=GEAR_CHOICES, material=MATERIAL_CHOICES)
     @staff_only()
     async def add_gear(self, interaction: discord.Interaction, member: discord.Member, gear: str, material: str):
@@ -72,6 +77,12 @@ class EconomyAdminCog(commands.Cog):
         await self._done(interaction, f"Gave {gear_icon(gear, material)} **{material} {gear}** to {member.mention}.")
 
     @app_commands.command(name="remove_gear", description="STAFF: Remove pieces of gear from a member.")
+    @app_commands.describe(
+        member="Whose gear to remove",
+        gear="Which piece",
+        material="Which material",
+        count="How many pieces (unequipped ones first)",
+    )
     @app_commands.choices(gear=GEAR_CHOICES, material=MATERIAL_CHOICES)
     @staff_only()
     async def remove_gear(
@@ -83,18 +94,21 @@ class EconomyAdminCog(commands.Cog):
 
     # ---------- XP / talents ----------
     @app_commands.command(name="xp_add", description="STAFF: Give XP to a member.")
+    @app_commands.describe(member="Who gets the XP", amount="How much XP")
     @staff_only()
     async def xp_add(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
         p = await self.bot.db.run(players.add_xp, member.id, amount)
         await self._done(interaction, f"{member.mention} is now level **{p['level']}** ({p['xp']} XP).")
 
     @app_commands.command(name="xp_set", description="STAFF: Set a member's XP inside their level.")
+    @app_commands.describe(member="Whose XP to set", xp="XP inside the current level")
     @staff_only()
     async def xp_set(self, interaction: discord.Interaction, member: discord.Member, xp: app_commands.Range[int, 0]):
         p = await self.bot.db.run(players.set_xp, member.id, xp)
         await self._done(interaction, f"{member.mention} is now level **{p['level']}** ({p['xp']} XP).")
 
     @app_commands.command(name="level_set", description="STAFF: Set a member's level (talent points are recomputed).")
+    @app_commands.describe(member="Whose level to set", level="The new level")
     @staff_only()
     async def level_set(self, interaction: discord.Interaction, member: discord.Member, level: app_commands.Range[int, 1, 10_000]):
         p = await self.bot.db.run(players.set_level, member.id, level)
@@ -104,12 +118,14 @@ class EconomyAdminCog(commands.Cog):
         )
 
     @app_commands.command(name="talent_add", description="STAFF: Add (or remove, if negative) talent points.")
+    @app_commands.describe(member="Who gets the points", points="Points to add (negative to remove some)")
     @staff_only()
     async def talent_add(self, interaction: discord.Interaction, member: discord.Member, points: int):
         p = await self.bot.db.run(players.add_talent_points, member.id, points)
         await self._done(interaction, f"{member.mention} has **{p['talent_points']}** unspent talent point(s).")
 
     @app_commands.command(name="talent_reset", description="STAFF: Reset a member's talents (points are refunded).")
+    @app_commands.describe(member="Whose talents to reset")
     @staff_only()
     async def talent_reset(self, interaction: discord.Interaction, member: discord.Member):
         p = await self.bot.db.run(players.reset_talents, member.id)
