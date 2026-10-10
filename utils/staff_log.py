@@ -5,7 +5,7 @@ import discord
 
 # Commands that already write a detailed log entry themselves, or that change nothing.
 SELF_LOGGED = {
-    "config", "mc", "team_remove", "event tournament", "give", "take",
+    "config", "mc", "team_remove", "event tournament", "give", "take", "reset",
     "warn", "unwarn", "clearwarns", "mute", "unmute", "kick", "ban", "unban", "clear", "lock", "unlock", "slowmode",
 }
 READ_ONLY = {"history", "whitelist list"}
