@@ -101,7 +101,8 @@ class EconomyMiningCog(commands.Cog):
         else:
             embed.add_field(name="Gained", value=em(gained))
         embed.add_field(name="New balance", value=em(res["balance"]))
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)  # public: rewards are shown to everyone
 
 
 async def setup(bot: commands.Bot):

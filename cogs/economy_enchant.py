@@ -7,11 +7,7 @@ from discord.ext import commands
 from game import enchants, shop
 from game.db import Ctx
 from game.enchants import ENCHANTS, MAX_LEVEL, ROMAN
-from utils.checks import staff_only
 from utils.ui import book_icon, gear_label, join_lines, lapis_icon
-
-ENCHANT_CHOICES = [app_commands.Choice(name=e.name, value=e.key) for e in ENCHANTS.values()]
-LEVEL_CHOICES = [app_commands.Choice(name=ROMAN[lvl], value=lvl) for lvl in range(1, MAX_LEVEL + 1)]
 
 
 def _overview(ctx: Ctx, user_id: int) -> dict:
@@ -99,25 +95,6 @@ class EnchantCog(commands.Cog):
             on = "all gear" if len(e.items) > 5 else ", ".join(e.items)
             embed.add_field(name=f"{e.name} ({on})", value=effects[:1024], inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    # ---------- staff ----------
-    @app_commands.command(name="add_book", description="STAFF: Give enchanted books to a member.")
-    @app_commands.describe(
-        member="Who gets the books",
-        enchant="Which enchantment",
-        level="Book level",
-        amount="How many books (1-100)",
-    )
-    @app_commands.choices(enchant=ENCHANT_CHOICES, level=LEVEL_CHOICES)
-    @staff_only()
-    async def add_book(
-        self, interaction: discord.Interaction, member: discord.Member, enchant: str, level: int,
-        amount: app_commands.Range[int, 1, 100] = 1,
-    ):
-        await self.bot.db.run(enchants.give_book, member.id, enchant, level, amount)
-        await interaction.response.send_message(
-            f"✅ Gave {amount} × {book_icon()} **{enchants.label(enchant, level)}** book to {member.mention}.", ephemeral=True
-        )
 
 
 async def setup(bot: commands.Bot):

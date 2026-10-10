@@ -27,6 +27,8 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds)
 - `/market` — Buy sticks and gold (5) / iron (10) / diamond (60) / netherite (300) ingots
 - `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day gives a diamond ingot, and missing a day resets the streak.
+- Rewards are public: the results of `/daily`, `/sell` and `/craft` are shown in the channel (level-ups and achievements go to the announcements channel). Personal info (`/inventory`, `/gear`, `/xp`…) and errors are only shown to the player.
+- Buttons that don't work anymore (they expired, or the bot restarted) answer so, instead of Discord's "This interaction failed".
 
 ### 🛠️ Crafting & equipment
 
@@ -126,6 +128,8 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 Restricted to the staff role (or members with the *Manage Server* permission). **Every staff command is logged in the staff channel** (who, which command, which options).
 
+**Players don't see the staff commands.** Discord can hide a command behind a permission, not behind a role, so at startup the bot picks a permission the staff role has and `@everyone` doesn't (*Timeout Members* first, then *Kick*, *Ban*, *Manage Messages*…): only members with it see the staff commands. If the staff role has none of these permissions, the commands stay visible (the logs say so) — still only the staff can use them. You can fine-tune it per role in *Server Settings → Integrations → Blocky*.
+
 - Moderation (the member gets a DM with the reason; everything is logged in the staff channel):
   - `/warn <member> <reason>` — warnings count for 30 days; 3 warnings = automatic 1h mute, 5 = 1 day, 7 = 7 days. `/unwarn <#>` removes one, `/clearwarns` removes them all.
   - `/history <member>` — warnings, mutes, kicks and bans, with their numbers.
@@ -133,14 +137,12 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
   - `/kick`, `/ban <member> <reason> [duration] [delete_messages]` (permanent by default; temporary bans are lifted automatically) and `/unban <user_id>`.
   - `/clear <amount> [member]` (pinned messages are kept), `/lock` / `/unlock` (staff can still write), `/slowmode <seconds>`.
   - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
-- Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
-- Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion [level]`
-- XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
-- Events: `/boss_spawn [name] [hp]`, `/drop_spawn`
+- Economy: `/give <member> <item> [amount] [reason]` gives anything (emeralds, blocks, sticks, ingots, lapis, books, potions, gear; type e.g. `gear:diamond:sword:sharpness3` for an enchanted piece). `/take <member> <item> [amount] [reason]` removes anything the member owns (the suggestions are what they have), after a confirmation button, and never more than they have. The member gets a DM with the reason. Staff gifts don't count for the seasons.
+- Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
+- Events: `/event boss [name] [hp]`, `/event drop`, `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
+- Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
-- Villager: `/villager_admin` makes him come now (for the usual visit length) or leave
-- Tournament: `/tournament_admin` opens registrations now, runs the next step now (draw, then the next round) or cancels and refunds. Handy to test without waiting for the weekend.
-- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Values are checked before being saved (an invalid one is refused with the reason). Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -216,7 +218,7 @@ Every night at 04:00 (config timezone) the bot copies the database to a `backups
 
 ### Game balance
 
-The `balance` section is checked when the bot starts and on `/reload_config`: an unknown key (typo), a wrong type, an invalid time zone or an incoherent schedule is reported. At startup the invalid values are ignored (logged as warnings); `/reload_config` refuses the whole file and keeps the current settings.
+The `balance` section is checked when the bot starts and on `/reload_config`: an unknown key (typo), a wrong type, an invalid time zone or an incoherent schedule is reported. The invalid values are ignored (the default is used): at startup they are logged as warnings, and `/reload_config` lists them. A file that isn't valid JSON is refused and the current settings stay.
 
 Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, timezone…) has a default in [`game/settings.py`](game/settings.py). To change one, copy its path under `balance` in `config.json`, for example:
 
@@ -231,7 +233,7 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 
 `/repair` uses `balance.repair.cost_percent` (60). Spam channels use `balance.mining.spam_reward` (0.01).
 
-`balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
+`balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/event boss`).
 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
 

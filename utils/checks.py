@@ -31,4 +31,8 @@ def staff_only():
 
 
 def is_staff_command(command: object) -> bool:
+    """A command with the staff_only() check, or a group made only of such commands."""
+    if isinstance(command, app_commands.Group):
+        subcommands = command.commands
+        return bool(subcommands) and all(is_staff_command(c) for c in subcommands)
     return any(getattr(check, "blocky_staff", False) for check in getattr(command, "checks", []))

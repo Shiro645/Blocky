@@ -117,7 +117,7 @@ DEFAULTS: dict[str, Any] = {
         ],
     },
     "boss": {
-        "auto_spawn_hours": 0,  # 0 = staff spawns bosses with /boss_spawn
+        "auto_spawn_hours": 0,  # 0 = staff spawns bosses with /event boss
         "duration_hours": 24,
         "hp": 1000,
         "attack_cooldown_seconds": 60,

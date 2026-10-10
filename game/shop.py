@@ -160,17 +160,3 @@ def repair(ctx: Ctx, user_id: int, gear_id: int) -> dict:
     players.bump_stat(ctx, user_id, "items_repaired")
     piece["durability"] = piece["max_durability"]
     return {"piece": piece, "cost": cost, "balance": players.get_emeralds(ctx, user_id)}
-
-
-def remove_gear(ctx: Ctx, user_id: int, item: str, material: str, count: int) -> int:
-    """Staff: delete up to `count` pieces (unequipped first). Returns how many were removed."""
-    rows = ctx.all(
-        """
-        SELECT gear_id FROM gear WHERE user_id=? AND item=? AND material=?
-        ORDER BY equipped, gear_id LIMIT ?;
-        """,
-        (user_id, item, material, count),
-    )
-    for r in rows:
-        ctx.execute("DELETE FROM gear WHERE gear_id=?;", (r["gear_id"],))
-    return len(rows)

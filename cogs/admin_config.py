@@ -47,11 +47,10 @@ class ConfigCog(commands.Cog):
         """Change config.json, apply it right away, log it. Returns the confirmation text."""
         async with self.lock:
             try:
-                new = mutate(read_config_file())
-                problems = settings.problems(balance_overrides(new))
-                if problems:
-                    raise GameError("Not changed, this value isn't allowed:\n" + "\n".join(f"- {p}" for p in problems[:10]))
-                ce.write_config(CONFIG_PATH, new, backups.backup_dir(self.bot.db.path))
+                change = ce.prepare_change(read_config_file(), mutate)
+                if change.refused:
+                    raise GameError("Not changed, this value isn't allowed:\n" + "\n".join(f"- {p}" for p in change.refused[:10]))
+                ce.write_config(CONFIG_PATH, change.config, backups.backup_dir(self.bot.db.path))
                 cfg = reload_config()
             except PermissionError as e:
                 raise GameError(str(e))
@@ -59,7 +58,7 @@ class ConfigCog(commands.Cog):
                 raise GameError(f"config.json is invalid, nothing was changed.\n{e}")
             except OSError as e:
                 raise GameError(f"Could not write config.json ({e}). Is it mounted read-only?")
-            settings.load(balance_overrides(cfg))
+            settings.load(settings.clean(balance_overrides(cfg))[0])
 
         embed = discord.Embed(title="⚙️ Config changed", color=discord.Color.blurple())
         embed.add_field(name="Setting", value=label, inline=False)
@@ -68,7 +67,12 @@ class ConfigCog(commands.Cog):
         embed.add_field(name="By", value=f"{user.mention} (`{user}`)", inline=False)
         await self.bot.announcer.send(embed=embed, channel="staff_log")
         log.info("%s changed %s: %s -> %s", user, label, before, after)
-        return f"✅ **{label}**: {before} → {after}"
+        text = f"✅ **{label}**: {before} → {after}"
+        if change.cleaned:
+            removed = "\n".join(f"- {p}" for p in change.cleaned[:10])
+            text += f"\n🧹 Also removed from config.json (the bot didn't use them):\n{removed}"
+            log.info("Removed from config.json: %s", "; ".join(change.cleaned))
+        return text
 
     async def set_field(self, interaction: discord.Interaction, field: ce.Field, value: Any) -> str:
         """Set a field (None = clear it, or back to the default for balance settings)."""
@@ -285,7 +289,7 @@ class LevelRolePicker(discord.ui.RoleSelect):
             lambda cfg: ce.set_level_role(cfg, self.level, role.id),
         )
         await interaction.response.edit_message(
-            content=text + "\nRun `/sync_level_roles` to update members who already passed this level.", view=None
+            content=text + "\nRun `/player sync_roles` to update members who already passed this level.", view=None
         )
 
 

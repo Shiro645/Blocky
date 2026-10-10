@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from typing import Awaitable, Callable
 
 import discord
 
@@ -145,6 +146,15 @@ async def reply(interaction: discord.Interaction, content: str | None = None, *,
         await interaction.response.send_message(content, ephemeral=ephemeral, **kwargs)
 
 
+async def dm(user: discord.abc.User, text: str) -> bool:
+    """Send a private message (best effort: members can close their DMs). Returns True if delivered."""
+    try:
+        await user.send(text, allowed_mentions=discord.AllowedMentions.none())
+        return True
+    except discord.HTTPException:
+        return False
+
+
 async def report_error(interaction: discord.Interaction, error: Exception) -> None:
     if isinstance(error, GameError):
         message = f"❌ {error}"
@@ -167,6 +177,23 @@ async def report_error(interaction: discord.Interaction, error: Exception) -> No
         pass
 
 
+# Component interactions answered by a live view (see Bot.on_interaction).
+_handled: set[int] = set()
+
+
+def mark_handled(interaction: discord.Interaction) -> None:
+    """A live view got this click (called first thing in interaction_check)."""
+    _handled.add(interaction.id)
+
+
+def take_handled(interaction: discord.Interaction) -> bool:
+    """Was this click handled by a live view? (forgets it)"""
+    if interaction.id in _handled:
+        _handled.discard(interaction.id)
+        return True
+    return False
+
+
 class BaseView(discord.ui.View):
     """View that reports GameError to the player and can be limited to some users."""
 
@@ -176,6 +203,7 @@ class BaseView(discord.ui.View):
         self.message: discord.Message | None = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        mark_handled(interaction)
         if self.allowed_ids is not None and interaction.user.id not in self.allowed_ids:
             await interaction.response.send_message("❌ This isn't for you.", ephemeral=True)
             return False
@@ -196,3 +224,22 @@ class BaseView(discord.ui.View):
                 await self.message.edit(view=self)
             except discord.HTTPException:
                 pass
+
+
+class ConfirmView(BaseView):
+    """Confirm / Cancel before something that can't be undone."""
+
+    def __init__(self, user_id: int, label: str, action: Callable[[discord.Interaction], Awaitable[None]]):
+        super().__init__(allowed_ids={user_id}, timeout=60)
+        self.action = action
+        self.confirm.label = label
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.stop()
+        await self.action(interaction)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled.", view=None)

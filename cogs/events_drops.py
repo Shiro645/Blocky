@@ -4,11 +4,9 @@ import random
 import time
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 from game import events, settings
-from utils.checks import staff_only
 from utils.ui import BaseView
 
 
@@ -81,9 +79,8 @@ class DropsCog(commands.Cog):
         except discord.HTTPException:
             pass
 
-    @app_commands.command(name="drop_spawn", description="STAFF: Make a drop appear in this channel.")
-    @staff_only()
-    async def drop_spawn(self, interaction: discord.Interaction):
+    async def staff_spawn(self, interaction: discord.Interaction) -> None:
+        """/event drop (cogs/staff_events.py): a drop in this channel, now."""
         await interaction.response.send_message("✅ Drop spawned.", ephemeral=True)
         await self.spawn(interaction.channel)
 
