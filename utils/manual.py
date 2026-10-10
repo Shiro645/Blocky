@@ -780,11 +780,16 @@ PAGES: list[Page] = [
     ),
     Page(
         "blockdle guess", "games",
-        "Guess the Minecraft block of the day (the same for everyone, like Wordle). After each guess you see, for "
-        "6 properties, how your block compares with the block of the day: 🟩 same, 🟥 different, 🔼 the block of "
-        "the day is higher / newer, 🔽 lower / older. The properties: the tool that mines it, its hardness, its "
-        "blast resistance, if it's transparent, if it can be crafted, and the version it was added in.\n"
-        "Guesses are unlimited and private; the fewer you need, the bigger the reward.",
+        "Find the Minecraft block of the day (the same for everyone, like Wordle). Guess any block: the bot compares "
+        "it with the block of the day on 6 properties and answers in plain words, for example:\n"
+        "🪨 Hardness: **1.5** → ⬆️ the block of the day is harder\n"
+        "👁️ Transparent: **No** → ❌ the block of the day is transparent\n"
+        "📅 Version: **1.14** → ⬇️ the block of the day is older\n"
+        "The properties: the tool that mines it, its hardness, its blast resistance, if it's transparent, if it can be "
+        "crafted, and the version it was added in. **📋 What you know so far** adds up every answer (e.g. \"harder "
+        "than 0.6 and softer than 3\") and tells how many blocks are still possible; when 6 or fewer are left it "
+        "names them. Some blocks have exactly the same 6 properties (e.g. Dandelion and Poppy): then try them one "
+        "by one.\nGuesses are unlimited and private; the fewer you need, the bigger the reward.",
         _blockdle,
         examples=("/blockdle guess block:Stone",),
         related=("blockdle today", "blockdle top"),

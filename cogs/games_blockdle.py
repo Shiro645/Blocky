@@ -11,14 +11,67 @@ from game import blockdle, settings
 from utils.checks import check_game_channel
 from utils.ui import em, join_lines
 
-CELLS = {"yes": "🟩", "no": "🟥", "higher": "🔼", "lower": "🔽"}
-LEGEND = "🟩 same · 🟥 different · 🔼 the block of the day is higher / newer · 🔽 lower / older"
-HEADER = "Tool · Hardness · Blast resistance · Transparent · Craftable · Version"
+ICONS = {"tool": "⛏️", "hardness": "🪨", "resistance": "💥", "transparent": "👁️", "craftable": "🛠️", "version": "📅"}
+SHORT = {"yes": "✅", "no": "❌", "higher": "⬆️", "lower": "⬇️"}
+LEGEND = "✅ same · ❌ different · ⬆️ the block of the day is higher / newer · ⬇️ lower / older"
+HOW_TO = (
+    "Find the Minecraft block of the day (the same for everyone). Guess any block with `/blockdle guess`: "
+    "the bot compares it with the block of the day on 6 properties and tells you, for each one, if it's the same, "
+    "or if the block of the day is higher (⬆️) or lower (⬇️). Use the clues to narrow it down!"
+)
+HIGHER = {"hardness": "harder", "resistance": "more blast resistant", "version": "newer"}
+LOWER = {"hardness": "softer", "resistance": "less blast resistant", "version": "older"}
 
 
-def guess_line(block: blockdle.Block, cells: dict[str, str]) -> str:
-    parts = [f"{CELLS[cells[key]]} {blockdle.value_text(block, key)}" for key, _ in blockdle.COLUMNS]
-    return f"**{block.name}**\n" + " · ".join(parts)
+def explain(key: str, block: blockdle.Block, result: str) -> str:
+    """One answer in plain words, e.g. "⬆️ the block of the day is harder"."""
+    if result == "yes":
+        return "✅ same"
+    if key == "tool":
+        return "❌ another tool"
+    if key in ("transparent", "craftable"):
+        is_it = not getattr(block, key)  # the block of the day is the opposite
+        word = "transparent" if key == "transparent" else "craftable"
+        return f"❌ the block of the day {'is' if is_it else 'is not'} {word}"
+    return f"{SHORT[result]} the block of the day is {(HIGHER if result == 'higher' else LOWER)[key]}"
+
+
+def result_lines(block: blockdle.Block, cells: dict[str, str]) -> str:
+    return "\n".join(
+        f"{ICONS[key]} {label}: **{blockdle.value_text(block, key)}** → {explain(key, block, cells[key])}"
+        for key, label in blockdle.COLUMNS
+    )
+
+
+def known_lines(guesses: list) -> list[str]:
+    """What all the answers together say about the block of the day."""
+    know = blockdle.knowledge(guesses)
+    lines = []
+    tool = know["tool"]
+    if "exact" in tool:
+        lines.append(f"{ICONS['tool']} Tool: **{blockdle.TOOL_NAMES.get(tool['exact'], tool['exact'])}** ✅")
+    else:
+        excluded = [blockdle.TOOL_NAMES.get(t, t) for t in tool["not"]]
+        lines.append(f"{ICONS['tool']} Tool: " + (" · ".join(f"❌ {t}" for t in excluded) if excluded else "?"))
+    for key, label in (("hardness", "Hardness"), ("resistance", "Blast resistance"), ("version", "Version")):
+        k = know[key]
+        if "exact" in k:
+            lines.append(f"{ICONS[key]} {label}: **{blockdle.value_text(k['exact'], key)}** ✅")
+            continue
+        bits = []
+        if k["above"] is not None:
+            bits.append(f"{HIGHER[key]} than {blockdle.value_text(k['above'], key)}")
+        if k["below"] is not None:
+            bits.append(f"{LOWER[key]} than {blockdle.value_text(k['below'], key)}")
+        lines.append(f"{ICONS[key]} {label}: {' and '.join(bits) if bits else '?'}")
+    for key, label in (("transparent", "Transparent"), ("craftable", "Craftable")):
+        if key in know:
+            lines.append(f"{ICONS[key]} {label}: **{'Yes' if know[key]['exact'] else 'No'}** ✅")
+    return lines
+
+
+def history_line(n: int, block: blockdle.Block, cells: dict[str, str]) -> str:
+    return f"`{n}.` {''.join(SHORT[cells[key]] for key, _ in blockdle.COLUMNS)} {block.name}"
 
 
 class BlockdleCog(commands.Cog):
@@ -30,18 +83,28 @@ class BlockdleCog(commands.Cog):
         self.bot = bot
 
     def grid(self, state: dict, title: str) -> discord.Embed:
-        lines = [guess_line(b, cells) for b, cells in state["guesses"]]
-        shown = lines[-15:]
-        if len(lines) > len(shown):
-            shown.insert(0, f"*…{len(lines) - len(shown)} earlier guesses*")
+        guesses = state["guesses"]
         embed = discord.Embed(title=title, color=discord.Color.green() if state["found"] else discord.Color.blurple())
-        embed.description = (f"*{HEADER}*\n\n" + "\n".join(shown))[:4000] if lines else (
-            "Guess a block with `/blockdle guess`. After each guess you see how it compares with the block of "
-            "the day: same tool? harder? more blast resistant? transparent? craftable? newer?"
-        )
         if state["found"]:
-            embed.add_field(name="Found!", value=f"**{state['secret'].name}** in **{state['tries']}** guess(es): "
-                                                 f"+{em(state['reward'])}", inline=False)
+            embed.description = (f"🎉 It was **{state['secret'].name}**! Found in **{state['tries']}** guess(es): "
+                                 f"+{em(state['reward'])}")
+        elif guesses:
+            block, cells = guesses[-1]
+            embed.description = f"**Your guess: {block.name}**\n{result_lines(block, cells)}"
+        else:
+            embed.description = HOW_TO
+        if guesses and not state["found"]:
+            left = blockdle.candidates(guesses)
+            known = known_lines(guesses)
+            if len(left) <= 6:
+                known.append(f"🎯 **{len(left)}** block(s) still possible: " + ", ".join(b.name for b in left))
+            else:
+                known.append(f"🎯 **{len(left)}** blocks still possible")
+            embed.add_field(name="📋 What you know so far", value=join_lines(known), inline=False)
+        if guesses:
+            header = "`  ` " + "".join(ICONS[key] for key, _ in blockdle.COLUMNS)
+            lines = [history_line(i + 1, b, cells) for i, (b, cells) in enumerate(guesses)][-15:]
+            embed.add_field(name="🕘 Your guesses", value=join_lines([header, *lines]), inline=False)
         embed.add_field(name="Found today", value=f"{state['winners']} player(s)", inline=True)
         embed.add_field(name="Next block", value=f"<t:{self.next_day(state['day'])}:R>", inline=True)
         embed.set_footer(text=LEGEND)

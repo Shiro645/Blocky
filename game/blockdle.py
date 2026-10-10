@@ -79,8 +79,13 @@ def compare(guess: Block, secret: Block) -> dict[str, str]:
     return out
 
 
+TOOL_NAMES = {"Any": "No tool needed", "None": "Can't be mined"}
+
+
 def value_text(block: Block, key: str) -> str:
     value = getattr(block, key)
+    if key == "tool":
+        return TOOL_NAMES.get(value, value)
     if key == "hardness" and value < 0:
         return "Unbreakable"
     if isinstance(value, bool):
@@ -88,6 +93,45 @@ def value_text(block: Block, key: str) -> str:
     if isinstance(value, float):
         return f"{value:g}"
     return str(value)
+
+
+def candidates(guesses: list[tuple[Block, dict[str, str]]]) -> list[Block]:
+    """The blocks that could still be the block of the day, given the answers so far."""
+    tried = {g.id for g, _ in guesses}
+    return [b for b in BLOCKS if b.id not in tried and all(compare(g, b) == cells for g, cells in guesses)]
+
+
+def knowledge(guesses: list[tuple[Block, dict[str, str]]]) -> dict[str, dict]:
+    """What the answers tell about each property of the block of the day.
+
+    For each column: {"exact": value} when known, else {"not": [values]} for the tool,
+    or {"above": value, "below": value} (either may be None) for numbers and versions.
+    """
+    out: dict[str, dict] = {}
+    secret_values = {}  # transparent / craftable are known after one guess
+    for key in ("transparent", "craftable"):
+        for g, cells in guesses:
+            value = getattr(g, key)
+            secret_values[key] = value if cells[key] == "yes" else not value
+        if key in secret_values:
+            out[key] = {"exact": secret_values[key]}
+    exact_tool = next((g.tool for g, cells in guesses if cells["tool"] == "yes"), None)
+    out["tool"] = {"exact": exact_tool} if exact_tool else {"not": sorted({g.tool for g, c in guesses if c["tool"] == "no"})}
+    for key in ("hardness", "resistance", "version"):
+        def rank(block: Block) -> float:
+            return VERSIONS.index(block.version) if key == "version" else _number(getattr(block, key))
+
+        exact = next((g for g, cells in guesses if cells[key] == "yes"), None)
+        if exact is not None:
+            out[key] = {"exact": exact}
+            continue
+        above = [g for g, cells in guesses if cells[key] == "higher"]  # the secret is above these
+        below = [g for g, cells in guesses if cells[key] == "lower"]
+        out[key] = {
+            "above": max(above, key=rank) if above else None,
+            "below": min(below, key=rank) if below else None,
+        }
+    return out
 
 
 def reward_for(tries: int) -> int:

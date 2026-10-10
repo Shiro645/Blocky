@@ -89,6 +89,22 @@ class BlockdleRules(unittest.TestCase):
         crafter = blockdle.find("crafter")
         self.assertEqual(blockdle.compare(crafter, stone)["version"], "lower")
 
+    def test_knowledge_and_candidates(self):
+        secret = blockdle.find("Dandelion")
+        guesses = [(blockdle.find(n), blockdle.compare(blockdle.find(n), secret)) for n in ("Stone", "Glass", "Torch")]
+        know = blockdle.knowledge(guesses)
+        self.assertEqual((know["transparent"], know["craftable"]), ({"exact": True}, {"exact": False}))
+        self.assertEqual(know["tool"], {"exact": "Any"})
+        self.assertEqual(blockdle.value_text(know["version"]["exact"], "version"), "Classic")
+        self.assertEqual({b.name for b in blockdle.candidates(guesses)}, {"Dandelion", "Poppy"})  # twins
+        stone = blockdle.find("Stone")
+        one = [(stone, blockdle.compare(stone, blockdle.find("Obsidian")))]
+        know = blockdle.knowledge(one)
+        self.assertEqual(know["hardness"], {"above": stone, "below": None})  # harder than stone
+        self.assertEqual(know["tool"], {"exact": "Pickaxe"})
+        self.assertIn(blockdle.find("Obsidian"), blockdle.candidates(one))
+        self.assertEqual(blockdle.value_text(blockdle.find("Bedrock"), "tool"), "Can't be mined")
+
     def test_search(self):
         names = [b.name for b in blockdle.search("block of")]
         self.assertIn("Block of Diamond", names)
