@@ -353,6 +353,29 @@ MIGRATIONS: list[str] = [
     DROP TABLE team_season_scores;
     ALTER TABLE team_season_scores_new RENAME TO team_season_scores;
     """,
+    # 15 - Blockdle: the block of each day, and each player's guesses
+    """
+    CREATE TABLE blockdle_days (
+        day TEXT PRIMARY KEY,           -- local date, YYYY-MM-DD
+        block TEXT NOT NULL
+    );
+    CREATE TABLE blockdle_guesses (
+        day TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        n INTEGER NOT NULL,             -- 1 for the first guess of the day
+        block TEXT NOT NULL,
+        guessed_at INTEGER NOT NULL,
+        PRIMARY KEY (day, user_id, n)
+    );
+    CREATE TABLE blockdle_wins (
+        day TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        tries INTEGER NOT NULL,
+        reward INTEGER NOT NULL,
+        won_at INTEGER NOT NULL,
+        PRIMARY KEY (day, user_id)
+    );
+    """,
 ]
 
 

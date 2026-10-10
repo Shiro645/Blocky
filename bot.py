@@ -57,6 +57,9 @@ EXTENSIONS = [
     "cogs.events_boss",
     "cogs.events_tournament",
     "cogs.events_villager",
+    "cogs.games_roulette",
+    "cogs.games_blockdle",
+    "cogs.games_quiz",
     "cogs.help_command",
 ]
 

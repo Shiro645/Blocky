@@ -13,7 +13,7 @@ from utils.checks import staff_only
 class StaffEventsCog(commands.Cog):
     """/event: start the server events now. The work is done by each event's own cog."""
 
-    event = app_commands.Group(name="event", description="STAFF: Start an event now: boss, drop, tournament, villager.")
+    event = app_commands.Group(name="event", description="STAFF: Start an event now: boss, drop, quiz, tournament, villager.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -48,6 +48,13 @@ class StaffEventsCog(commands.Cog):
     @staff_only()
     async def tournament(self, interaction: discord.Interaction, action: str):
         await self.cog("TournamentCog").staff_action(interaction, action)
+
+    @event.command(name="quiz", description="STAFF: Ask a Minecraft quiz question in this channel now.")
+    @staff_only()
+    async def quiz(self, interaction: discord.Interaction):
+        quiz_cog = self.cog("QuizCog")
+        await interaction.response.send_message("✅ Question posted.", ephemeral=True)
+        await quiz_cog.post(interaction.channel)
 
     @event.command(name="villager", description="STAFF: Make the wandering villager come now, or leave.")
     @app_commands.describe(action="What to do")
