@@ -19,29 +19,40 @@ def cooldown_seconds(efficiency_points: int, enchant_seconds: float = 0) -> int:
     return max(int(m["min_cooldown_seconds"]), int(base - t["efficiency_seconds_per_point"] * points - enchant_seconds))
 
 
+def pile_weights(amount: int, miner: int, lucky: int) -> dict[str, float]:
+    """Weight of each block for a pile of `amount` blocks, with the talent bonuses."""
+    m, t = settings.get()["mining"], settings.get()["talents"]
+    if amount >= 6:
+        weights = dict(m["odds_6_blocks"])
+    elif amount >= 4:
+        weights = dict(m["odds_4_5_blocks"])
+        weights["gravel"] += min(t["miner_gravel_4_5_max"], t["miner_gravel_4_5"] * miner)
+    elif amount >= 2:
+        weights = dict(m["odds_2_3_blocks"])
+        weights["gravel"] += min(t["miner_gravel_2_3_max"], t["miner_gravel_2_3"] * miner)
+        weights["deepslate"] += min(t["miner_deepslate_2_3_max"], t["miner_deepslate_2_3"] * miner)
+    else:
+        weights = dict(m["odds_1_block"])
+        weights["obsidian"] += t["lucky_rare_weight"] * lucky
+        weights["bedrock"] += t["lucky_rare_weight"] * lucky
+    return {b: float(weights[b]) for b in BLOCK_TYPES}
+
+
 def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tuple[str, int]:
-    caps = settings.get()["talents"]["caps"]
-    miner = min(max(0, miner_points), caps["miner"])
-    lucky = min(max(0, lucky_points), caps["lucky"])
+    t = settings.get()["talents"]
+    miner = min(max(0, miner_points), t["caps"]["miner"])
+    lucky = min(max(0, lucky_points), t["caps"]["lucky"])
     amount = rng.randint(1, 6)
 
-    if amount == 6:
-        block = "cobblestone"
-    elif amount in (4, 5):
-        block = rng.choices(["cobblestone", "gravel"], weights=[70, 30 + min(40, miner * 5)])[0]
-    elif amount in (2, 3):
-        block = rng.choices(
-            ["cobblestone", "gravel", "deepslate"],
-            weights=[70, 20 + min(30, miner * 3), 10 + min(30, miner * 2)],
-        )[0]
+    weights = pile_weights(amount, miner, lucky)
+    possible = [b for b, w in weights.items() if w > 0]
+    if len(possible) == 1:  # nothing to roll
+        block = possible[0]
     else:
-        block = rng.choices(
-            ["cobblestone", "gravel", "deepslate", "obsidian", "bedrock"],
-            weights=[70, 20, 9, 3 + lucky, 1 + lucky],
-        )[0]
+        block = rng.choices(list(weights), weights=list(weights.values()))[0]
 
-    # Miner talent: small chance of one bonus block on big rolls.
-    if amount >= 4 and rng.random() < min(0.25, 0.05 * miner):
+    # Miner talent: small chance of one bonus block on big piles.
+    if amount >= 4 and rng.random() < min(float(t["miner_bonus_block_max"]), float(t["miner_bonus_block_chance"]) * miner):
         amount += 1
     return block, amount
 
