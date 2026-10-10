@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from game import mining, players, shop
 from game.db import Ctx
+from utils.config import channel_ids
 from utils.ui import EMOJI, block_icon, em, gear_label, item_label, join_lines
 
 
@@ -25,6 +26,14 @@ class EconomyMiningCog(commands.Cog):
         self.bot = bot
         # user_id -> monotonic time when the user can mine again
         self._next_mine: dict[int, float] = {}
+        # Spam channels have their own cooldown, so spamming there doesn't stop mining elsewhere.
+        self._next_spam: dict[int, float] = {}
+
+    async def spam_mine(self, user_id: int, now: float) -> None:
+        if now < self._next_spam.get(user_id, 0.0):
+            return
+        self._next_spam[user_id] = now + mining.cooldown_seconds(0)
+        await self.bot.db.run(mining.spam_mine, user_id)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -33,6 +42,11 @@ class EconomyMiningCog(commands.Cog):
 
         user_id = message.author.id
         now = time.monotonic()
+        channel = message.channel
+        spam = channel_ids("spam")
+        if spam and (channel.id in spam or getattr(channel, "parent_id", None) in spam):
+            # No blocks, XP, drops or challenge progress here: only a tiny reward.
+            return await self.spam_mine(user_id, now)
         if now < self._next_mine.get(user_id, 0.0):
             return
         # Reserve the slot before awaiting, so two quick messages can't both mine.

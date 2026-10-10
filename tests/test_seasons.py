@@ -42,6 +42,18 @@ class SeasonTests(GameTestCase):
         self.assertEqual(await self.run_game(players.get_stat, BOB, "seasons_won"), 1)
         self.assertTrue((await self.run_game(leaderboard.profile, BOB))["is_champion"])
 
+    async def test_mined_blocks_are_scored_once(self):
+        from game import exchange, mining
+
+        res = await self.run_game(mining.mine, ALICE)
+        value = players.block_value(res["block"]) * res["amount"]
+        self.assertEqual((await self.run_game(seasons.overview, ALICE))["score"], value)
+        # Giving the blocks to someone who sells them doesn't move the score.
+        await self.run_game(exchange.trade, ALICE, BOB, f"block:{res['block']}", res["amount"], None, 0)
+        await self.run_game(players.sell_all_blocks, BOB)
+        self.assertEqual((await self.run_game(seasons.overview, BOB))["score"], 0)
+        self.assertEqual((await self.run_game(seasons.overview, ALICE))["score"], value)
+
     async def test_season_end_is_next_monday(self):
         overview = await self.run_game(seasons.overview, ALICE)
         # START is Wednesday 12:00 -> Monday 00:00 is 4.5 days later.

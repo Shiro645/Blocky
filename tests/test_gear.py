@@ -55,18 +55,18 @@ class CombatStatTests(unittest.TestCase):
         settings.load()
 
     def test_attack_and_armor(self):
-        self.assertEqual(gear.attack_damage({}), 1)
+        self.assertEqual(gear.attack_damage({}), 6)  # maximum damage without a sword
         full_iron = {s: {"material": "iron"} for s in ("helmet", "chestplate", "leggings", "boots")}
         full_iron["sword"] = {"material": "diamond"}
-        self.assertEqual(gear.attack_damage(full_iron), 7)
+        self.assertEqual(gear.attack_damage(full_iron), 12)
         self.assertEqual(gear.armor_points(full_iron), 15)
-        self.assertAlmostEqual(gear.damage_reduction(full_iron), 0.45)
+        self.assertAlmostEqual(gear.damage_reduction(full_iron), 0.18)
 
     def test_reduction_is_capped(self):
         from game import settings
 
         settings.load({"gear": {"damage_reduction_per_armor_point": 1}})
-        self.assertEqual(gear.damage_reduction({"helmet": {"material": "gold"}}), 0.8)
+        self.assertEqual(gear.damage_reduction({"helmet": {"material": "gold"}}), 0.35)
 
 
 class MiningWithToolsTests(GameTestCase):

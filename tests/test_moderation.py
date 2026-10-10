@@ -33,7 +33,19 @@ class SanctionTests(GameTestCase):
     async def test_warnings_and_automatic_mutes(self):
         results = [await self.run_game(moderation.warn, BOB, f"spam {i}", MOD) for i in range(5)]
         self.assertEqual([r["count"] for r in results], [1, 2, 3, 4, 5])
-        self.assertEqual([r["auto_mute"] for r in results], [None, None, HOUR, None, DAY])
+        self.assertEqual([r["auto_mute"] for r in results], [False, False, True, False, True])
+        self.assertEqual([r["duration"] for r in results if r["auto_mute"]], [HOUR, DAY])
+
+    async def test_a_warning_never_shortens_a_mute(self):
+        await self.run_game(moderation.add, BOB, "mute", "long", MOD, 7 * DAY)
+        for i in range(3):
+            res = await self.run_game(moderation.warn, BOB, f"spam {i}", MOD)
+        self.assertFalse(res["auto_mute"])  # the 7-day mute stays
+
+    async def test_permanent_automatic_mute(self):
+        settings.load({"moderation": {"warn_mutes": {"1": "perm"}}})
+        res = await self.run_game(moderation.warn, BOB, "bad", MOD)
+        self.assertEqual((res["auto_mute"], res["duration"]), (True, None))
 
     async def test_warnings_expire(self):
         await self.run_game(moderation.warn, BOB, "old", MOD)

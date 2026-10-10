@@ -17,7 +17,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
     ("🛠️ Crafting & Equipment", [
         "`/craft <item> <material>` · `/craftlist` → Craft gear",
         "`/gear` → Your equipment and what it does",
-        "`/equip` · `/equip_best` · `/unequip` → Manage your equipment",
+        "`/equip` · `/equip_best` · `/unequip` · `/repair` → Manage your equipment",
         "`/enchant apply · combine · info` → Enchanted books (costs lapis, found while mining)",
     ]),
     ("⭐ XP & Talents", [

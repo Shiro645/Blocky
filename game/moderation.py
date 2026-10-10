@@ -10,6 +10,7 @@ history and knows what must happen next:
 """
 from __future__ import annotations
 
+import json
 import re
 
 from game import settings
@@ -133,11 +134,24 @@ def warns(ctx: Ctx, user_id: int) -> list[dict]:
 
 
 def warn(ctx: Ctx, user_id: int, reason: str, moderator_id: int) -> dict:
-    """Record a warning. "auto_mute" is the duration of the automatic mute it triggers, if any."""
+    """Record a warning.
+
+    "auto_mute" is True when this warning triggers an automatic mute, of
+    "duration" seconds (None = permanent). No automatic mute when the member
+    already has a mute that lasts longer: a warning never shortens a mute.
+    """
     sanction = add(ctx, user_id, "warn", reason, moderator_id)
     count = len(warns(ctx, user_id))
     rule = (_cfg()["warn_mutes"] or {}).get(str(count))
-    return {"sanction": sanction, "count": count, "auto_mute": parse_duration(rule) if rule else None, "rule": rule}
+    duration = parse_duration(str(rule)) if rule else None
+    auto = rule is not None
+    current = active(ctx, user_id, "mute")
+    if auto and current is not None:
+        current_end = current["expires_at"]
+        new_end = None if duration is None else ctx.now + duration
+        if current_end is None or (new_end is not None and current_end >= new_end):
+            auto = False
+    return {"sanction": sanction, "count": count, "auto_mute": auto, "duration": duration, "rule": rule}
 
 
 def remove_warn(ctx: Ctx, sanction_id: int, moderator_id: int) -> dict:
@@ -155,6 +169,26 @@ def remove_warn(ctx: Ctx, sanction_id: int, moderator_id: int) -> dict:
 
 def clear_warns(ctx: Ctx, user_id: int, moderator_id: int) -> int:
     return len(_end(ctx, user_id, "warn", moderator_id))
+
+
+# ---------------- channel locks ----------------
+def lock(ctx: Ctx, channel_id: int, saved: dict, moderator_id: int) -> None:
+    """Remember the permissions /lock changes, so /unlock puts them back."""
+    if ctx.one("SELECT 1 FROM channel_locks WHERE channel_id=?;", (channel_id,)):
+        raise GameError("This channel is already locked. Use `/unlock` first.")
+    ctx.execute(
+        "INSERT INTO channel_locks(channel_id, saved, locked_by, locked_at) VALUES(?, ?, ?, ?);",
+        (channel_id, json.dumps(saved), moderator_id, int(ctx.now)),
+    )
+
+
+def unlock(ctx: Ctx, channel_id: int) -> dict:
+    """The saved permissions of a locked channel (and forget the lock)."""
+    row = ctx.one("SELECT saved FROM channel_locks WHERE channel_id=?;", (channel_id,))
+    if row is None:
+        raise GameError("This channel wasn't locked with `/lock`.")
+    ctx.execute("DELETE FROM channel_locks WHERE channel_id=?;", (channel_id,))
+    return json.loads(row["saved"])
 
 
 # ---------------- history and clock ----------------

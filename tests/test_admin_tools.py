@@ -50,18 +50,36 @@ class BackupScheduleTests(unittest.TestCase):
             self.assertEqual(len(names), 7)
             self.assertTrue((folder / "notes.txt").exists())
 
+    def test_manual_backups_never_push_nightly_ones_out(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            for day in range(1, 8):
+                backups.backup_path(folder, date(2026, 10, day)).write_bytes(b"x")
+            for minute in range(10):
+                backups.manual_path(folder, datetime(2026, 10, 9, 12, minute)).write_bytes(b"x")
+                backups.prune(folder, keep=7, manual=True)
+            backups.prune(folder, keep=7)
+            self.assertEqual(len(backups.existing(folder)), 7)
+            manual = backups.existing(folder, manual=True)
+            self.assertEqual(len(manual), 7)
+            self.assertEqual(manual[0].name, "manual-2026-10-09-120300.db")
+
 
 class ConsoleRulesTests(unittest.TestCase):
     def test_normalize(self):
         self.assertEqual(normalize("  /Minecraft:Whitelist   OFF "), "whitelist off")
 
     def test_blocked_commands(self):
-        for cmd in ("stop", "/stop", "op Steve", "whitelist off", "minecraft:deop Steve", "kill @e[type=cow]"):
+        for cmd in (
+            "stop", "/stop", "op Steve", "whitelist off", "minecraft:deop Steve", "kill @e[type=cow]",
+            "execute run op Steve", "execute as @a at @s run stop", "execute run execute run minecraft:op Steve",
+        ):
             with self.subTest(cmd=cmd):
                 self.assertIsNotNone(blocked_by(cmd, DEFAULT_BLOCKED))
 
     def test_allowed_commands(self):
-        for cmd in ("say hello", "give Steve diamond 3", "whitelist add Steve", "list", "stopwatch", "kill Steve"):
+        for cmd in ("say hello", "give Steve diamond 3", "whitelist add Steve", "list", "stopwatch", "kill Steve",
+                    "execute as @a run say hi"):
             with self.subTest(cmd=cmd):
                 self.assertIsNone(blocked_by(cmd, DEFAULT_BLOCKED))
 

@@ -87,6 +87,7 @@ class BossCog(commands.Cog):
         self.bot = bot
         self._refresh_scheduled: set[int] = set()
         self._post_retry_at = 0.0
+        self._posting: set[int] = set()  # bosses being posted
         self._tasks: set[asyncio.Task] = set()
 
     async def cog_load(self) -> None:
@@ -99,16 +100,26 @@ class BossCog(commands.Cog):
 
     # ---------- boss message ----------
     async def post_boss(self, boss: dict, channel: discord.abc.Messageable) -> None:
-        boss["ranking"] = []
-        ping = role_id("event_ping")
-        msg = await channel.send(
-            content=f"<@&{ping}>" if ping else None,
-            embed=boss_embed(boss),
-            view=boss_view(boss["boss_id"], True),
-            # Only the configured role is pinged, never @everyone / @here.
-            allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=[discord.Object(ping)] if ping else False),
-        )
-        await self.bot.db.run(events.set_boss_message, boss["boss_id"], msg.channel.id, msg.id)
+        # /boss_spawn and the loop can both try to post a new boss: only one does.
+        if boss["boss_id"] in self._posting:
+            return
+        self._posting.add(boss["boss_id"])
+        try:
+            fresh = await self.bot.db.run(events.get_boss, boss["boss_id"])
+            if fresh is None or fresh["message_id"]:
+                return  # already posted
+            boss["ranking"] = []
+            ping = role_id("event_ping")
+            msg = await channel.send(
+                content=f"<@&{ping}>" if ping else None,
+                embed=boss_embed(boss),
+                view=boss_view(boss["boss_id"], True),
+                # Only the configured role is pinged, never @everyone / @here.
+                allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=[discord.Object(ping)] if ping else False),
+            )
+            await self.bot.db.run(events.set_boss_message, boss["boss_id"], msg.channel.id, msg.id)
+        finally:
+            self._posting.discard(boss["boss_id"])
 
     async def refresh_message(self, boss_id: int) -> None:
         data = await self.bot.db.run(events.boss_view, boss_id)
@@ -187,7 +198,10 @@ class BossCog(commands.Cog):
     @app_commands.command(name="boss_spawn", description="STAFF: Summon a boss.")
     @app_commands.describe(name="Boss name (random if empty)", hp="Health points (default from settings)")
     @staff_only()
-    async def boss_spawn(self, interaction: discord.Interaction, name: str | None = None, hp: app_commands.Range[int, 1, 10_000_000] | None = None):
+    async def boss_spawn(
+        self, interaction: discord.Interaction, name: app_commands.Range[str, 1, 64] | None = None,
+        hp: app_commands.Range[int, 1, 10_000_000] | None = None,
+    ):
         await interaction.response.defer(ephemeral=True)
         boss = await self.bot.db.run(events.spawn_boss, name, hp)
         channel = self.bot.announcer.channel("events") or interaction.channel

@@ -23,6 +23,9 @@ TEXT_CHANNELS = [discord.ChannelType.text, discord.ChannelType.news]
 def show(field: ce.Field, value: Any) -> str:
     if field.kind == "channel":
         return f"<#{value}>" if value else "*not set*"
+    if field.kind == "channels":
+        ids = value if isinstance(value, list) else []
+        return ", ".join(f"<#{c}>" for c in ids) if ids else "*none*"
     if field.kind == "role":
         return f"<@&{value}>" if value else "*not set*"
     if value is None:
@@ -45,6 +48,9 @@ class ConfigCog(commands.Cog):
         async with self.lock:
             try:
                 new = mutate(read_config_file())
+                problems = settings.problems(balance_overrides(new))
+                if problems:
+                    raise GameError("Not changed, this value isn't allowed:\n" + "\n".join(f"- {p}" for p in problems[:10]))
                 ce.write_config(CONFIG_PATH, new, backups.backup_dir(self.bot.db.path))
                 cfg = reload_config()
             except PermissionError as e:
@@ -143,13 +149,16 @@ class FieldSelect(discord.ui.Select):
     @staticmethod
     def describe(field: ce.Field, value: Any) -> str:
         # Select descriptions can't render mentions: just say whether it is set.
+        if field.kind == "channels":
+            count = len(value) if isinstance(value, list) else 0
+            return f"Now: {count} channel(s)"
         if field.kind in ("channel", "role"):
             return "Now: set" if value else "Now: not set"
         return f"Now: {show(field, value)}".replace("*", "")[:100]
 
     async def callback(self, interaction: discord.Interaction):
         field = ce.FIELDS_BY_KEY[self.values[0]]
-        if field.kind == "channel":
+        if field.kind in ("channel", "channels"):
             view = PickerView(self.cog, field, interaction.user.id)
             view.add_item(ChannelPicker(self.cog, field))
             await interaction.response.send_message(f"Choose the **{field.label}**:", view=view, ephemeral=True)
@@ -177,10 +186,18 @@ class PickerView(BaseView):
 class ChannelPicker(discord.ui.ChannelSelect):
     def __init__(self, cog: ConfigCog, field: ce.Field):
         self.cog, self.field = cog, field
-        super().__init__(channel_types=TEXT_CHANNELS, placeholder="Choose a channel…", row=0)
+        many = field.kind == "channels"
+        super().__init__(
+            channel_types=TEXT_CHANNELS, placeholder="Choose channels…" if many else "Choose a channel…",
+            min_values=1, max_values=25 if many else 1, row=0,
+        )
 
     async def callback(self, interaction: discord.Interaction):
-        text = await self.cog.set_field(interaction, self.field, self.values[0].id)
+        if self.field.kind == "channels":
+            value: Any = [c.id for c in self.values]
+        else:
+            value = self.values[0].id
+        text = await self.cog.set_field(interaction, self.field, value)
         await interaction.response.edit_message(content=text, view=None)
 
 

@@ -294,7 +294,7 @@ class TeamsCog(commands.Cog):
         embed = discord.Embed(
             title=f"🛡️ Team season {data['season_id']}",
             description=(
-                "Score = emeralds earned by the members this week. The reward is shared between them, "
+                "Score = what the members created this week (same as /season). The reward is shared between them, "
                 "in proportion to what each one earned for the team.\n"
                 f"Ends <t:{data['ends_at']}:R>. Rewards: {rewards}\n\n"
                 + ("\n".join(lines) or "No team has scored yet. Be the first!")

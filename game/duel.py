@@ -1,10 +1,14 @@
 """Duels: both players bet the same stake, the winner takes the pot.
 
-The fight is turn based. Damage comes from the sword, armor reduces the
-damage taken, and a bit of luck (damage variance and critical hits) keeps
-underdogs in the game. In a duel, the players play their turns one by one
-and can drink a potion before attacking (see game/potions.py); tournament
-matches are simulated in one go, without potions.
+The fight is turn based and luck matters a lot:
+- each hit deals a random amount between a minimum (1, raised by a Strength
+  potion) and a maximum (raised by a better sword and Sharpness);
+- a hit can be dodged, or be a critical hit;
+- armor reduces the damage taken, but only up to a cap.
+Better gear wins more often, not always. The player who plays second starts
+with a few extra HP to make up for not striking first. In a duel the players
+play their turns one by one and can drink a potion before attacking (see
+game/potions.py); tournament matches are simulated in one go, without potions.
 """
 from __future__ import annotations
 
@@ -16,21 +20,21 @@ from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
 
-DAMAGE_VARIANCE = 0.25  # damage is between 75% and 125% of the attack
-
-
 @dataclass
 class Fighter:
     user_id: int
-    attack: float
+    attack: float  # maximum damage of a hit
     reduction: float
     hp: float
     max_hp: float = 0.0
+    min_attack: float = 1.0  # minimum damage of a hit
     attacks: int = 0
     hits_taken: int = 0
     potions_used: int = 0
+    strong_potion_used: bool = False  # level II potions: one per duel
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
+    gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
         self.max_hp = self.max_hp or self.hp
@@ -40,6 +44,7 @@ class Fighter:
 class Hit:
     damage: float
     crit: bool
+    dodged: bool = False
 
 
 @dataclass
@@ -65,7 +70,12 @@ class Fight:
         self.winner: Fighter | None = None
         # The turn being played: set when the current player drank a potion and hasn't attacked yet.
         self.pending: Turn | None = None
-        self._multiplier = 1.0
+        self._min_bonus = 0.0
+        # Striking first is an advantage: the other player starts with a few extra HP.
+        second = self.fighters[1 - self.index]
+        bonus = float(settings.get()["duel"]["second_player_bonus_hp"])
+        second.hp += bonus
+        second.max_hp += bonus
 
     @property
     def current(self) -> Fighter:
@@ -100,21 +110,26 @@ class Fight:
             raise GameError("You already drank a potion this turn: now attack!")
         if self.potions_left(self.current) <= 0:
             raise GameError(f"You already drank {potions.max_per_duel()} potions in this duel.")
+        if potions.parse(key)[1] >= 2 and self.current.strong_potion_used:
+            raise GameError("Only one reinforced (II) potion per duel.")
 
     @property
     def can_drink(self) -> bool:
         return not self.over and self.pending is None and self.potions_left(self.current) > 0
 
-    def _hit(self, rng: random.Random, multiplier: float = 1.0) -> Hit:
+    def _hit(self, rng: random.Random, min_bonus: float = 0.0) -> Hit:
         d = settings.get()["duel"]
         attacker, defender = self.current, self.other
-        damage = attacker.attack * rng.uniform(1 - DAMAGE_VARIANCE, 1 + DAMAGE_VARIANCE) * multiplier
+        attacker.attacks += 1
+        if rng.random() < float(d["dodge_chance"]):
+            return Hit(0.0, False, dodged=True)
+        low = min(attacker.min_attack + min_bonus, attacker.attack)
+        damage = rng.uniform(low, attacker.attack)
         crit = rng.random() < d["crit_chance"]
         if crit:
             damage *= d["crit_multiplier"]
         damage = max(0.5, damage * (1 - defender.reduction))
         defender.hp = max(0.0, defender.hp - damage)
-        attacker.attacks += 1
         defender.hits_taken += 1
         return Hit(damage, crit)
 
@@ -124,19 +139,22 @@ class Fight:
         p = settings.get()["potions"]
         attacker, defender = self.current, self.other
         turn = Turn(attacker.user_id, defender.user_id, potion)
-        kind, _ = potions.parse(potion)
+        kind, level = potions.parse(potion)
         attacker.potions_used += 1
+        attacker.strong_potion_used = attacker.strong_potion_used or level >= 2
         if kind == "healing":
             turn.healed = min(potions.effect(potion, "healing_hp"), attacker.max_hp - attacker.hp)
             attacker.hp += turn.healed
         elif kind == "harming":
-            turn.direct = min(potions.effect(potion, "harming_damage"), defender.hp)
-            defender.hp -= turn.direct
+            # Armor softens it too (it used to ignore armor and decided duels on its own).
+            damage = potions.effect(potion, "harming_damage") * (1 - defender.reduction)
+            turn.direct = round(min(damage, defender.hp), 1)
+            defender.hp = max(0.0, defender.hp - damage)
         elif kind == "speed":
             attacker.speed_turns = int(p["speed_turns"])
-            attacker.speed_chance = potions.effect(potion, "speed_chance")
+            attacker.speed_chance = min(1.0, potions.effect(potion, "speed_chance"))
         elif kind == "strength":
-            self._multiplier = 1.0 + potions.effect(potion, "strength_bonus")
+            self._min_bonus = potions.effect(potion, "strength_min_bonus")
         turn.attacker_hp, turn.defender_hp = round(attacker.hp, 1), round(defender.hp, 1)
         self.pending = turn
         return turn
@@ -149,11 +167,11 @@ class Fight:
             self.drink(potion)
         attacker, defender = self.current, self.other
         turn = self.pending or Turn(attacker.user_id, defender.user_id)
-        multiplier = self._multiplier
-        self.pending, self._multiplier = None, 1.0
+        min_bonus = self._min_bonus
+        self.pending, self._min_bonus = None, 0.0
 
         if defender.hp > 0:
-            turn.hits.append(self._hit(rng, multiplier))
+            turn.hits.append(self._hit(rng, min_bonus))
         if attacker.speed_turns > 0:
             attacker.speed_turns -= 1
             if defender.hp > 0 and rng.random() < attacker.speed_chance:
@@ -194,7 +212,12 @@ def simulate(rng: random.Random, a: Fighter, b: Fighter) -> FightResult:
 def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
     equipped = gear.get_equipped(ctx, user_id)
     hp = float(settings.get()["duel"]["hp"])
-    return Fighter(user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp), equipped
+    fighter = Fighter(
+        user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp,
+        min_attack=float(settings.get()["duel"]["min_damage"]),
+    )
+    fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
+    return fighter, equipped
 
 
 def check_stake(ctx: Ctx, user_id: int, stake: int) -> None:
@@ -238,9 +261,8 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
     stake = row["stake"]
     winner, loser = fight.winner, fight.loser
 
-    # The winner gets their stake back, and the opponent's stake counts as earned.
-    players.give_emeralds(ctx, winner.user_id, stake)
-    players.earn_emeralds(ctx, winner.user_id, stake)
+    # The pot only moves between the two players: it doesn't count for the seasons.
+    players.give_emeralds(ctx, winner.user_id, stake * 2)
     players.bump_stat(ctx, winner.user_id, "duels_won")
     players.bump_stat(ctx, loser.user_id, "duels_lost")
     players.bump_stat(ctx, winner.user_id, "duel_winnings", stake)
@@ -249,7 +271,8 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
 
     broken: list[tuple[int, str]] = []
     for fighter in fight.fighters:
-        equipped = gear.get_equipped(ctx, fighter.user_id)
+        # The pieces worn when the fight started, even if they were unequipped or traded since.
+        equipped = gear.get_pieces(ctx, fighter.gear_ids)
         sword = equipped.get("sword")
         if sword and fighter.attacks and gear.wear(ctx, sword, fighter.attacks):
             broken.append((fighter.user_id, f"{sword['material']} sword"))

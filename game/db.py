@@ -324,6 +324,35 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_sanctions_user ON sanctions(user_id, kind, active);
     """,
+    # 14 - /lock saves the permissions it changes; team season scores outlive the team
+    """
+    CREATE TABLE channel_locks (
+        channel_id INTEGER PRIMARY KEY,
+        saved TEXT NOT NULL,            -- JSON: the overwrite values /unlock puts back
+        locked_by INTEGER NOT NULL,
+        locked_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_sanctions_due ON sanctions(kind, active, expires_at);
+    CREATE INDEX idx_team_invites_user ON team_invites(user_id);
+    -- name and tag of deleted teams, for the results of a week not closed yet
+    CREATE TABLE team_archive (
+        team_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        tag TEXT NOT NULL
+    );
+    -- same table without the cascade: deleting a team must not delete what its members earned
+    CREATE TABLE team_season_scores_new (
+        season_id TEXT NOT NULL,
+        team_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        score INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (season_id, team_id, user_id)
+    );
+    INSERT INTO team_season_scores_new(season_id, team_id, user_id, score)
+        SELECT season_id, team_id, user_id, score FROM team_season_scores;
+    DROP TABLE team_season_scores;
+    ALTER TABLE team_season_scores_new RENAME TO team_season_scores;
+    """,
 ]
 
 

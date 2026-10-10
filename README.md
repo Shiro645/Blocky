@@ -18,23 +18,25 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 ### ⛏️ Mining & economy
 
-- **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown.
+- **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown (30 s, at least 10 s with talents and enchantments).
+- **Spam channels** (`channels.spam`, set in `/config`): messages there don't mine blocks, give no XP, no drops and no challenge progress — only a tiny reward (0.01 emerald per message by default, so about 1 emerald an hour of spam), with a cooldown of their own.
 - `/inventory` — Blocks, emeralds, items and gear
 - `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds)
-- `/market` — Buy sticks and gold / iron / diamond / netherite ingots
+- `/market` — Buy sticks and gold (5) / iron (10) / diamond (60) / netherite (300) ingots
 - `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day gives a diamond ingot, and missing a day resets the streak.
 
 ### 🛠️ Crafting & equipment
 
 - `/craft <item> <material>` and `/craftlist` — Swords, tools and armor in gold, iron, diamond or netherite.
 - `/equip`, `/equip_best`, `/unequip`, `/gear` — One piece per slot. Freshly crafted gear is equipped if the slot is empty.
+- `/repair <piece>` — Repair a piece for emeralds (it keeps its enchantments): a broken-down piece costs 60% of its crafting value, a half-worn one 30%.
 - What gear does:
-  - **Pickaxe**: more blocks per message + chance to upgrade the block
+  - **Pickaxe**: extra cobblestone each time you mine (+1 per tier) + chance to upgrade the block
   - **Shovel**: extra gravel
   - **Axe**: finds sticks while mining
   - **Hoe**: more XP
-  - **Sword**: damage in duels and against bosses
-  - **Armor**: damage reduction in duels
+  - **Sword**: higher maximum damage per hit (duels, bosses, tournament)
+  - **Armor**: damage reduction in duels (1.2% per armor point, 35% at most)
 - Gear loses **durability** when used and breaks at 0, so players keep crafting.
 
 ### ✨ Enchanting
@@ -49,9 +51,9 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 | Enchantment | On | I / II / III |
 |---|---|---|
 | Efficiency | pickaxe | mining cooldown −2 s / −4 s / −6 s (never below the minimum) |
-| Fortune | pickaxe, shovel, axe, hoe | +1 / +2 / +3 blocks (pickaxe), gravel (shovel), sticks (axe); +5% / +10% / +15% XP (hoe) |
+| Fortune | pickaxe, shovel, axe, hoe | +1 / +2 / +3 cobblestone (pickaxe), gravel (shovel), sticks (axe); +5% / +10% / +15% XP (hoe) |
 | Unbreaking | all gear | 25% / 40% / 50% chance a use costs no durability |
-| Sharpness | sword | +1 / +2 / +3 damage (duels, bosses, tournament) |
+| Sharpness | sword | +1 / +2 / +3 maximum damage (duels, bosses, tournament) |
 | Looting | sword | +10% / +20% / +30% boss reward |
 | Protection | armor | +1 / +2 / +3 armor points per piece |
 
@@ -72,17 +74,19 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
 - `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
-- **Weekly seasons** (`/season`) — The score is the emeralds *earned* during the week (Monday to Sunday). Spending doesn't lower it, and emeralds received from other players don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
-- `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. Damage comes from the sword, armor reduces it, with random variance and critical hits. If the bot restarts during a duel, both stakes are refunded.
-- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel, the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
+- **Weekly seasons** (`/season`) — The score is the value you *created* during the week (Monday to Sunday): the value of the blocks you mine (counted when mined, not when sold), daily rewards, drops, bosses, challenges, the server share of the tournament pot, and the trader/villager bonus when you sell. Spending doesn't lower it; emeralds or blocks received from other players, duel pots and auction sales don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
+- `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. If the bot restarts during a duel, both stakes are refunded.
+  - **Luck matters**: each hit deals a random amount between **1** and your sword's **maximum** (no sword 6 · gold 8 · iron 10 · diamond 12 · netherite 14, +1/+2/+3 with Sharpness). 10% of hits are **dodged**, 15% are **critical** (x2). Armor reduces the damage taken by 1.2% per point, 35% at most. The player who plays second starts with **+2 HP**.
+  - Better gear wins more often, not always: one tier ahead (e.g. iron vs gold) wins about 70% of the time, netherite vs iron about 80%.
+- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel (at most one reinforced II potion), the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
 
   | Potion | Effect |
   |---|---|
-  | Strength | this turn's attack +50% |
-  | Speed | 1 chance in 5 to strike twice, this turn and your next 2 turns |
-  | Healing | heals 6 HP (max 20) |
-  | Harming | 4 direct damage to the opponent, ignoring armor (on top of your attack) |
-- `/challenges` — 3 weekly challenges, the same for everyone.
+  | Strength | this turn's attack: minimum damage +5 (never above your maximum) |
+  | Speed | 40% chance to strike twice, this turn and your next 2 turns |
+  | Healing | heals 3 HP (never above your maximum) |
+  | Harming | 3 direct damage to the opponent, reduced by their armor (on top of your attack) |
+- `/challenges` — 3 weekly challenges, the same for everyone (the boss challenge only comes up when bosses spawn automatically).
 - `/achievements [member]` — 28 achievements with emerald rewards, announced publicly.
 - **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock, lapis, enchanted books, potions). The first player to click gets it.
 - **Server bosses** (`/boss`, `/attack` or the button) — A boss with shared HP. Everyone attacks once a minute, rewards are shared by damage dealt, and the top damage dealer gets a bonus. A boss escapes after 24h.
@@ -99,25 +103,25 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - Comes **every day from 18:00 to 21:00** (local time) in the events channel, pinging the events role, with **3 offers**:
   - 🛒 a sale 30% below the value: iron, diamond or netherite ingots, lapis, a level I/II book or potions;
-  - 💰 a purchase: he buys a pile of blocks (gravel, deepslate, obsidian or bedrock) 50% above the /sell price (counts as earned, like /sell);
-  - ✨ an exclusive: a **level III book** or a **reinforced potion (II)**, whose effect is doubled (Strength +100%, Speed 40%, Healing 12 HP, Harming 8). Reinforced potions are only sold by the villager.
+  - 💰 a purchase: he buys a pile of blocks (gravel, deepslate, obsidian or bedrock) 50% above the /sell price (his bonus counts for the season);
+  - ✨ an exclusive: a **level III book** or a **reinforced potion (II)**, whose effect is doubled (Strength minimum +10, Speed 80%, Healing 6 HP, Harming 6). Reinforced potions are limited to one per duel. Reinforced potions are only sold by the villager.
 - Each offer exists **once**: the first player to click gets it. The buttons keep working after a restart, and the message shows who took what.
 - `/villager` shows whether he is here and when he comes next.
 
 ### 🛡️ Teams
 
-- `/team create <name> <tag>` — Anyone can create a team (name 3–24 characters, tag 2–4 letters or numbers) and becomes its leader. Up to 5 members.
+- `/team create <name> <tag>` — Anyone can create a team for **500 emeralds** (name 3–24 characters, tag 2–4 letters or numbers) and becomes its leader. Up to 5 members.
 - `/team invite <member>` — The leader invites a player, who answers with the buttons (they still work after a restart) or later with `/team join <tag>`. Invitations last 48h.
 - `/team leave` — Leave the team. When the leader leaves, the oldest member becomes leader; the last one to leave disbands the team.
 - Leader: `/team kick`, `/team transfer`, `/team rename [name] [tag]`, `/team disband`.
 - `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
 - **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
 - **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
-- **Weekly team season** (`/team top`) — A team's score is the emeralds its members earned while in the team (Monday to Sunday). The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
+- **Weekly team season** (`/team top`) — A team's score is the season score (see above) its members made while in the team (Monday to Sunday). Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
 
 ### 🔐 Staff commands
 
-Restricted to the staff role (or members with the *Manage Server* permission).
+Restricted to the staff role (or members with the *Manage Server* permission). **Every staff command is logged in the staff channel** (who, which command, which options).
 
 - Moderation (the member gets a DM with the reason; everything is logged in the staff channel):
   - `/warn <member> <reason>` — warnings count for 30 days; 3 warnings = automatic 1h mute, 5 = 1 day, 7 = 7 days. `/unwarn <#>` removes one, `/clearwarns` removes them all.
@@ -125,7 +129,7 @@ Restricted to the staff role (or members with the *Manage Server* permission).
   - `/mute <member> <duration> <reason>` (e.g. `30m`, `2h`, `3d`, `1w`, `perm`) and `/unmute`. Mutes use Discord timeouts; the bot renews them past Discord's 28-day limit (permanent mutes) and re-applies them if the member leaves and comes back.
   - `/kick`, `/ban <member> <reason> [duration] [delete_messages]` (permanent by default; temporary bans are lifted automatically) and `/unban <user_id>`.
   - `/clear <amount> [member]` (pinned messages are kept), `/lock` / `/unlock` (staff can still write), `/slowmode <seconds>`.
-  - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages* and *Manage Channels* permissions.
+  - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
 - Whitelist: `/add_whitelist`, `/remove_whitelist`, `/check_whitelist`, `/unlink`
 - Economy: `/add_block`, `/add_emerald`, `/remove_emerald`, `/add_item` (sticks, ingots, lapis), `/add_gear`, `/remove_gear`, `/add_book`, `/add_potion [level]`
 - XP: `/xp_add`, `/xp_set`, `/level_set`, `/talent_add`, `/talent_reset` (refunds points), `/sync_level_roles`
@@ -133,8 +137,8 @@ Restricted to the staff role (or members with the *Manage Server* permission).
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Villager: `/villager_admin` makes him come now (for the usual visit length) or leave
 - Tournament: `/tournament_admin` opens registrations now, runs the next step now (draw, then the next round) or cancels and refunds. Handy to test without waiting for the weekend.
-- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
-- Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
+- Settings: `/config` opens menus to change channels, roles (pick them from the Discord list), level roles, market prices, block values, gameplay numbers, team settings and the /ip and /modpacks texts. Values are checked before being saved (an invalid one is refused with the reason). Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
 
@@ -166,6 +170,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
+| `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
@@ -204,9 +209,11 @@ After editing `config.json`, run `/reload_config` (or restart the bot). Changing
 
 Every night at 04:00 (config timezone) the bot copies the database to a `backups/` folder next to it (`bot/db/backups/` with Docker) and keeps the last 7 copies. Change it with `"balance": {"backups": {"hour": 4, "keep": 7}}`. `/backup_now` makes an extra copy at any time.
 
-To restore one: stop the bot, replace `economy.db` with the backup (and delete `economy.db-wal` / `economy.db-shm`), start the bot.
+`/backup_now` copies are named `manual-…` and are kept apart: they never replace a nightly backup. To restore one: stop the bot, replace `economy.db` with the backup (and delete `economy.db-wal` / `economy.db-shm`), start the bot.
 
 ### Game balance
+
+The `balance` section is checked when the bot starts and on `/reload_config`: an unknown key (typo), a wrong type, an invalid time zone or an incoherent schedule is reported. At startup the invalid values are ignored (logged as warnings); `/reload_config` refuses the whole file and keeps the current settings.
 
 Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, timezone…) has a default in [`game/settings.py`](game/settings.py). To change one, copy its path under `balance` in `config.json`, for example:
 
@@ -219,11 +226,13 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 }
 ```
 
+`/repair` uses `balance.repair.cost_percent` (60). Spam channels use `balance.mining.spam_reward` (0.01).
+
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/boss_spawn`).
 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
 
-Duels and potions are tuned with `balance.duel` (`turn_seconds`, `afk_turns`, `hp`, `min_stake`…) and `balance.potions`: `max_per_duel`, `strength_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `boss_top` and the reference `value`.
+Duels and potions are tuned with `balance.duel` (`hp`, `min_damage`, `dodge_chance`, `crit_chance`, `crit_multiplier`, `second_player_bonus_hp`, `turn_seconds`, `afk_turns`, `min_stake`…), `balance.gear` (`sword_max_damage`, `damage_reduction_per_armor_point`, `max_damage_reduction`) and `balance.potions`: `max_per_duel`, `strength_min_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `level2_multiplier`, `boss_top` and the reference values `value` / `value_ii`.
 
 Moderation is tuned with `balance.moderation`: `warn_expire_days` (0 = warnings never expire) and `warn_mutes`, e.g. `{"3": "1h", "5": "1d", "7": "7d"}` (automatic mute when a member reaches that many warnings).
 
@@ -231,9 +240,9 @@ The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sel
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
-Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
+Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
 
-> ⚠️ `.env`, `config.json` and `economy.db` contain secrets or user data. They are ignored by git — never commit them.
+> ⚠️ `.env`, `config.json`, the database files (`*.db`, `*.db-wal`, `*.db-shm`) and the `backups/` folder (it holds copies of `config.json`, with the RCON password) contain secrets or user data. They are ignored by git and Docker — never commit them.
 
 ---
 

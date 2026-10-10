@@ -175,8 +175,8 @@ class ModerationCog(commands.Cog):
         )
         text = f"⚠️ {member.mention} warned ({count} active warning{'s' if count > 1 else ''})."
         if res["auto_mute"]:
-            await self.mute_member(None, member, res["auto_mute"], f"Automatic: {count} warnings", None)
-            text += f"\n🔇 Automatic mute: **{format_duration(res['auto_mute'])}**."
+            await self.mute_member(None, member, res["duration"], f"Automatic: {count} warnings", None)
+            text += f"\n🔇 Automatic mute: **{format_duration(res['duration'])}**."
         await interaction.followup.send(text, ephemeral=True)
 
     @app_commands.command(name="unwarn", description="STAFF: Remove a warning (its # is shown in /history).")
@@ -334,18 +334,26 @@ class ModerationCog(commands.Cog):
         )
         await interaction.followup.send(f"🧹 {len(deleted)} message(s){who} deleted.", ephemeral=True)
 
-    async def set_lock(self, interaction: discord.Interaction, channel: discord.TextChannel, locked: bool, reason: str | None) -> None:
-        guild = interaction.guild
-        everyone = channel.overwrites_for(guild.default_role)
-        everyone.send_messages = False if locked else None
-        everyone.send_messages_in_threads = False if locked else None
-        await channel.set_permissions(guild.default_role, overwrite=everyone, reason=reason or f"/lock by {interaction.user}")
+    # The overwrites /lock changes: (target, permission). /unlock puts the saved values back.
+    LOCK_PERMS = ("send_messages", "send_messages_in_threads")
+
+    def lock_targets(self, guild: discord.Guild) -> dict[str, discord.abc.Snowflake]:
+        targets: dict[str, discord.abc.Snowflake] = {"everyone": guild.default_role, "bot": guild.me}
         staff = guild.get_role(staff_role_id())
         if staff is not None:
-            # Staff can still talk in a locked channel.
-            allowed = channel.overwrites_for(staff)
-            allowed.send_messages = True if locked else None
-            await channel.set_permissions(staff, overwrite=allowed, reason="Staff can talk in locked channels")
+            targets["staff"] = staff
+        return targets
+
+    async def apply_overwrites(self, channel: discord.TextChannel, guild: discord.Guild, values: dict, reason: str) -> None:
+        targets = self.lock_targets(guild)
+        for key, perms in values.items():
+            target = targets.get(key) if key in targets else guild.get_role(int(key)) if key.isdigit() else None
+            if target is None:
+                continue
+            overwrite = channel.overwrites_for(target)
+            for perm, value in perms.items():
+                setattr(overwrite, perm, value)
+            await channel.set_permissions(target, overwrite=None if overwrite.is_empty() else overwrite, reason=reason)
 
     @app_commands.command(name="lock", description="STAFF: Nobody (except staff) can write in a channel anymore.")
     @app_commands.describe(channel="This channel by default", reason="Shown in the channel")
@@ -354,21 +362,55 @@ class ModerationCog(commands.Cog):
         channel = channel or interaction.channel
         if not isinstance(channel, discord.TextChannel):
             raise GameError("Pick a text channel.")
-        await self.set_lock(interaction, channel, True, reason)
-        await interaction.response.send_message(f"🔒 {channel.mention} is locked.", ephemeral=True)
-        await channel.send("🔒 This channel is locked." + (f" Reason: {reason}" if reason else ""))
+        guild = interaction.guild
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        targets = self.lock_targets(guild)
+        saved = {
+            key: {perm: getattr(channel.overwrites_for(target), perm) for perm in self.LOCK_PERMS}
+            for key, target in targets.items()
+        }
+        await self.bot.db.run(moderation.lock, channel.id, saved, interaction.user.id)
+        # Members can't write; staff and the bot itself still can.
+        wanted = {key: {perm: key != "everyone" for perm in self.LOCK_PERMS} for key in targets}
+        try:
+            await self.apply_overwrites(channel, guild, wanted, reason or f"/lock by {interaction.user}")
+        except discord.HTTPException:
+            await self.bot.db.run(moderation.unlock, channel.id)
+            raise
+        # Roles allowed to write in this channel on purpose keep that right: tell the moderator.
+        still = [
+            role.mention for role, ow in channel.overwrites.items()
+            if isinstance(role, discord.Role) and role != guild.default_role and role.id not in {t.id for t in targets.values()}
+            and ow.send_messages is True
+        ]
         await self.log_action("🔒 Channel locked", interaction.user, interaction.user, reason, discord.Color.dark_grey(), channel.mention)
+        text = f"🔒 {channel.mention} is locked."
+        if still:
+            text += f"\n⚠️ These roles are allowed to write here and still can: {', '.join(still)}."
+        await interaction.followup.send(text, ephemeral=True)
+        try:
+            await channel.send("🔒 This channel is locked." + (f" Reason: {reason}" if reason else ""),
+                               allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            pass
 
     @app_commands.command(name="unlock", description="STAFF: Let members write in a locked channel again.")
+    @app_commands.describe(channel="This channel by default")
     @staff_only()
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         channel = channel or interaction.channel
         if not isinstance(channel, discord.TextChannel):
             raise GameError("Pick a text channel.")
-        await self.set_lock(interaction, channel, False, f"/unlock by {interaction.user}")
-        await interaction.response.send_message(f"🔓 {channel.mention} is unlocked.", ephemeral=True)
-        await channel.send("🔓 This channel is open again.")
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        saved = await self.bot.db.run(moderation.unlock, channel.id)
+        # The permissions exactly as they were before /lock.
+        await self.apply_overwrites(channel, interaction.guild, saved, f"/unlock by {interaction.user}")
         await self.log_action("🔓 Channel unlocked", interaction.user, interaction.user, None, discord.Color.dark_grey(), channel.mention)
+        await interaction.followup.send(f"🔓 {channel.mention} is unlocked.", ephemeral=True)
+        try:
+            await channel.send("🔓 This channel is open again.")
+        except discord.HTTPException:
+            pass
 
     @app_commands.command(name="slowmode", description="STAFF: Set the slow mode of a channel (0 = off).")
     @app_commands.describe(seconds="Seconds between two messages of a member (0-21600)", channel="This channel by default")

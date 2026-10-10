@@ -81,13 +81,13 @@ def effect(key: str, setting: str) -> float:
 def effect_text(key: str) -> str:
     kind, _ = parse(key)
     if kind == "strength":
-        return f"this turn's attack +{effect(key, 'strength_bonus'):.0%}"
+        return f"this turn's attack: minimum damage +{effect(key, 'strength_min_bonus'):g}"
     if kind == "speed":
         chance = min(1.0, effect(key, "speed_chance"))
         return f"{chance:.0%} chance to strike twice, this turn and the next {int(_cfg()['speed_turns']) - 1}"
     if kind == "healing":
         return f"heal {effect(key, 'healing_hp'):g} HP"
-    return f"{effect(key, 'harming_damage'):g} direct damage to the opponent (ignores armor)"
+    return f"{effect(key, 'harming_damage'):g} direct damage to the opponent (reduced by armor)"
 
 
 def value(key: str) -> float:

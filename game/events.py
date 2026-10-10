@@ -48,6 +48,7 @@ def claim_drop(ctx: Ctx, user_id: int, drop: dict) -> str:
         text = ", ".join(potions.label(k) for k in found)
     else:
         players.add_blocks(ctx, user_id, reward["block"], int(reward["amount"]))
+        players.add_score(ctx, user_id, players.block_value(reward["block"]) * int(reward["amount"]))
     players.bump_stat(ctx, user_id, "drops_claimed")
     return text
 
@@ -108,7 +109,9 @@ def attack_boss(ctx: Ctx, user_id: int, boss_id: int | None = None) -> dict:
         raise GameError(f"You are catching your breath. Attack again <t:{int(ready_at)}:R>.")
 
     equipped = gear.get_equipped(ctx, user_id)
-    damage = gear.attack_damage(equipped) * ctx.rng.uniform(1 - b["damage_variance"], 1 + b["damage_variance"])
+    # Same roll as duels: between the minimum damage and the sword's maximum.
+    top = float(gear.attack_damage(equipped))
+    damage = ctx.rng.uniform(min(float(settings.get()["duel"]["min_damage"]), top), top)
     crit = ctx.rng.random() < b["crit_chance"]
     if crit:
         damage *= b["crit_multiplier"]

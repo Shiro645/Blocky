@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 from game import backups, settings
 from game.errors import GameError
 from utils.checks import staff_only
-from utils.config import balance_overrides, load_config, reload_config
+from utils.config import balance_overrides, load_config, read_config_file, reload_config
 from utils.mc_commands import DEFAULT_BLOCKED, blocked_by, clean_output
 from utils.minecraft_rcon import RconError, rcon_command
 from utils.ui import load_application_emojis
@@ -42,7 +42,8 @@ class AdminToolsCog(commands.Cog):
         tmp = target.with_name(target.name + ".tmp")
         await self.bot.db.backup_to(tmp)
         tmp.replace(target)  # a half-written copy never looks like a backup
-        backups.prune(target.parent, int(settings.get()["backups"]["keep"]))
+        manual = target.name.startswith(backups.MANUAL_PREFIX)
+        backups.prune(target.parent, int(settings.get()["backups"]["keep"]), manual=manual)
         log.info("Database backup written to %s", target)
         return target
 
@@ -67,11 +68,12 @@ class AdminToolsCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         now = datetime.now(ZoneInfo(settings.get()["timezone"]))
         folder = backups.backup_dir(self.bot.db.path)
-        target = folder / f"{backups.PREFIX}{now:%Y-%m-%d-%H%M%S}{backups.SUFFIX}"
+        target = backups.manual_path(folder, now)
         await self.make_backup(target)
-        count = len(backups.existing(folder))
+        nightly, manual = len(backups.existing(folder)), len(backups.existing(folder, manual=True))
         await interaction.followup.send(
-            f"✅ Backup saved: `{target.name}` ({count} backup(s) kept in `{folder.name}/`).", ephemeral=True
+            f"✅ Backup saved: `{target.name}` in `{folder.name}/` ({manual} manual and {nightly} nightly backup(s) kept).",
+            ephemeral=True,
         )
 
     # ---------- config ----------
@@ -81,6 +83,9 @@ class AdminToolsCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         old = load_config()
         try:
+            problems = settings.problems(balance_overrides(read_config_file()))
+            if problems:
+                raise ValueError("Invalid balance settings:\n" + "\n".join(f"- {p}" for p in problems[:10]))
             cfg = reload_config()
         except (ValueError, OSError) as e:
             raise GameError(f"Config not reloaded, the current one is still active.\n{e}")

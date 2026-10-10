@@ -10,6 +10,9 @@ ALICE, BOB, CAROL, DAVE, EVE, FRANK = 1, 2, 3, 4, 5, 6
 
 
 class TeamTestCase(GameTestCase):
+    # Most tests are about the rules, not the costs: free teams, ranked from 1 member.
+    overrides = {"teams": {"create_cost": 0, "min_members_ranked": 1}}
+
     async def make_team(self, leader=ALICE, name="Diamond Diggers", tag="DIG", *others):
         team = await self.run_game(teams.create, leader, name, tag)
         for uid in others:
@@ -52,6 +55,12 @@ class MembershipTests(TeamTestCase):
             await self.run_game(teams.create, BOB, "diamond diggers", "DD")
         with self.assertRaisesRegex(GameError, "already used"):
             await self.run_game(teams.create, BOB, "Other", "dig")
+
+    async def test_default_creation_cost(self):
+        settings.load()
+        await self.run_game(players.give_emeralds, ALICE, 600)
+        await self.run_game(teams.create, ALICE, "Rich Club", "RICH")
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 100)
 
     async def test_create_cost(self):
         settings.load({"teams": {"create_cost": 100}})
@@ -148,7 +157,7 @@ class BonusTests(TeamTestCase):
         self.assertEqual(await self.run_game(teams.activity_bonus, ALICE), 0.0)
 
     async def test_bonus_is_capped(self):
-        settings.load({"teams": {"xp_bonus_per_active_member": 0.5, "max_xp_bonus": 0.3}})
+        settings.load({"teams": {"xp_bonus_per_active_member": 0.5, "max_xp_bonus": 0.3, "create_cost": 0}})
         await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB)
         await self.run_game(teams.activity_bonus, ALICE)
         self.assertAlmostEqual(await self.run_game(teams.activity_bonus, BOB), 0.3)
@@ -212,6 +221,25 @@ class TeamSeasonTests(TeamTestCase):
         self.assertEqual(data["top"], [])
         self.assertEqual(data["last_winner"]["team_id"], dig["team_id"])
         self.assertEqual((await self.run_game(teams.overview, dig["team_id"]))["wins"], 1)
+
+    async def test_disbanding_after_the_week_keeps_the_rewards(self):
+        team = await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB)
+        await self.run_game(players.earn_emeralds, BOB, 300)
+        self.advance(7 * DAY)  # the week is over, not closed yet
+        await self.run_game(teams.disband, ALICE)
+        closed = await self.run_game(teams.close_finished)
+        podium = closed[0]["podium"]
+        self.assertEqual((podium[0]["team_id"], podium[0]["tag"]), (team["team_id"], "DIG"))
+        self.assertEqual(podium[0]["payout"], [(BOB, 600)])
+
+    async def test_a_team_needs_two_scoring_members_to_be_ranked(self):
+        settings.load({"teams": {"create_cost": 0, "min_members_ranked": 2}})
+        await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB)
+        await self.run_game(players.earn_emeralds, ALICE, 300)
+        self.assertEqual((await self.run_game(teams.season_overview, ALICE))["top"], [])  # only Alice scored
+        await self.run_game(players.earn_emeralds, BOB, 10)
+        top = (await self.run_game(teams.season_overview, ALICE))["top"]
+        self.assertEqual([(t["tag"], t["score"]) for t in top], [("DIG", 310)])
 
     async def test_disbanded_team_is_not_ranked(self):
         await self.make_team()

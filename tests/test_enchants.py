@@ -112,7 +112,7 @@ class EffectTests(EnchantTestCase):
         await self.piece(ALICE, "helmet", protection=2)
         await self.run_game(gear.equip_best, ALICE)
         eq = await self.equipped(ALICE)
-        self.assertEqual(gear.attack_damage(eq), 6 + 3)
+        self.assertEqual(gear.attack_damage(eq), 10 + 3)  # iron sword maximum + Sharpness III
         self.assertEqual(gear.armor_points(eq), 2 + 2)
 
     async def test_unbreaking_saves_durability(self):
@@ -127,7 +127,7 @@ class EffectTests(EnchantTestCase):
         await self.piece(ALICE, "pickaxe", efficiency=3)
         await self.run_game(gear.equip_best, ALICE)
         self.assertEqual((await self.run_game(mining.mine, ALICE))["cooldown"], 30 - 6)
-        self.assertEqual(mining.cooldown_seconds(99, 6), 5)  # never below the minimum
+        self.assertEqual(mining.cooldown_seconds(99, 6), 10)  # never below the minimum
 
     async def test_fortune_adds_blocks(self):
         await self.piece(ALICE, "pickaxe", fortune=3)
@@ -138,7 +138,8 @@ class EffectTests(EnchantTestCase):
         lucky = await self.run_game(mining.mine, ALICE)
         self.db.rng = random.Random(9)
         plain = await self.run_game(mining.mine, BOB)
-        self.assertEqual(lucky["amount"], plain["amount"] + 3)
+        # Fortune III: 3 more cobblestone, the mined block itself isn't multiplied.
+        self.assertEqual((lucky["amount"], lucky["bonus"]), (plain["amount"], plain["bonus"] + 3))
 
     async def test_mining_finds_lapis(self):
         settings.load({"enchants": {"lapis_chance": 1}})

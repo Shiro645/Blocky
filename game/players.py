@@ -27,13 +27,25 @@ def get_emeralds(ctx: Ctx, user_id: int) -> int:
 
 
 def earn_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
-    """Emeralds created by playing (selling, rewards...).
+    """Emeralds created by playing (rewards, the trader bonus...).
 
     Counts as earned, and as score for the weekly season.
     """
     if amount <= 0:
         return
     give_emeralds(ctx, user_id, amount)
+    add_score(ctx, user_id, amount)
+
+
+def add_score(ctx: Ctx, user_id: int, amount: int) -> None:
+    """Value created by playing, without giving emeralds (blocks mined are scored when mined).
+
+    Weekly season score, team season score and the "emeralds earned" stat.
+    Blocks are scored when they are mined, not when they are sold: giving
+    blocks to another player doesn't move the score.
+    """
+    if amount <= 0:
+        return
     bump_stat(ctx, user_id, "emeralds_earned", amount)
     ctx.execute(
         """
@@ -135,7 +147,9 @@ def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:
         raise GameError("You have no blocks to sell.")
     bonus = int(round(base * (trader_multiplier(user["trader_points"]) - 1.0)))
     ctx.execute("UPDATE blocks SET amount = 0 WHERE user_id=?;", (user_id,))
-    earn_emeralds(ctx, user_id, base + bonus)
+    # The blocks' value was scored when they were mined: only the trader bonus is new.
+    give_emeralds(ctx, user_id, base)
+    earn_emeralds(ctx, user_id, bonus)
     bump_stat(ctx, user_id, "emeralds_from_sales", base + bonus)
     return {"sold": sold, "base": base, "bonus": bonus, "balance": get_emeralds(ctx, user_id)}
 

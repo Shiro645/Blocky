@@ -118,7 +118,7 @@ class Challenge:
 
 CHALLENGE_POOL: list[Challenge] = [
     Challenge("mine_blocks", "blocks_mined", 500, 150, "Mine 500 blocks"),
-    Challenge("find_bedrock", "bedrock_found", 15, 150, "Find 15 bedrock"),
+    Challenge("find_bedrock", "bedrock_found", 5, 150, "Find 5 bedrock"),
     Challenge("sell_blocks", "emeralds_from_sales", 1000, 150, "Earn 1,000 emeralds by selling blocks"),
     Challenge("craft_gear", "items_crafted", 3, 100, "Craft 3 pieces of gear"),
     Challenge("win_duels", "duels_won", 3, 150, "Win 3 duels"),
@@ -130,10 +130,23 @@ CHALLENGE_POOL: list[Challenge] = [
 CHALLENGES_BY_CODE = {c.code: c for c in CHALLENGE_POOL}
 
 
+def _available(c: Challenge) -> bool:
+    # No boss challenge when bosses only come from /boss_spawn: the week may have none.
+    return c.stat != "boss_damage" or float(settings.get()["boss"]["auto_spawn_hours"]) > 0
+
+
 def challenges_of_week(week_id: str) -> list[Challenge]:
-    """The same challenges for everyone, picked from the week id (no storage needed)."""
-    count = min(int(settings.get()["challenges"]["per_week"]), len(CHALLENGE_POOL))
-    return random.Random(f"blocky-challenges-{week_id}").sample(CHALLENGE_POOL, count)
+    """The same challenges for everyone, picked from the week id (no storage needed).
+
+    A challenge that can't be done this week (see _available) is replaced by
+    the next one of the week's shuffled pool, so the other picks don't change.
+    """
+    pool = [c for c in CHALLENGE_POOL if _available(c)]
+    count = min(int(settings.get()["challenges"]["per_week"]), len(pool))
+    rng = random.Random(f"blocky-challenges-{week_id}")
+    picked = [c for c in rng.sample(CHALLENGE_POOL, min(count, len(CHALLENGE_POOL))) if _available(c)]
+    spare = [c for c in rng.sample(CHALLENGE_POOL, len(CHALLENGE_POOL)) if _available(c) and c not in picked]
+    return (picked + spare)[:count]
 
 
 def advance_challenges(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
