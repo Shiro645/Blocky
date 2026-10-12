@@ -12,6 +12,13 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/help` — A menu by category, and a page for every command: what it does, its options, its **current numbers** (read from the settings, so they follow `/config`), examples and related commands. `/help command:<name>` opens a page directly (`/help command:mining` explains chat mining). Staff commands are only shown to staff, and the answer is only visible to the player who asked.
 
+### 📚 Wiki
+
+- **A wiki channel kept by the bot** (`channels.wiki`, `/config` → Channels): every feature for players explained in detail, more than `/help` (which has one page per command). A contents message at the top links to each part, then one message per topic (start here, mining and the daily reward, XP and talents, crafting and gear, enchanting, species, trading/auctions/loans, duels/potions/dummy, the dungeon, bosses/drops/villager, seasons/challenges/achievements/leaderboards, the tournament, teams, profile, mini-games, the Minecraft server), and the contents again at the bottom.
+- Each part ends with its **📊 current numbers**, read from the settings like the `/help` pages: when a setting changes in `/config` (or with `/reload_config`), the bot edits the parts that changed. If a wiki message is deleted, the bot posts the wiki again (checked at every start and every hour). Changing the channel moves the wiki; removing it deletes the messages.
+- No staff commands in it (they stay in `/help`, for the staff). `/help` and the guide channels link to it.
+- Best as a channel where members can't write. The bot needs *Send Messages*, *Embed Links* and *Read Message History* there.
+
 ### 📘 Guide
 
 - **A private guide channel for every Blocky player** — Only members with the **Blocky player role** (`roles.blocky_player`, `/config` → Roles) get one. Give it with a question in Discord's onboarding (*Server Settings → Onboarding → Customization questions*, e.g. "Do you want to play Blocky?" with an answer giving the role): as soon as a member gets the role (when joining or later in *Channels & Roles*), the bot creates a channel only they and the staff can see, in the guide category (`channels.guide_category`, `/config` → Channels). If they lose the role, the channel is deleted (the checklist progress is kept). Without the role set, no guide channel is created. It holds a welcome message with a **checklist of first steps**, then the guide: mining and emeralds, gear, species and profile, fighting, playing with others, and how to get more info with `/help`.
@@ -244,6 +251,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
+| `channels.wiki` | Wiki channel: the bot keeps every feature explained there, with the current numbers (0 = no wiki) |
 | `channels.guide_category` | Category of the guide channels: every new member gets a private channel there with the guide and a checklist (0 = no guide channels; `/guide` still shows the guide) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
@@ -467,7 +475,7 @@ game/                        # game rules, no Discord code
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature
-utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages),
+utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages), wiki (the wiki channel),
                              # profile_card.py (draws the profile cards and banners with Pillow)
 tests/                       # unit tests
 ```

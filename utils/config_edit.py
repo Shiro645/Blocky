@@ -162,6 +162,9 @@ FIELDS: list[Field] = [
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),
+    Field("ch_wiki", "channels", "Wiki channel", ("channels", "wiki"), "channel",
+          help="The bot keeps the wiki there: every feature explained in detail for players, with the current "
+               "numbers, updated when the settings change. Best as a channel where members can't write."),
     Field("ch_guide_category", "channels", "Guide category", ("channels", "guide_category"), "channel",
           help="Every Blocky player (the Blocky player role, see Roles) gets a private guide channel in this "
                "category (only them and the staff see it), with a checklist of first steps. When it's full "

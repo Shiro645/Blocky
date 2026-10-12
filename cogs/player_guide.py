@@ -121,7 +121,9 @@ def guide_pages() -> list[discord.Embed]:
             "`/help command:<name>` opens a page directly, e.g. `/help command:duel` or `/help command:mining`.\n"
             "When you type `/`, Discord lists every command with a short description, and each option says what to "
             "put in it.\n\n"
-            "`/guide` shows your checklist anywhere. A question? Ask the staff. Have fun! 🧱"
+            + (f"📚 The wiki <#{channel_id('wiki')}> explains every feature in detail, with the current numbers.\n"
+               if channel_id("wiki") else "")
+            + "`/guide` shows your checklist anywhere. A question? Ask the staff. Have fun! 🧱"
         )),
     ]
     return [discord.Embed(title=title, description=text, color=COLOR) for title, text in pages]
