@@ -53,6 +53,7 @@ CATEGORIES = {
     "rob": "🦹 Robberies",
     "loans": "💳 Loans",
     "species": "🧬 Species",
+    "pve": "⚔️ PVE dungeon",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -392,6 +393,29 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    # ---- PVE dungeon ----
+    _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
+    _b("pve.max_players", "pve", "Players per group", min=1, max=10),
+    _b("pve.cooldown_minutes", "pve", "Minutes between two runs", "From the start of a run.", max=10_080),
+    _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
+    _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
+       "Then everyone still in leaves with their loot.", min=1, max=60),
+    _b("pve.max_potions", "pve", "Potions per player and run", "One reinforced (II) at most.", max=20),
+    _pct("pve.wave_growth", "pve", "Monsters stronger each wave", "Health and damage.", max=2),
+    _pct("pve.clear_bonus", "pve", "Bonus for clearing wave 5", "Added to the loot.", max=10),
+    _b("pve.xp_per_wave", "pve", "XP per wave cleared", max=10_000),
+    *[_b(f"pve.wave_rewards.{i}", "pve", f"Wave {i + 1} reward (× difficulty)",
+         "Emeralds for clearing this wave, multiplied by the difficulty's reward. Lost on death.")
+      for i in range(5)],
+    *[f for key, name in (("easy", "Easy"), ("normal", "Normal"), ("hard", "Hard"), ("hardcore", "Hardcore"),
+                          ("nightmare", "Nightmare"))
+      for f in (
+          _b(f"pve.difficulties.{key}.entry", "pve", f"{name}: entry fee"),
+          _b(f"pve.difficulties.{key}.strength", "pve", f"{name}: monster strength",
+             "Multiplies the monsters' health and damage (Normal = 1).", kind="float", min=0.1, max=100),
+          _b(f"pve.difficulties.{key}.reward", "pve", f"{name}: reward multiplier",
+             "Multiplies the wave rewards.", kind="float", min=0, max=1000),
+      )],
     # ---- species ----
     _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),
     _b("species.change_days", "species", "Days between two changes", kind="float", max=365),

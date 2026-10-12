@@ -13,6 +13,7 @@ from typing import Any, Callable
 from game import blockdle, enchants, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
+from game.pve import DIFFICULTIES as DUNGEON
 from game.species import SPECIES
 from utils.mc_commands import DEFAULT_BLOCKED
 
@@ -429,6 +430,24 @@ def _loans(s: Settings) -> list[str]:
     ]
 
 
+def _pve(s: Settings) -> list[str]:
+    p = s["pve"]
+    lines = []
+    for key, (name, emoji) in DUNGEON.items():
+        d = p["difficulties"][key]
+        loot = sum(round(int(r) * float(d["reward"])) for r in p["wave_rewards"])
+        lines.append(f"{emoji} **{name}**: entry {em(d['entry'])} · monsters ×{num(d['strength'])} · "
+                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
+    lines += [
+        f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
+        f"Up to **{num(p['max_players'])}** players (as many monsters per player) · a run every "
+        f"**{duration(float(p['cooldown_minutes']) * 60)}**",
+        f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
+        f"**{duration(float(p['decision_minutes']) * 60)}** to decide between waves",
+    ]
+    return lines
+
+
 def _rob(s: Settings) -> list[str]:
     r = s["rob"]
     return [
@@ -775,12 +794,13 @@ PAGES: list[Page] = [
     ),
     Page(
         "potions", "competition",
-        "Shows your potions and what they do. Potions only work in duels (not in the tournament): on your "
-        "turn, drink one from the menu, then attack. The effect lasts for that turn (Speed lasts a few turns). "
-        "Potions come from drops, bosses and the villager.",
+        "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
+        "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
+        "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
+        "(Harming hits every monster at its start). Potions come from drops, bosses and the villager.",
         _potions,
         examples=("/potions",),
-        related=("duel", "villager"),
+        related=("duel", "pve start", "villager"),
     ),
     Page(
         "challenges", "competition",
@@ -889,6 +909,27 @@ PAGES: list[Page] = [
         "Today's ranking: who found the block of the day, with the fewest guesses first. Also tells yesterday's block.",
         examples=("/blockdle top",),
         related=("blockdle guess",),
+    ),
+    Page(
+        "pve start", "games",
+        "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
+        "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
+        "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
+        "gear (and species). Your health isn't restored between waves: between two waves, the leader starts the "
+        "next one, anyone can drink a potion (Healing heals now, the others help during the next wave) or **leave "
+        "with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
+        "Clearing wave 5 gives a bonus. Gear wears out like in duels.",
+        _pve,
+        examples=("/pve start difficulty:🟡 Normal",),
+        related=("pve info", "potions", "species choose"),
+    ),
+    Page(
+        "pve info", "games",
+        "Shows the difficulties (entry, monster strength, loot), the waves and when you can play again. "
+        "Only you see it.",
+        _pve,
+        examples=("/pve info",),
+        related=("pve start",),
     ),
     Page(
         "rob", "games",

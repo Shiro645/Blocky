@@ -231,6 +231,31 @@ DEFAULTS: dict[str, Any] = {
         "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
         "min_victim_level": 5,  # players below this level can't be robbed
     },
+    # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
+    # every wave cleared adds up but is lost on death. Monsters' health and damage: x strength of the
+    # difficulty, +wave_growth every wave. Wave rewards (emeralds, waves 1 to 5) are multiplied by the
+    # difficulty's reward; clearing wave 5 adds clear_bonus.
+    "pve": {
+        "hp": 20,
+        "max_players": 4,
+        "cooldown_minutes": 60,
+        "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
+        "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
+        "max_potions": 3,  # per player and per run (one reinforced II at most)
+        "wave_growth": 0.10,
+        "clear_bonus": 0.5,
+        "xp_per_wave": 15,
+        "wave_rewards": [5, 8, 12, 18, 27],
+        # Calibrated (solo, no potions, all 5 waves): Easy ~98% with iron gear; Normal ~90% diamond;
+        # Hard ~80% netherite; Hardcore ~80% enchanted netherite; Nightmare ~35% enchanted netherite.
+        "difficulties": {
+            "easy": {"entry": 30, "strength": 0.85, "reward": 1.0},
+            "normal": {"entry": 75, "strength": 1.0, "reward": 2.5},
+            "hard": {"entry": 200, "strength": 1.13, "reward": 6.0},
+            "hardcore": {"entry": 500, "strength": 1.26, "reward": 14.0},
+            "nightmare": {"entry": 1200, "strength": 1.42, "reward": 32.0},
+        },
+    },
     # Species (/species): a small bonus each. The first choice is free, then changing costs
     # change_cost emeralds, once every change_days days.
     "species": {

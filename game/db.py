@@ -437,6 +437,37 @@ MIGRATIONS: list[str] = [
     ALTER TABLE users ADD COLUMN species TEXT;
     ALTER TABLE users ADD COLUMN species_changed_at INTEGER;
     """,
+    # 19: PVE dungeon
+    """
+    CREATE TABLE pve_runs (
+        run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        leader_id INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'lobby',  -- lobby | between | done | cancelled
+        wave INTEGER NOT NULL DEFAULT 0,       -- waves cleared
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        deadline INTEGER NOT NULL,             -- lobby: start before; between waves: decide before
+        ended_at INTEGER,
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE TABLE pve_members (
+        run_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        joined_at INTEGER NOT NULL,
+        entry INTEGER NOT NULL,                -- what they paid to enter
+        status TEXT NOT NULL DEFAULT 'in',     -- in | dead | left | cleared
+        loot INTEGER NOT NULL DEFAULT 0,       -- earned so far (lost if they die)
+        paid INTEGER NOT NULL DEFAULT 0,       -- loot paid when they left or cleared
+        hero TEXT,                             -- JSON: health, gear and potions of the run
+        potions INTEGER NOT NULL DEFAULT 0,
+        strong_potion INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (run_id, user_id)
+    );
+    CREATE INDEX idx_pve_runs_status ON pve_runs(status, deadline);
+    CREATE INDEX idx_pve_members_user ON pve_members(user_id);
+    """,
 ]
 
 
