@@ -222,6 +222,7 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
 - Guide: `/guide_resend [member]` sends the guide again in a new private channel (the old one is deleted), to one member or to **every member with the Blocky player role** (after a confirmation, newest members first, in the background; the result is also posted in the staff channel). Steps already done stay checked and the reward is never paid twice. Members it can't reach because of the 500-channel limit are counted in the report.
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies, loans, species, the PVE dungeon, profiles and the guide (the category menu is paged when there are more than 25). Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Update: `/bot_update` pulls Blocky from GitHub and restarts it, after showing what's new (see *Updating from Discord*)
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -411,6 +412,41 @@ docker compose up -d --build
 
 > Upgrading from an older Blocky: the old database format can't be converted. On first start the bot renames it to `economy.db.legacy-<timestamp>` (kept as a backup) and starts a new one.
 
+### Updating from Discord (`/bot_update`)
+
+`/bot_update` (staff) shows what's new on GitHub (the titles of the new changes, and warnings such as files changed by hand), then **Update and restart** pulls the changes, rebuilds the bot and restarts it. The result (new version and what changed, or the error) is posted in the staff channel; if the pull or the build fails, the old version keeps running.
+
+The bot itself never gets access to Docker: a small **updater** container does the work. It only knows two fixed actions (check, update) that the bot asks for by dropping a file in a folder they share, and nothing in a request is ever run. When the updater's own code changes, it rebuilds itself after the bot.
+
+1. The `Blocky` folder must be a **git clone** (`git clone https://github.com/Shiro645/Blocky.git Blocky`), on the `main` branch. The repository is public: no password needed.
+2. Add the shared folder to `blocky`, and the `blocky-updater` service. The updater must see the folder of your `docker-compose.yml` **at the same path** as on the host (here `/volume1/docker/craftoria`: change it to yours):
+
+```yaml
+  blocky:
+    # ... as above ...
+    volumes:
+      - ./bot/config.json:/app/config.json
+      - ./bot/db:/app/db
+      - ./bot/update:/app/update        # shared with the updater
+
+  blocky-updater:
+    build: ./Blocky/updater
+    container_name: blocky-updater
+    restart: unless-stopped
+    working_dir: /volume1/docker/craftoria
+    environment:
+      REPO_DIR: /volume1/docker/craftoria/Blocky
+      SERVICE: blocky                   # the bot's service name
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /volume1/docker/craftoria:/volume1/docker/craftoria
+      - ./bot/update:/shared
+```
+
+3. `mkdir -p bot/update && docker compose up -d --build`, then `/bot_update` in Discord. `docker logs blocky-updater` shows what the updater does.
+
+> ⚠️ The updater has the Docker socket, which gives full control of Docker on the machine: that's why it's a separate container that only accepts these two fixed actions. Don't give the socket to the bot's container.
+
 ---
 
 # 💻 Running locally
@@ -484,7 +520,9 @@ game/                        # game rules, no Discord code
 cogs/                        # slash commands, one file per feature
 utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages), wiki (the wiki channel),
                              # updates.py (what's new: the announcements of the updates channel),
+                             # selfupdate.py (talks to the updater for /bot_update),
                              # profile_card.py (draws the profile cards and banners with Pillow)
+updater/                     # the updater container: git pull + rebuild of the bot, asked by /bot_update
 tests/                       # unit tests
 ```
 

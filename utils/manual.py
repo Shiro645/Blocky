@@ -1478,6 +1478,18 @@ PAGES: list[Page] = [
         related=("reload_config", "backup_now"),
     ),
     Page(
+        "bot_update", "staff_server",
+        "Updates Blocky from GitHub. First it shows the **new changes** (their titles) and warnings, if any (files "
+        "changed by hand in the Blocky folder, another branch…), with an **Update and restart** button. Then the "
+        "**updater** (a small container next to the bot) pulls the changes, rebuilds the bot and restarts it: a "
+        "few minutes. The result (the version and what changed, or the error) is posted in the staff channel. If "
+        "the pull or the rebuild fails, the bot keeps running the old version.\n"
+        "Needs the updater container: see the README, *Updating from Discord*. New features are then announced in "
+        "the updates channel.",
+        examples=("/bot_update",),
+        related=("reload_config", "backup_now"),
+    ),
+    Page(
         "reload_config", "staff_server",
         "Reads config.json again after you edited it by hand, without restarting the bot. If the file isn't "
         "valid JSON, nothing changes and the error is shown. Wrong values in `balance` are ignored (the default "
