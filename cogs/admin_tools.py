@@ -90,6 +90,7 @@ class AdminToolsCog(commands.Cog):
         valid, problems = settings.clean(balance_overrides(cfg))
         settings.load(valid)
         await load_application_emojis(self.bot)
+        self.bot.dispatch("blocky_config_reloaded")  # e.g. the wiki follows the new numbers
 
         notes = []
         if problems:

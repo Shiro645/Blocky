@@ -8,6 +8,8 @@
     "events": 0,
     "staff_log": 0,
     "guide_category": 0,
+    "wiki": 0,
+    "updates": 0,
     "spam": []
   },
   "roles": {
@@ -19,6 +21,8 @@
     "season_champion": 0,
     "tournament_champion": 0,
     "team_leader": 0,
+    "blocky_player": 0,
+    "updates_ping": 0,
     "species_villager": 0,
     "species_dwarf": 0,
     "species_witch": 0,

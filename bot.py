@@ -47,6 +47,8 @@ EXTENSIONS = [
     "cogs.player_species",
     "cogs.player_profile",
     "cogs.player_guide",
+    "cogs.info_wiki",
+    "cogs.info_updates",
     "cogs.economy_auction",
     "cogs.staff_economy",
     "cogs.admin_tools",

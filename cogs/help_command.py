@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from game import settings
 from utils import manual
+from utils.config import channel_id
 from utils.checks import is_staff
 from utils.ui import BaseView, join_lines
 
@@ -102,6 +103,8 @@ class HelpCog(commands.Cog):
             ),
             color=COLOR,
         )
+        if channel_id("wiki"):
+            embed.description += f"\n📚 **Every feature explained in detail**: <#{channel_id('wiki')}>"
         for key in manual.categories(staff):
             names = [p.heading if p.is_topic else f"`/{p.name}`" for p in manual.in_category(key)]
             embed.add_field(name=manual.CATEGORIES[key][0], value=join_lines([" · ".join(names)]), inline=False)

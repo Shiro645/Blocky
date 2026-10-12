@@ -162,16 +162,28 @@ FIELDS: list[Field] = [
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),
+    Field("ch_updates", "channels", "Updates channel", ("channels", "updates"), "channel",
+          help="The bot announces each new Blocky feature there, once, after the bot is updated. Not set = the "
+               "announcements wait until a channel is set."),
+    Field("ch_wiki", "channels", "Wiki channel", ("channels", "wiki"), "channel",
+          help="The bot keeps the wiki there: every feature explained in detail for players, with the current "
+               "numbers, updated when the settings change. Best as a channel where members can't write."),
     Field("ch_guide_category", "channels", "Guide category", ("channels", "guide_category"), "channel",
-          help="Every new member gets a private guide channel in this category (only them and the staff see it), "
-               "with a checklist of first steps. When it's full (50 channels) the bot adds \"<name> 2\", "
-               "\"<name> 3\"… Not set = no guide channels (/guide still shows the guide).", item="category"),
+          help="Every Blocky player (the Blocky player role, see Roles) gets a private guide channel in this "
+               "category (only them and the staff see it), with a checklist of first steps. When it's full "
+               "(50 channels) the bot adds \"<name> 2\", \"<name> 3\"… Not set = no guide channels (/guide still "
+               "shows the guide).", item="category"),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
           help="Given to the winner of the last weekend tournament.", item="assign"),
+    Field("role_updates_ping", "roles", "Role pinged for updates", ("roles", "updates_ping"), "role",
+          help="Mentioned when a new Blocky feature is announced in the updates channel (not set = no ping)."),
+    Field("role_blocky_player", "roles", "Blocky player role", ("roles", "blocky_player"), "role",
+          help="Only members with this role get a guide channel: it opens as soon as they get the role (e.g. from a "
+               "question in Channels & Roles) and is deleted if they lose it. Not set = no guide channels."),
     Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
           help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",

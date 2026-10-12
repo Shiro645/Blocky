@@ -12,7 +12,7 @@ from game import guide, settings, species
 from game.errors import GameError
 from game.notices import GuideProgress
 from utils.checks import is_staff, staff_only
-from utils.config import channel_id, staff_role_id
+from utils.config import channel_id, role_id, staff_role_id
 from utils.ui import ConfirmView, dm, em
 
 log = logging.getLogger("guide")
@@ -121,7 +121,9 @@ def guide_pages() -> list[discord.Embed]:
             "`/help command:<name>` opens a page directly, e.g. `/help command:duel` or `/help command:mining`.\n"
             "When you type `/`, Discord lists every command with a short description, and each option says what to "
             "put in it.\n\n"
-            "`/guide` shows your checklist anywhere. A question? Ask the staff. Have fun! 🧱"
+            + (f"📚 The wiki <#{channel_id('wiki')}> explains every feature in detail, with the current numbers.\n"
+               if channel_id("wiki") else "")
+            + "`/guide` shows your checklist anywhere. A question? Ask the staff. Have fun! 🧱"
         )),
     ]
     return [discord.Embed(title=title, description=text, color=COLOR) for title, text in pages]
@@ -191,6 +193,12 @@ class GuideCog(commands.Cog):
     def base_category(guild: discord.Guild) -> discord.CategoryChannel | None:
         found = guild.get_channel(channel_id("guide_category"))
         return found if isinstance(found, discord.CategoryChannel) else None
+
+    @staticmethod
+    def player_role(guild: discord.Guild) -> discord.Role | None:
+        """The Blocky player role (roles.blocky_player): only its members get a guide channel."""
+        rid = role_id("blocky_player")
+        return guild.get_role(rid) if rid else None
 
     @staticmethod
     def overflow(guild: discord.Guild, base: discord.CategoryChannel) -> list[tuple[int, discord.CategoryChannel]]:
@@ -330,9 +338,32 @@ class GuideCog(commands.Cog):
     # ---------- members and channels ----------
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
+        role = self.guide_role_of(member)
+        if role is not None and role in member.roles:
+            await self.welcome(member)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+        """Getting the Blocky player role (e.g. from a question in Channels & Roles) opens the guide;
+        losing it closes the guide channel (the checklist progress is kept)."""
+        role = self.guide_role_of(after)
+        if role is None or (role in before.roles) == (role in after.roles):
+            return
+        if role in after.roles:
+            state = await self.bot.db.run(guide.overview, after.id)
+            if not (state["channel_id"] and after.guild.get_channel(state["channel_id"])):
+                await self.welcome(after)
+        else:
+            await self.close_for(after.guild, after.id)
+
+    def guide_role_of(self, member: discord.Member) -> discord.Role | None:
+        """The Blocky player role, when this member is a player of the main server and guides are on."""
         guild = getattr(self.bot, "main_guild", None)
         if member.bot or guild is None or member.guild.id != guild.id or self.base_category(guild) is None:
-            return
+            return None
+        return self.player_role(guild)
+
+    async def welcome(self, member: discord.Member) -> None:
         try:
             await self.open_for(member)
         except GameError as exc:
@@ -366,6 +397,13 @@ class GuideCog(commands.Cog):
     @app_commands.command(name="guide", description="Your checklist of first steps, and your guide channel.")
     async def guide_cmd(self, interaction: discord.Interaction):
         member = interaction.user
+        role = self.player_role(interaction.guild) if interaction.guild is not None else None
+        if role is not None and isinstance(member, discord.Member) and role not in member.roles:
+            await interaction.response.send_message(
+                f"📘 The guide is for Blocky players. Answer the question in <id:customize> to get the **{role.name}** "
+                "role: your guide channel opens right away.", ephemeral=True,
+            )
+            return
         state = await self.bot.db.run(guide.overview, member.id)
         channel = interaction.guild.get_channel(state["channel_id"]) if interaction.guild and state["channel_id"] else None
         if channel is None and isinstance(member, discord.Member) and interaction.guild is not None:
@@ -387,8 +425,8 @@ class GuideCog(commands.Cog):
         text = f"📘 Your guide channel: {channel.mention}" if channel else "📘 Your checklist:"
         await interaction.response.send_message(text, embed=checklist_embed(state), ephemeral=True)
 
-    @app_commands.command(name="guide_resend", description="STAFF: Send the guide again, to a member or to everyone.")
-    @app_commands.describe(member="Who gets a new guide channel (empty = every member)")
+    @app_commands.command(name="guide_resend", description="STAFF: Send the guide again, to a member or to every Blocky player.")
+    @app_commands.describe(member="Who gets a new guide channel (empty = every member with the Blocky player role)")
     @staff_only()
     async def guide_resend(self, interaction: discord.Interaction, member: discord.Member | None = None):
         guild = interaction.guild
@@ -406,8 +444,14 @@ class GuideCog(commands.Cog):
             return
         if self.sending:
             raise GameError("The guide is already being sent to everyone.")
-        members = sorted((m for m in guild.members if not m.bot), key=lambda m: m.joined_at or discord.utils.utcnow(),
+        role = self.player_role(guild)
+        if role is None:
+            raise GameError("Set the Blocky player role first: `/config` → Roles → Blocky player role. Only the members "
+                            "with it get the guide.")
+        members = sorted((m for m in role.members if not m.bot), key=lambda m: m.joined_at or discord.utils.utcnow(),
                          reverse=True)
+        if not members:
+            raise GameError(f"Nobody has the **{role.name}** role yet.")
         room = max(0, CHANNEL_LIMIT - len(guild.channels) + len(self.cache))
 
         async def go(i: discord.Interaction) -> None:
@@ -421,7 +465,8 @@ class GuideCog(commands.Cog):
         note = (f" Discord allows 500 channels: about **{room}** guide channels fit, the newest members first."
                 if room < len(members) else "")
         await interaction.response.send_message(
-            f"Send the guide again to **{len(members)}** members? Each one gets a new private channel (their old one is "
+            f"Send the guide again to the **{len(members)}** members with the **{role.name}** role? Each one gets a new "
+            "private channel (their old one is "
             f"replaced). Steps already done stay checked, and the reward is only paid once.{note}",
             view=ConfirmView(interaction.user.id, f"Send to {len(members)}", go), ephemeral=True,
         )

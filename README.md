@@ -12,14 +12,26 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/help` — A menu by category, and a page for every command: what it does, its options, its **current numbers** (read from the settings, so they follow `/config`), examples and related commands. `/help command:<name>` opens a page directly (`/help command:mining` explains chat mining). Staff commands are only shown to staff, and the answer is only visible to the player who asked.
 
+### 🆕 Updates channel
+
+- **Each new feature is announced once** in the updates channel (`channels.updates`, `/config` → Channels), pinging the role `roles.updates_ping` if it's set (one ping, even when several announcements are posted together). The announcements are written in [`utils/updates.py`](utils/updates.py): the bot posts the ones it hasn't posted yet when it starts (so right after each update of the bot), when the channel is set and after `/reload_config`. Until a channel is set, they wait. The first one is a recap of everything new.
+- **Adding a feature?** Add an entry at the end of `utils/updates.py` with a new key (never change the key of an entry already posted: it would be posted again).
+
+### 📚 Wiki
+
+- **A wiki channel kept by the bot** (`channels.wiki`, `/config` → Channels): every feature for players explained in detail, more than `/help` (which has one page per command). A contents message at the top links to each part, then one message per topic (start here, mining and the daily reward, XP and talents, crafting and gear, enchanting, species, trading/auctions/loans, duels/potions/dummy, the dungeon, bosses/drops/villager, seasons/challenges/achievements/leaderboards, the tournament, teams, profile, mini-games, the Minecraft server), and the contents again at the bottom.
+- Each part ends with its **📊 current numbers**, read from the settings like the `/help` pages: when a setting changes in `/config` (or with `/reload_config`), the bot edits the parts that changed. If a wiki message is deleted, the bot posts the wiki again (checked at every start and every hour). Changing the channel moves the wiki; removing it deletes the messages.
+- No staff commands in it (they stay in `/help`, for the staff). `/help` and the guide channels link to it.
+- Best as a channel where members can't write. The bot needs *Send Messages*, *Embed Links* and *Read Message History* there.
+
 ### 📘 Guide
 
-- **A private guide channel for every new member** — When someone joins, the bot creates a channel only they and the staff can see, in the guide category (`channels.guide_category`, `/config` → Channels). It holds a welcome message with a **checklist of first steps**, then the guide: mining and emeralds, gear, species and profile, fighting, playing with others, and how to get more info with `/help`.
+- **A private guide channel for every Blocky player** — Only members with the **Blocky player role** (`roles.blocky_player`, `/config` → Roles) get one. Give it with a question in Discord's onboarding (*Server Settings → Onboarding → Customization questions*, e.g. "Do you want to play Blocky?" with an answer giving the role): as soon as a member gets the role (when joining or later in *Channels & Roles*), the bot creates a channel only they and the staff can see, in the guide category (`channels.guide_category`, `/config` → Channels). If they lose the role, the channel is deleted (the checklist progress is kept). Without the role set, no guide channel is created. It holds a welcome message with a **checklist of first steps**, then the guide: mining and emeralds, gear, species and profile, fighting, playing with others, and how to get more info with `/help`.
 - **Checklist**: mine by chatting, `/daily`, `/sell`, pick a species, look at your `/profile`, hit the training dummy (or play a training duel). Each step is checked by itself as soon as it's done, with a line in the channel; steps done before the guide count too. Doing them all pays **200 emeralds**, **once per player ever** (a guide sent again never pays twice). The reward doesn't count for the seasons.
 - **Cleanup**: the channel is deleted 3 days after the checklist is done (or right away with the **Delete this channel now** button), after 30 days if it's never done (progress is kept), and when the member leaves. Each category holds 50 channels: when it's full the bot adds `"<name> 2"`, `"<name> 3"`… (removed once empty), and it stops a little before Discord's limit of 500 channels per server.
 - Mini-games work in guide channels too, so new players can try what the guide explains.
-- `/guide` — Your checklist and a link to your guide channel; if you don't have one anymore, it opens a new one. Without a guide category, it shows the whole guide privately and the checklist still works.
-- Staff: `/guide_resend [member]` (see Staff commands). Members already in the server when this is installed get a guide channel with `/guide_resend` (everyone) or `/guide`.
+- `/guide` — Your checklist and a link to your guide channel; if you don't have one anymore, it opens a new one. Without the Blocky player role, it tells you to answer the question in *Channels & Roles* (with a link). Without a guide category, it shows the whole guide privately and the checklist still works.
+- Staff: `/guide_resend [member]` (see Staff commands). Blocky players already in the server when this is installed get a guide channel with `/guide_resend` (everyone) or `/guide`.
 - The bot needs the **Manage Channels** and **Manage Roles** permissions (it sets the channel permissions). Tuned with `balance.guide` (`/config` → Guide).
 
 ### 🌍 Minecraft
@@ -207,7 +219,7 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
 - Events: `/event boss [name] [hp]`, `/event drop`, `/event quiz` (a quiz question in this channel now), `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
 - Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Blocky ban: `/blocky ban <member> <duration> <reason>` blocks a player who abuses the bot: they can't use any of Blocky's commands, buttons or menus until the end (`30m`, `2h`, `3d`, `1w`…) or until lifted (`perm`). They keep everything they own and still mine by chatting; they get a DM and see the end and the reason when they try a command. A new block replaces the previous one; staff can't be blocked. `/blocky unban <member>` lifts it, `/blocky list` shows who is blocked. Logged in the staff channel.
-- Guide: `/guide_resend [member]` sends the guide again in a new private channel (the old one is deleted), to one member or to **every member** (after a confirmation, newest members first, in the background; the result is also posted in the staff channel). Steps already done stay checked and the reward is never paid twice. Members it can't reach because of the 500-channel limit are counted in the report.
+- Guide: `/guide_resend [member]` sends the guide again in a new private channel (the old one is deleted), to one member or to **every member with the Blocky player role** (after a confirmation, newest members first, in the background; the result is also posted in the staff channel). Steps already done stay checked and the reward is never paid twice. Members it can't reach because of the 500-channel limit are counted in the report.
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies, loans, species, the PVE dungeon, profiles and the guide (the category menu is paged when there are more than 25). Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
@@ -244,11 +256,15 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
+| `channels.updates` | Updates channel: each new Blocky feature is announced there once, after the bot is updated (0 = the announcements wait) |
+| `channels.wiki` | Wiki channel: the bot keeps every feature explained there, with the current numbers (0 = no wiki) |
 | `channels.guide_category` | Category of the guide channels: every new member gets a private channel there with the guide and a checklist (0 = no guide channels; `/guide` still shows the guide) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
+| `roles.updates_ping` | Role pinged when a new feature is announced (0 = no ping) |
+| `roles.blocky_player` | Blocky player role: only its members get a guide channel (give it with an onboarding question in *Channels & Roles*; 0 = no guide channels) |
 | `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
 | `roles.species_villager` … `species_miner` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`) |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
@@ -466,7 +482,8 @@ game/                        # game rules, no Discord code
 ├── events.py                # drops and bosses
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature
-utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages),
+utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages), wiki (the wiki channel),
+                             # updates.py (what's new: the announcements of the updates channel),
                              # profile_card.py (draws the profile cards and banners with Pillow)
 tests/                       # unit tests
 ```
