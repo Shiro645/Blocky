@@ -63,4 +63,16 @@ UPDATES: tuple[Update, ...] = (
              "detail, with the current numbers."),
         ),
     ),
+    Update(
+        "2026-10-team-categories", "2026-10-13", "Team categories",
+        "Teams can now have their **own private category** on the server.",
+        (
+            ("🏠 Unlock it",
+             "The team leader unlocks it once with `/team category`. Only the team's members and the staff see it: "
+             "every member gets the team's role."),
+            ("💬 Your channels",
+             "The leader creates text and voice channels in it with `/team channel create`, and can rename or delete "
+             "them (`/team channel rename`, `/team channel delete`). `/team info` lists them."),
+        ),
+    ),
 )

@@ -40,7 +40,11 @@ def slash_commands() -> dict[str, SlashCommand]:
             if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
                 if getattr(node.value.func, "attr", "") == "Group":
                     kw = {k.arg: k.value for k in node.value.keywords}
-                    groups[node.targets[0].id] = ast.literal_eval(kw["name"])
+                    group = ast.literal_eval(kw["name"])
+                    parent = kw.get("parent")
+                    if isinstance(parent, ast.Name) and parent.id in groups:  # a group inside a group
+                        group = f"{groups[parent.id]} {group}"
+                    groups[node.targets[0].id] = group
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue

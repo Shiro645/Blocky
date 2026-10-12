@@ -526,6 +526,17 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX guides_channel ON guides(channel_id);
     """,
+    # 24: team spaces (a private Discord category per team)
+    """
+    CREATE TABLE team_spaces (
+        team_id INTEGER PRIMARY KEY,   -- no foreign key: kept after the team is gone, to clean up Discord
+        payer_id INTEGER NOT NULL,
+        paid INTEGER NOT NULL,
+        unlocked_at INTEGER NOT NULL,
+        role_id INTEGER,               -- the team role (its members see the category)
+        category_id INTEGER
+    );
+    """,
 ]
 
 

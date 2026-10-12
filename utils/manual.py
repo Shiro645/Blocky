@@ -167,6 +167,12 @@ def _market(s: Settings) -> list[str]:
     ]
 
 
+def _team_spaces(s: Settings) -> list[str]:
+    t = s["teams"]
+    return [f"Unlocking the category: {em(t['space_cost'])}, once (paid by the leader)",
+            f"Up to **{num(t['max_channels'])}** channels (text and voice)"]
+
+
 def _days(n: Any) -> str:
     return "kept" if not float(n) else f"**{float(n):g}** day{'s' if float(n) != 1 else ''}"
 
@@ -1139,6 +1145,38 @@ PAGES: list[Page] = [
         lambda s: [f"Each change: {em(s['profiles']['banner_cost'])}"],
         examples=("/team banner base:Blue pattern1:Chevron color1:Yellow pattern2:Bordure color2:Black",),
         related=("team info", "profile"),
+    ),
+    Page(
+        "team category", "teams",
+        "**Leader only.** Unlocks your team's **private category** on the server, once: only your members and "
+        "the staff see it. The bot creates a team role (given to every member, taken back when someone leaves), the "
+        "category and a first text channel, `chat`. Then you create, rename and delete text and voice channels with "
+        "`/team channel …`. If the team is disbanded, its category, channels and role are deleted.",
+        _team_spaces,
+        examples=("/team category",),
+        related=("team channel create", "team info"),
+    ),
+    Page(
+        "team channel create", "teams",
+        "**Leader only.** Creates a **text** or **voice** channel in your team's category (unlock it first with "
+        "`/team category`). Only your members and the staff see it.",
+        _team_spaces,
+        examples=("/team channel create name:strategy", "/team channel create name:Mining kind:Voice"),
+        related=("team channel rename", "team channel delete", "team category"),
+    ),
+    Page(
+        "team channel rename", "teams",
+        "**Leader only.** Renames one of your team's channels (pick it in the suggestions). Discord allows 2 renames "
+        "of the same channel per 10 minutes.",
+        examples=("/team channel rename channel:chat name:headquarters",),
+        related=("team channel create",),
+    ),
+    Page(
+        "team channel delete", "teams",
+        "**Leader only.** Deletes one of your team's channels, after a confirmation: its messages are lost for good. "
+        "The category always keeps at least one channel.",
+        examples=("/team channel delete channel:strategy",),
+        related=("team channel create",),
     ),
     Page(
         "team rename", "teams",

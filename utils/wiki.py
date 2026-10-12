@@ -230,8 +230,11 @@ SECTIONS: tuple[Section, ...] = (
         "teammate who already mined today; and there's a **weekly team season** (`/team top`): a team's score comes "
         "from what its members made for the season. The best player counts in full and the next ones less and "
         "less, so a big team doesn't win just by being big. The top teams share their reward in proportion to what "
-        "each member brought. Team leaders can get a role.",
-        ("team create", "team banner"),
+        "each member brought. Team leaders can get a role.\n\n"
+        "**Your team's own category**: the leader unlocks it once with `/team category`. Only the members and the "
+        "staff see it (members get a team role). The leader manages its text and voice channels: "
+        "`/team channel create`, `/team channel rename` and `/team channel delete`.",
+        ("team create", "team banner", "team category"),
     ),
     Section(
         "profile", "🎨 Your profile and customization",

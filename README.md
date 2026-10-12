@@ -181,7 +181,8 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
 - `/team leave` — Leave the team. When the leader leaves, the oldest member becomes leader; the last one to leave disbands the team.
 - Leader: `/team kick`, `/team transfer`, `/team rename [name] [tag]`, `/team disband`.
 - **Team leader role** — If `roles.team_leader` is set (`/config` → Roles), the bot gives that role to every team leader and takes it back when they no longer lead a team (transfer, leaving, disbanding, team deleted by staff). It is checked again at every start and when a member rejoins the server; changing the role in `/config` moves it.
-- `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
+- `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus, and its category's channels.
+- **Team category** — `/team category` (leader, **1,000 emeralds**, once) unlocks a private category for the team: only its members and the staff see it. The bot creates a **team role** `[TAG] Name` (given to every member and taken back when someone leaves), the category and a first `chat` channel. The leader manages up to **5** text and voice channels with `/team channel create <name> [kind]`, `/team channel rename` and `/team channel delete` (the category keeps at least one). Renaming the team renames its role and category; disbanding it (or `/team_remove`) deletes the channels, the category and the role. If the role or the category is deleted by hand, the bot makes it again (checked every 30 min). If the bot can't create it (missing *Manage Channels* / *Manage Roles*), the leader is refunded. Tuned with `balance.teams.space_cost` and `max_channels`.
 - **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
 - **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
 - **Weekly team season** (`/team top`) — A team's score comes from the season score (see above) its members made while in the team (Monday to Sunday), and grows like a logarithm of the number of members: the best earner counts in full, the next ones ×0.69, ×0.41, ×0.29, ×0.22… So 5 members earning the same score ×2.6 instead of ×5 (2 → ×1.7, 3 → ×2.1), and one more member earning anything never lowers the score. `/team top` shows the score in points next to the emeralds earned. Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
@@ -354,7 +355,7 @@ Profiles are tuned with `balance.profiles`: `bio_max`, `color_price` (each dye c
 
 The guide is tuned with `balance.guide`: `reward` (emeralds for the whole checklist, once per player), `delete_after_days` (after the checklist is done, 0 = kept) and `expire_days` (if it's never done, 0 = kept).
 
-Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus`, `season_rewards` (e.g. `[600, 300, 150]`) and `log_score` (`true`: the logarithmic team score above; `false`: the sum of what the members earned).
+Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `space_cost` (the team category, 0 = free), `max_channels` (channels per team category), `xp_bonus_per_active_member`, `max_xp_bonus`, `season_rewards` (e.g. `[600, 300, 150]`) and `log_score` (`true`: the logarithmic team score above; `false`: the sum of what the members earned).
 
 > ⚠️ `.env`, `config.json`, the database files (`*.db`, `*.db-wal`, `*.db-shm`) and the `backups/` folder (it holds copies of `config.json`, with the RCON password) contain secrets or user data. They are ignored by git and Docker — never commit them.
 
@@ -508,6 +509,7 @@ game/                        # game rules, no Discord code
 ├── profiles.py              # profile customization (bio, colors, frames, titles, showcase) and team banners
 ├── leaderboard.py · seasons.py · duel.py
 ├── teams.py                 # teams, team bonus and weekly team season
+├── team_spaces.py           # team categories: unlocked once by the leader, kept in sync by the teams cog
 ├── tournament.py            # weekend tournament
 ├── enchants.py              # enchanted books, lapis and enchantment effects
 ├── potions.py               # duel potions

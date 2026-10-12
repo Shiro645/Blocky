@@ -6,13 +6,13 @@ import re
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from cogs.player_profile import banner_file
-from game import profiles, settings, teams
+from game import profiles, settings, team_spaces, teams
 from game.errors import GameError
 from utils.checks import staff_only
-from utils.config import role_id
+from utils.config import role_id, staff_role_id
 from utils.ui import ConfirmView, em, report_error, tag_prefix
 
 log = logging.getLogger("teams")
@@ -23,8 +23,41 @@ DYE_CHOICES = [app_commands.Choice(name=name, value=key) for key, (name, _) in p
 PATTERN_CHOICES = [app_commands.Choice(name=label, value=key) for key, label in profiles.PATTERNS.items()]
 
 
+CHANNEL_LIMIT = 490  # Discord allows 500 channels per server: keep some room for the staff
+KIND_CHOICES = [app_commands.Choice(name="Text", value="text"), app_commands.Choice(name="Voice", value="voice")]
+
+
 def team_label(team: dict) -> str:
     return f"**[{team['tag']}] {team['name']}**"
+
+
+def space_name(team: dict) -> str:
+    """The name of a team's role and category."""
+    return f"[{team['tag']}] {team['name']}"
+
+
+def space_overwrites(guild: discord.Guild, role: discord.Role) -> dict:
+    """A team category: its members (the team role) and the staff see it, nobody else.
+
+    Only what's needed is allowed (the rest comes from the members' server roles): Discord refuses an
+    overwrite allowing a permission the bot doesn't have itself."""
+    out: dict = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True,
+                                          connect=True, speak=True),
+        guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True,
+                                              connect=True),
+    }
+    staff = guild.get_role(staff_role_id())
+    if staff is not None:
+        out[staff] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True,
+                                                 manage_messages=True, connect=True, speak=True)
+    return out
+
+
+def check_room(guild: discord.Guild, needed: int) -> None:
+    if len(guild.channels) + needed > CHANNEL_LIMIT:
+        raise GameError("The server is close to Discord's limit of 500 channels: no room for more team channels.")
 
 
 class TeamInviteButton(
@@ -70,16 +103,26 @@ def invite_view(team_id: int, user_id: int) -> discord.ui.View:
 
 class TeamsCog(commands.Cog):
     team = app_commands.Group(name="team", description="Teams: play together and win the weekly team season.")
+    channel = app_commands.Group(name="channel", description="LEADER: The channels of your team's category.",
+                                 parent=team)
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._role_lock = asyncio.Lock()
+        self._space_lock = asyncio.Lock()
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(TeamInviteButton)
+        self.space_loop.start()
 
     async def cog_unload(self) -> None:
+        self.space_loop.cancel()
         self.bot.remove_dynamic_items(TeamInviteButton)
+
+    async def after_change(self) -> None:
+        """After a team changes (members, leader, name, deleted): the leader role and the team spaces follow."""
+        await self.sync_leader_role()
+        await self.sync_spaces()
 
     async def say(self, interaction: discord.Interaction, text: str) -> None:
         """Public answer that shows names without pinging anyone."""
@@ -119,15 +162,90 @@ class TeamsCog(commands.Cog):
                 except discord.HTTPException:
                     log.warning("Could not update the team leader role of %s (check Manage Roles and role order)", member)
 
+    # ---------- team spaces (a private category per team) ----------
+    async def sync_spaces(self) -> None:
+        """Every team space: role and category named after the team, the role on exactly its members,
+        and the spaces of teams that are gone deleted."""
+        guild = getattr(self.bot, "main_guild", None)
+        if guild is None:
+            return
+        async with self._space_lock:
+            for space in await self.bot.db.run(team_spaces.every):
+                try:
+                    await self.sync_space(guild, space)
+                except discord.HTTPException:
+                    log.warning("Could not update the space of team %s (check Manage Channels and Manage Roles)",
+                                space["team_id"], exc_info=True)
+
+    async def sync_space(self, guild: discord.Guild, space: dict) -> None:
+        role = guild.get_role(space["role_id"]) if space["role_id"] else None
+        found = guild.get_channel(space["category_id"]) if space["category_id"] else None
+        category = found if isinstance(found, discord.CategoryChannel) else None
+        team = space["team"]
+        if team is None:  # disbanded or deleted by the staff
+            await self.delete_space(category, role)
+            await self.bot.db.run(team_spaces.forget, space["team_id"])
+            return
+        if not space["category_id"]:
+            return  # being unlocked right now
+        name = space_name(team)
+        if role is None:
+            role = await guild.create_role(name=name, reason="Blocky: team role (it was missing)")
+        elif role.name != name:
+            await role.edit(name=name, reason="Blocky: team renamed")
+        if category is None:
+            check_room(guild, 2)
+            category = await self.make_category(guild, role, name)  # deleted by hand: made again
+        else:
+            if category.name != name:
+                await category.edit(name=name, reason="Blocky: team renamed")
+            wanted = space_overwrites(guild, role)
+            if any(category.overwrites.get(target) != perms for target, perms in wanted.items()):
+                await category.edit(overwrites={**category.overwrites, **wanted}, reason="Blocky: team category")
+                for child in category.channels:
+                    await child.edit(sync_permissions=True, reason="Blocky: team category")
+        if (role.id, category.id) != (space["role_id"], space["category_id"]):
+            await self.bot.db.run(team_spaces.set_discord, space["team_id"], role.id, category.id)
+        members = set(space["members"])
+        for member in role.members:
+            if member.id not in members:
+                await member.remove_roles(role, reason="Blocky: left the team")
+        for uid in members:
+            member = guild.get_member(uid)
+            if member is not None and role not in member.roles:
+                await member.add_roles(role, reason="Blocky: team member")
+
+    async def make_category(self, guild: discord.Guild, role: discord.Role, name: str) -> discord.CategoryChannel:
+        category = await guild.create_category(name, overwrites=space_overwrites(guild, role),
+                                               reason="Blocky: team category")
+        await category.create_text_channel("chat", overwrites=category.overwrites, reason="Blocky: team category")
+        return category
+
+    async def delete_space(self, category: discord.CategoryChannel | None, role: discord.Role | None) -> None:
+        if category is not None:
+            for child in category.channels:
+                await child.delete(reason="Blocky: the team is gone")
+            await category.delete(reason="Blocky: the team is gone")
+        if role is not None:
+            await role.delete(reason="Blocky: the team is gone")
+
+    @tasks.loop(minutes=30)
+    async def space_loop(self) -> None:
+        await self.sync_spaces()  # repairs what was changed by hand (a deleted role or category…)
+
+    @space_loop.before_loop
+    async def before_space_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await self.sync_leader_role()
+        await self.after_change()
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         guild = getattr(self.bot, "main_guild", None)
         if guild is not None and member.guild.id == guild.id:
-            await self.sync_leader_role()
+            await self.after_change()  # a member coming back gets their team role again
 
     @commands.Cog.listener()
     async def on_blocky_config_changed(self, key: str, before) -> None:
@@ -198,6 +316,8 @@ class TeamsCog(commands.Cog):
             await self.bot.db.run(teams.decline, user.id, team_id)
             embed = discord.Embed(description=f"✖️ {user.mention} declined the invitation.", color=discord.Color.dark_grey())
         await interaction.response.edit_message(content=None, embed=embed, view=None)
+        if accept:
+            await self.after_change()
 
     @team.command(name="join", description="Accept a team invitation.")
     @app_commands.describe(team="The team that invited you")
@@ -208,6 +328,7 @@ class TeamsCog(commands.Cog):
             interaction,
             f"✅ {interaction.user.mention} joined {team_label(res['team'])}! ({res['members']}/{teams.max_members()})",
         )
+        await self.after_change()
 
     @team.command(name="leave", description="Leave your team.")
     async def leave(self, interaction: discord.Interaction):
@@ -227,8 +348,7 @@ class TeamsCog(commands.Cog):
                 text = f"👋 {user.mention} left {label}."
             await i.response.edit_message(content="Done.", view=None)
             await i.followup.send(text, allowed_mentions=NO_PINGS)
-            if team["leader_id"] == user.id:
-                await self.sync_leader_role()
+            await self.after_change()
 
         warning = ""
         if team["leader_id"] == user.id:
@@ -245,13 +365,14 @@ class TeamsCog(commands.Cog):
     async def kick(self, interaction: discord.Interaction, member: discord.Member):
         team = await self.bot.db.run(teams.kick, interaction.user.id, member.id)
         await self.say(interaction, f"🚪 {member.mention} was removed from {team_label(team)} by {interaction.user.mention}.")
+        await self.after_change()
 
     @team.command(name="transfer", description="LEADER: Make another member the leader.")
     @app_commands.describe(member="The new leader")
     async def transfer(self, interaction: discord.Interaction, member: discord.Member):
         team = await self.bot.db.run(teams.transfer, interaction.user.id, member.id)
         await self.say(interaction, f"👑 {member.mention} is the new leader of {team_label(team)}.")
-        await self.sync_leader_role()
+        await self.after_change()
 
     @team.command(name="rename", description="LEADER: Change the name and/or the tag of your team.")
     @app_commands.describe(name="New name (leave empty to keep it)", tag="New tag (leave empty to keep it)")
@@ -261,6 +382,7 @@ class TeamsCog(commands.Cog):
     ):
         res = await self.bot.db.run(teams.rename, interaction.user.id, name, tag)
         await self.say(interaction, f"✏️ {team_label(res['before'])} is now {team_label(res['after'])}.")
+        await self.after_change()
 
     @team.command(name="disband", description="LEADER: Delete your team.")
     async def disband(self, interaction: discord.Interaction):
@@ -275,12 +397,127 @@ class TeamsCog(commands.Cog):
             res = await self.bot.db.run(teams.disband, user.id)
             await i.response.edit_message(content="Done.", view=None)
             await i.followup.send(f"💥 {team_label(res)} was disbanded by {user.mention}.", allowed_mentions=NO_PINGS)
-            await self.sync_leader_role()
+            await self.after_change()
 
         await interaction.response.send_message(
             f"Disband {team_label(team)}? Every member leaves the team and this week's team score is lost. "
             "This can't be undone.",
             view=ConfirmView(user.id, "Disband", do), ephemeral=True,
+        )
+
+    # ---------- the team's category ----------
+    @team.command(name="category", description="LEADER: Unlock your team's private category, where you create channels.")
+    async def category(self, interaction: discord.Interaction):
+        user, guild = interaction.user, interaction.guild
+        if guild is None:
+            raise GameError("Use this in the server.")
+        team = await self.bot.db.run(team_spaces.check_unlock, user.id)
+        check_room(guild, 2)
+        price, limit = team_spaces.cost(), team_spaces.max_channels()
+
+        async def do(i: discord.Interaction) -> None:
+            await i.response.edit_message(content="⏳ Creating your team's category…", view=None)
+            res = await self.bot.db.run(team_spaces.unlock, user.id)
+            role = None
+            try:
+                async with self._space_lock:
+                    role = await guild.create_role(name=space_name(team), reason="Blocky: team role")
+                    category = await self.make_category(guild, role, space_name(team))
+                    await self.bot.db.run(team_spaces.set_discord, team["team_id"], role.id, category.id)
+            except discord.HTTPException:
+                log.warning("Could not create the category of team %s", team["team_id"], exc_info=True)
+                if role is not None:
+                    try:
+                        await role.delete(reason="Blocky: team category failed")
+                    except discord.HTTPException:
+                        pass
+                back = await self.bot.db.run(team_spaces.refund, team["team_id"])
+                await i.followup.send(
+                    "❌ I couldn't create the category (I need the *Manage Channels* and *Manage Roles* "
+                    f"permissions). You got your {em(back)} back.", ephemeral=True,
+                )
+                return
+            await self.sync_spaces()  # the members get the team role
+            await i.followup.send(
+                f"🏠 {team_label(team)} has its own category: {category.channels[0].mention}. Only your members and "
+                f"the staff see it. Create up to {limit} channels with `/team channel create`."
+                + (f" (-{em(res['paid'])})" if res["paid"] else ""),
+                allowed_mentions=NO_PINGS,
+            )
+
+        await interaction.response.send_message(
+            f"Unlock a private category for {team_label(team)}? Only your members and the staff see it, and you (the "
+            f"leader) create up to **{limit}** text and voice channels in it with `/team channel create`. "
+            f"Price: {em(price)}, once.",
+            view=ConfirmView(user.id, f"Unlock ({price:,})", do), ephemeral=True,
+        )
+
+    async def leader_category(self, interaction: discord.Interaction) -> tuple[dict, discord.CategoryChannel]:
+        res = await self.bot.db.run(team_spaces.leader_space, interaction.user.id)
+        guild = interaction.guild
+        found = guild.get_channel(res["space"]["category_id"]) if guild is not None else None
+        if not isinstance(found, discord.CategoryChannel):
+            await self.sync_spaces()
+            raise GameError("Your team's category was missing: it was made again, try once more.")
+        return res["team"], found
+
+    async def team_channel_autocomplete(self, interaction: discord.Interaction, current: str):
+        try:
+            _, category = await self.leader_category(interaction)
+        except GameError:
+            return []
+        return [
+            app_commands.Choice(name=("🔊 " if isinstance(c, discord.VoiceChannel) else "# ") + c.name, value=str(c.id))
+            for c in category.channels if current.lower() in c.name.lower()
+        ][:25]
+
+    async def team_channel(self, interaction: discord.Interaction, value: str) -> tuple[dict, discord.CategoryChannel,
+                                                                                      discord.abc.GuildChannel]:
+        team, category = await self.leader_category(interaction)
+        channel = interaction.guild.get_channel(int(value)) if value.isdigit() else None  # type: ignore[union-attr]
+        if channel is None or getattr(channel, "category_id", None) != category.id:
+            raise GameError("Pick one of your team's channels (the suggestions).")
+        return team, category, channel
+
+    @channel.command(name="create", description="LEADER: Create a text or voice channel in your team's category.")
+    @app_commands.describe(name="The channel's name", kind="Text or voice (text by default)")
+    @app_commands.choices(kind=KIND_CHOICES)
+    async def channel_create(self, interaction: discord.Interaction, name: app_commands.Range[str, 1, 40],
+                             kind: str = "text"):
+        team, category = await self.leader_category(interaction)
+        limit = team_spaces.max_channels()
+        if len(category.channels) >= limit:
+            raise GameError(f"Your category has {limit} channels at most: delete one first (`/team channel delete`).")
+        check_room(interaction.guild, 1)  # type: ignore[arg-type]
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        make = category.create_voice_channel if kind == "voice" else category.create_text_channel
+        channel = await make(name, overwrites=category.overwrites, reason=f"Blocky: team channel ({interaction.user})")
+        await interaction.followup.send(f"✅ {channel.mention} created in {team_label(team)}.", ephemeral=True)
+
+    @channel.command(name="rename", description="LEADER: Rename one of your team's channels.")
+    @app_commands.describe(channel="One of your team's channels", name="Its new name")
+    @app_commands.autocomplete(channel=team_channel_autocomplete)
+    async def channel_rename(self, interaction: discord.Interaction, channel: str, name: app_commands.Range[str, 1, 40]):
+        _, _, target = await self.team_channel(interaction, channel)
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        await target.edit(name=name, reason=f"Blocky: team channel renamed ({interaction.user})")
+        await interaction.followup.send(f"✏️ Renamed: {target.mention}.", ephemeral=True)
+
+    @channel.command(name="delete", description="LEADER: Delete one of your team's channels.")
+    @app_commands.describe(channel="One of your team's channels")
+    @app_commands.autocomplete(channel=team_channel_autocomplete)
+    async def channel_delete(self, interaction: discord.Interaction, channel: str):
+        _, category, target = await self.team_channel(interaction, channel)
+        if len(category.channels) <= 1:
+            raise GameError("Your category needs at least one channel: create another one first.")
+
+        async def do(i: discord.Interaction) -> None:
+            await target.delete(reason=f"Blocky: team channel deleted ({interaction.user})")
+            await i.response.edit_message(content=f"🗑️ **{target.name}** was deleted.", view=None)
+
+        await interaction.response.send_message(
+            f"Delete {target.mention}? Its messages are lost for good.",
+            view=ConfirmView(interaction.user.id, "Delete", do), ephemeral=True,
         )
 
     # ---------- information ----------
@@ -321,6 +558,14 @@ class TeamsCog(commands.Cog):
         embed.add_field(name="Team bonus", value=bonus, inline=True)
         if data["wins"]:
             embed.add_field(name="🏆 Team seasons won", value=str(data["wins"]), inline=True)
+        space = await self.bot.db.run(team_spaces.get, t["team_id"])
+        found = interaction.guild.get_channel(space["category_id"]) if space and space["category_id"] and interaction.guild else None
+        if isinstance(found, discord.CategoryChannel):
+            where = " ".join(c.mention for c in found.channels) or "—"
+            embed.add_field(name="🏠 Team category", value=f"{where}\n(members and staff only)", inline=False)
+        else:
+            embed.add_field(name="🏠 Team category", value=f"Not unlocked yet: `/team category` (leader, "
+                                                         f"{em(team_spaces.cost())})", inline=False)
         embed.set_footer(text="⛏️ = mined today")
         file = banner_file(data["banner"]) if data.get("banner") else None
         if file is None:
@@ -410,7 +655,7 @@ class TeamsCog(commands.Cog):
             color=discord.Color.orange(),
         )
         await self.bot.announcer.send(embed=embed, channel="staff_log")
-        await self.sync_leader_role()
+        await self.after_change()
 
 
 async def setup(bot: commands.Bot):
