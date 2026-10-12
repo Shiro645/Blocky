@@ -182,7 +182,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 
 | Key | Description |
 |---|---|
-| `guild_id` | ID of your Discord server (slash commands are synced instantly to it) |
+| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice) |
 | `staff.role_id` | ID of the staff role allowed to use staff commands |
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |

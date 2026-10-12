@@ -118,9 +118,23 @@ class Bot(commands.Bot):
             self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
             log.info("Synced %d commands (guild sync)", len(synced))
+            await self.remove_global_commands()
         else:
             synced = await self.tree.sync()
             log.info("Synced %d global commands", len(synced))
+
+    async def remove_global_commands(self) -> None:
+        """Commands synced globally by a start without guild_id would show twice in the server: remove them.
+
+        Only on Discord's side: the tree keeps its global commands (the guild copies and /help use them).
+        """
+        try:
+            old = await self.tree.fetch_commands()
+            if old:
+                await self.http.bulk_upsert_global_commands(self.application_id, payload=[])
+                log.info("Removed %d old global commands (they showed twice in the server)", len(old))
+        except discord.HTTPException:
+            log.warning("Could not remove the old global commands: some commands may show twice", exc_info=True)
 
     async def hide_staff_commands(self, guild_id: int) -> None:
         """Only members with a permission of the staff role see the staff commands (utils/staff_visibility.py)."""
