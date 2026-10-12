@@ -55,6 +55,7 @@ CATEGORIES = {
     "species": "🧬 Species",
     "pve": "⚔️ PVE dungeon",
     "profiles": "🎨 Profiles",
+    "guide": "📘 Guide",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -74,7 +75,7 @@ class Field:
     max: float | None = None
     help: str = ""
     choices: tuple[tuple[str, Any], ...] = ()  # choice: (label, value)
-    item: str = ""  # list: "int" or "text"; table: "drops" or "goods"
+    item: str = ""  # list: "int" or "text"; table: "drops" or "goods"; channel: "category" (a category)
     max_items: int = 25  # list, map and table editors
 
     @property
@@ -161,6 +162,10 @@ FIELDS: list[Field] = [
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),
+    Field("ch_guide_category", "channels", "Guide category", ("channels", "guide_category"), "channel",
+          help="Every new member gets a private guide channel in this category (only them and the staff see it), "
+               "with a checklist of first steps. When it's full (50 channels) the bot adds \"<name> 2\", "
+               "\"<name> 3\"… Not set = no guide channels (/guide still shows the guide).", item="category"),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
@@ -408,6 +413,13 @@ FIELDS: list[Field] = [
     *[_b(f"profiles.frame_prices.{key}", "profiles", f"Frame price: {name}", "The rarer frames are earned, not sold.")
       for key, name in (("stone", "Stone"), ("gold", "Gold"), ("redstone", "Redstone"), ("lapis", "Lapis"),
                         ("diamond", "Diamond"), ("emerald", "Emerald"))],
+    # ---- guide ----
+    _b("guide.reward", "guide", "Checklist reward", "Emeralds for doing every step of the guide, paid once per player."),
+    _b("guide.delete_after_days", "guide", "Days before a finished guide is deleted",
+       "After the checklist is done (0 = kept). The player can delete it sooner with a button.", kind="float",
+       max=365),
+    _b("guide.expire_days", "guide", "Days before an unfinished guide is deleted",
+       "If the checklist is never done (0 = kept). Progress is kept: /guide opens a new one.", kind="float", max=365),
     # ---- PVE dungeon ----
     _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
     _b("pve.max_players", "pve", "Players per group", min=1, max=10),
