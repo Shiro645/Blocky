@@ -83,7 +83,7 @@ class SeasonsCog(commands.Cog):
             medal = MEDALS.get(p["rank"], f"#{p['rank']}")
             shares = ", ".join(f"<@{uid}> +{amount:,}" for uid, amount in p["payout"][:10])
             lines.append(
-                f"{medal} **[{p['tag']}] {p['name']}** — {em(p['score'])} earned · "
+                f"{medal} **[{p['tag']}] {p['name']}** — {p['score']:,} pts ({em(p['earned'])} earned) · "
                 f"reward **{em(p['reward'])}**\n└ {shares}"
             )
         winner = podium[0]
@@ -118,7 +118,7 @@ class SeasonsCog(commands.Cog):
     async def season(self, interaction: discord.Interaction):
         data = await self.bot.db.run(seasons.overview, interaction.user.id)
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid)}<@{uid}> — **{em(score)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'])}<@{uid}> — **{em(score)}**"
             for i, (uid, score) in enumerate(data["top"], start=1)
         ]
         rewards = " · ".join(f"{MEDALS.get(i, f'#{i}')} {em(r)}" for i, r in enumerate(data["rewards"], start=1))

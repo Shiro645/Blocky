@@ -12,7 +12,7 @@ import random
 import re
 from dataclasses import dataclass
 
-from game import players, settings
+from game import players, settings, species
 from game.catalog import ARMOR, GEAR_ITEMS
 from game.db import Ctx
 from game.errors import GameError
@@ -57,6 +57,18 @@ def _per_level(values: list, level: int) -> float:
 def bonus(name: str, level: int) -> float:
     """Effect of an enchantment at a level (0 when not enchanted)."""
     return _per_level(_cfg()[ENCHANTS[name].setting], level)
+
+
+def boost_of(ctx: Ctx, user_id: int) -> float:
+    """Multiplier of the enchantment effects of a player's gear (Mages: stronger)."""
+    return 1.0 + species.bonus(ctx, user_id, "mage")
+
+
+def effect(piece: dict | None, name: str) -> float:
+    """Effect of an enchantment on a gear row, with its owner's species bonus (rows from attach)."""
+    if not piece:
+        return 0.0
+    return bonus(name, level_of(piece, name)) * float(piece.get("enchant_boost", 1.0))
 
 
 def hoe_xp_bonus(level: int) -> float:
@@ -140,8 +152,13 @@ def of_gear(ctx: Ctx, gear_ids: list[int]) -> dict[int, dict[str, int]]:
 def attach(ctx: Ctx, rows: list[dict]) -> list[dict]:
     """Add an "enchants" dict to gear rows."""
     found = of_gear(ctx, [r["gear_id"] for r in rows])
+    boosts: dict[int, float] = {}
     for r in rows:
         r["enchants"] = found.get(r["gear_id"], {})
+        if "user_id" in r:
+            if r["user_id"] not in boosts:
+                boosts[r["user_id"]] = boost_of(ctx, r["user_id"])
+            r["enchant_boost"] = boosts[r["user_id"]]
     return rows
 
 

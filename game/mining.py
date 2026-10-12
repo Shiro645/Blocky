@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import enchants, gear, players, settings, teams
+from game import enchants, gear, players, settings, species, teams
 from game.catalog import BLOCK_TYPES
 from game.db import Ctx
 
@@ -97,7 +97,12 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     sticks = 0
 
     def fortune(piece: dict) -> int:
-        return int(enchants.bonus("fortune", enchants.level_of(piece, "fortune")))
+        # A boosted Fortune (Mages) gives the fraction as a chance of one more.
+        value = enchants.effect(piece, "fortune")
+        whole = int(value)
+        if value - whole > 1e-9 and ctx.rng.random() < value - whole:
+            whole += 1
+        return whole
 
     pickaxe = tools.get("pickaxe")
     bonus = 0  # extra cobblestone from the pickaxe and its Fortune
@@ -125,7 +130,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     hoe = tools.get("hoe")
     if hoe:
         hoe_bonus = g["hoe_xp_bonus_per_tier"] * gear.tier(hoe["material"])
-        hoe_bonus += enchants.hoe_xp_bonus(enchants.level_of(hoe, "fortune"))
+        hoe_bonus += enchants.hoe_xp_bonus(enchants.level_of(hoe, "fortune")) * float(hoe.get("enchant_boost", 1.0))
         xp = int(round(xp * (1 + hoe_bonus)))
         used.append(hoe)
     team_bonus = teams.activity_bonus(ctx, user_id)
@@ -150,6 +155,10 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         enchants.give_lapis(ctx, user_id, lapis)
         players.bump_stat(ctx, user_id, "lapis_found", lapis)
 
+    cooldown = cooldown_seconds(user["efficiency_points"], enchants.effect(pickaxe, "efficiency"))
+    speed = species.bonus(ctx, user_id, "miner")
+    if speed and cooldown > 0:
+        cooldown = max(1, round(cooldown * (1 - speed)))  # even below the minimum
     return {
         "block": block,
         "amount": amount,
@@ -159,7 +168,5 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         "team_bonus": team_bonus,
         "lapis": lapis,
         "broken": broken,
-        "cooldown": cooldown_seconds(
-            user["efficiency_points"], enchants.bonus("efficiency", enchants.level_of(pickaxe, "efficiency"))
-        ),
+        "cooldown": cooldown,
     }

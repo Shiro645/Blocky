@@ -69,22 +69,36 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - Branches (each has a cap): **Miner** (better blocks), **Trader** (sell bonus), **Lucky** (bedrock chance), **Efficiency** (shorter cooldown).
 - Level-ups are announced, and configurable **level roles** are given automatically.
 
+### 🧬 Species
+
+- `/species choose <species>` — Pick a species for a small bonus. The first choice is free; changing costs 1,000 emeralds (you confirm first) and is possible once every 7 days.
+  - 🧑‍🌾 **Villager** — 5% better prices: `/sell` gives 5% more, the market and the wandering villager's goods cost 5% less, and he pays 5% more for blocks.
+  - 🪓 **Dwarf** — +5% damage in duels, tournaments and against bosses.
+  - 🧪 **Witch** — +10% potion effects in duels.
+  - 🔮 **Mage** — +10% enchantment effects (Efficiency, Fortune, Unbreaking, Sharpness, Looting, Protection). A Fortune that isn't a whole number gives the rest as a chance of one more.
+  - ⚒️ **Miner** — 5% shorter mining cooldown (even below the minimum cooldown).
+- `/species list` — Every species, its bonus, how many players chose it, yours and when you can change (private).
+- Your species is shown in `/profile` and as an emoji before your name in `/leaderboard`, `/season` and `/team info`.
+- **Species roles** — `roles.species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner` (`/config` → Roles): the bot gives each player the role of their species and takes the others back. Checked at every start and when a member rejoins; changing a role in `/config` moves it.
+- All values in `/config` → 🧬 Species (`balance.species`). `/reset` doesn't change species.
+
 ### 🤝 Trading
 
 - `/pay <member> <amount>` — Send emeralds
+- **Loans** — `/loan offer <member> <amount> <interest> <days>` lends emeralds (you pick the interest, 0–20%, and 1–7 days to repay); `/loan ask` asks a player for one. The other player accepts or declines with the buttons (they still work after a restart, the offer lasts 15 min), everything is checked again when they accept and the emeralds move at once. One unpaid loan per borrower, up to 5 unpaid loans per lender. `/loan repay [amount]` pays back (everything by default, or part of it), `/loan list` shows what you owe and what you're owed (private), `/loan forgive <member>` cancels a debt. **Late** (not repaid at the deadline): +10% of what's left, the bot takes what it can from the borrower's emeralds at once, then 50% of every emerald they receive (mining, sales, payments…) goes to the lender until it's paid; until then they can't `/pay`, `/trade`, list at the auction or take/give loans. Both get a DM when it's late and when it's paid. Loans, repayments and interest don't count for the seasons. All tuned with `balance.loans` (`/config` → Loans).
 - `/trade <member> <give> [give_amount] [get] [get_amount]` — Trade or gift emeralds, blocks, sticks, ingots or gear. The other player accepts with a button.
 - `/auction sell | browse | buy | cancel | mine` — Player auction house: 5% tax, 10 listings per player, unsold items come back after 7 days.
 - **Market channel** (`channels.market`, set in `/config`): the bot keeps one message there with every listing, always up to date (pages ◀ ▶ and a menu to buy, with a confirmation). It's updated on every sale, purchase, cancellation and expiry, and posted again if someone deletes it. Best as a channel where members can't write.
 
 ### 🏆 Competition
 
-- `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, blocks mined, bedrock, crafts, duels won, boss damage, achievements.
-- `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
+- `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, top senders (emeralds sent with `/pay` plus emeralds lent with `/loan`; repayments don't count), blocks mined, bedrock, crafts, duels won, boss damage, achievements.
+- `/profile [member]` — Public profile: level, fortune and rank, team, species, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the value you *created* during the week (Monday to Sunday): the value of the blocks you mine (counted when mined, not when sold), daily rewards, drops, bosses, challenges, the server share of the tournament pot, and the trader/villager bonus when you sell. Spending doesn't lower it; emeralds or blocks received from other players, duel pots and auction sales don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. If the bot restarts during a duel, both stakes are refunded.
   - **Luck matters**: each hit deals a random amount between **1** and your sword's **maximum** (no sword 6 · gold 8 · iron 10 · diamond 12 · netherite 14, +1/+2/+3 with Sharpness). 10% of hits are **dodged**, 15% are **critical** (x2). Armor reduces the damage taken by 1.2% per point, 35% at most. The player who plays second starts with **+2 HP**.
   - Better gear wins more often, not always: one tier ahead (e.g. iron vs gold) wins about 70% of the time, netherite vs iron about 80%.
-- **Potions** (`/potions`) — Duels only (not the tournament, not bosses): one potion per turn, up to 3 per duel (at most one reinforced II potion), the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
+- **Potions** (`/potions`) — Duels and the PVE dungeon (not the tournament, not bosses). In a duel: one potion per turn, up to 3 per duel (at most one reinforced II potion), the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
 
   | Potion | Effect |
   |---|---|
@@ -121,6 +135,17 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
 - `/roulette <bet> <amount> [number]` — A solo spin: red/black, even/odd, 1-18/19-36 (×2), a dozen (×3) or a number (×36). The green slots (0 and 00 by default) make the bank keep about 5% of the bets on average. Minimum/maximum bet and a few seconds between two spins. Winnings don't count for the seasons.
 - `/blockdle guess <block>` — Guess the Minecraft block of the day, the same for everyone (like Wordle / MCdle). After each guess you see how your block compares with the block of the day on 6 properties: tool, hardness, blast resistance, transparent, craftable and version added (🟩 same, 🟥 different, 🔼/🔽 higher or lower). Unlimited private guesses; the fewer you need, the bigger the reward, and the channel is told when you find it. `/blockdle today` shows your guesses, `/blockdle top` today's best (and yesterday's block). 190 blocks, with their real values from Minecraft 1.21.1.
 - **Minecraft quiz** — Every hour or so a question appears in a game channel with 4 answers; the first player to click the right one wins emeralds and XP (one try each). Staff can ask one now with `/event quiz`.
+- **PVE dungeon** — `/pve start <difficulty>` opens a run of **5 waves**: 🧟 zombies, then 💀 skeletons (they shoot before you attack), both, 🕷️ spiders (two bites a turn) with a 🟩 creeper (it explodes on its 2nd turn unless you kill it first) and a skeleton, then a mix with a 🐂 Ravager. Alone or in a group of up to 4: others join with the button (each pays the entry, refunded if they leave before the start or if the group isn't started within 5 min) and the leader starts. Each wave plays out on its own with your gear and species (as in duels); the message shows the fight, everyone's health and loot. **Health isn't restored between waves.** Between two waves (buttons that still work after a restart): the leader starts the next wave, anyone can drink a potion (up to 3 per run: Healing heals now, Strength/Speed help during the next wave, Harming hits every monster at its start) or **leave with their loot**. Each wave cleared adds to your loot (+15 XP), but **if you die you lose it** and the entry. Clearing wave 5 pays the loot +50%. No decision within 5 min = everyone left leaves with their loot. A group faces as many monsters per player; if the leader leaves or dies, the next player leads. Gear wears out like in duels. One run per hour. `/pve info` shows the difficulties, the waves and when you can play again.
+
+  | Difficulty | Entry | Monsters | Loot (all 5 waves) | Calibrated for (solo, no potions, ~chance to clear all 5) |
+  |---|---|---|---|---|
+  | 🟢 Easy | 30 | ×0.85 | 105 | iron gear ~98% · no gear ~20% |
+  | 🟡 Normal | 75 | ×1 | 262 | diamond ~90% · iron ~60% |
+  | 🟠 Hard | 200 | ×1.13 | 630 | netherite ~80% · diamond ~50% |
+  | 🔴 Hardcore | 500 | ×1.26 | 1,470 | enchanted netherite ~80% · netherite ~40% |
+  | 💀 Nightmare | 1,200 | ×1.42 | 3,360 | enchanted netherite ~35% (potions help) |
+
+  Monsters get +10% health and damage every wave. Everything is tuned with `balance.pve` (`/config` → PVE dungeon).
 - `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, and stolen emeralds don't count for the seasons. All tuned with `balance.rob` (`/config` → Robberies).
 - Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_zeros` (1 = 0 only, 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `quiz_every_minutes` (0 = only `/event quiz`), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Mini-games.
 
@@ -130,10 +155,11 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
 - `/team invite <member>` — The leader invites a player, who answers with the buttons (they still work after a restart) or later with `/team join <tag>`. Invitations last 48h.
 - `/team leave` — Leave the team. When the leader leaves, the oldest member becomes leader; the last one to leave disbands the team.
 - Leader: `/team kick`, `/team transfer`, `/team rename [name] [tag]`, `/team disband`.
+- **Team leader role** — If `roles.team_leader` is set (`/config` → Roles), the bot gives that role to every team leader and takes it back when they no longer lead a team (transfer, leaving, disbanding, team deleted by staff). It is checked again at every start and when a member rejoins the server; changing the role in `/config` moves it.
 - `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
 - **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
 - **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
-- **Weekly team season** (`/team top`) — A team's score is the season score (see above) its members made while in the team (Monday to Sunday). Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
+- **Weekly team season** (`/team top`) — A team's score comes from the season score (see above) its members made while in the team (Monday to Sunday), and grows like a logarithm of the number of members: the best earner counts in full, the next ones ×0.69, ×0.41, ×0.29, ×0.22… So 5 members earning the same score ×2.6 instead of ×5 (2 → ×1.7, 3 → ×2.1), and one more member earning anything never lowers the score. `/team top` shows the score in points next to the emeralds earned. Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
 
 ### 🔐 Staff commands
 
@@ -149,12 +175,12 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
   - `/clear <amount> [member]` (pinned messages are kept), `/lock` / `/unlock` (staff can still write), `/slowmode <seconds>`.
   - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
 - Economy: `/give <member> <item> [amount] [reason]` gives anything (emeralds, blocks, sticks, ingots, lapis, books, potions, gear; type e.g. `gear:diamond:sword:sharpness3` for an enchanted piece). `/take <member> <item> [amount] [reason]` removes anything the member owns (the suggestions are what they have), after a confirmation button, and never more than they have. The member gets a DM with the reason. Staff gifts don't count for the seasons.
-- Fresh start: `/reset [member]` resets, for one player or the whole server, what you pick: emeralds/blocks/items (and auction listings), gear, levels/XP/talents (level roles removed), stats/achievements/seasons. You confirm by typing `RESET`, and a backup of the database is made just before. Minecraft links, moderation, teams and settings are kept.
-- Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
+- Fresh start: `/reset [member]` resets, for one player or the whole server, what you pick: emeralds/blocks/items (and auction listings, loans: the debts are cancelled), gear, levels/XP/talents (level roles removed), stats/achievements/seasons. You confirm by typing `RESET`, and a backup of the database is made just before. Minecraft links, moderation, teams and settings are kept.
+- Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points), `/player species` (set or remove a member's species, free and without waiting) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
 - Events: `/event boss [name] [hp]`, `/event drop`, `/event quiz` (a quiz question in this channel now), `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
 - Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
-- Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament and villager. Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies, loans, species and the PVE dungeon (the category menu is paged when there are more than 25). Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -182,7 +208,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 
 | Key | Description |
 |---|---|
-| `guild_id` | ID of your Discord server (slash commands are synced instantly to it) |
+| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice) |
 | `staff.role_id` | ID of the staff role allowed to use staff commands |
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
@@ -193,6 +219,8 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
+| `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
+| `roles.species_villager` … `species_miner` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`) |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
@@ -269,7 +297,13 @@ The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sel
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
-Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
+The PVE dungeon is tuned with `balance.pve`: `hp` (players' health, not restored between waves), `max_players`, `cooldown_minutes`, `lobby_minutes`, `decision_minutes`, `max_potions`, `wave_growth` (e.g. `0.1` = monsters +10% each wave), `clear_bonus` (e.g. `0.5`), `xp_per_wave`, `wave_rewards` (5 values, multiplied by the difficulty's reward) and `difficulties` (`easy`, `normal`, `hard`, `hardcore`, `nightmare`, each with `entry`, `strength` = monsters' health and damage, Normal = 1, and `reward`).
+
+Species are tuned with `balance.species`: `change_cost`, `change_days`, and the bonus of each one: `villager_trade` (e.g. `0.05`), `dwarf_damage`, `witch_potions`, `mage_enchants`, `miner_speed`.
+
+Loans are tuned with `balance.loans`: `min_amount`, `max_amount`, `max_interest` (e.g. `0.2` = 20%), `min_days`, `max_days`, `max_loans_out` (unpaid loans per lender), `offer_minutes`, `late_penalty` (e.g. `0.1`) and `garnish` (share of a late borrower's income that goes to the lender, e.g. `0.5`).
+
+Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus`, `season_rewards` (e.g. `[600, 300, 150]`) and `log_score` (`true`: the logarithmic team score above; `false`: the sum of what the members earned).
 
 > ⚠️ `.env`, `config.json`, the database files (`*.db`, `*.db-wal`, `*.db-shm`) and the `backups/` folder (it holds copies of `config.json`, with the RCON password) contain secrets or user data. They are ignored by git and Docker — never commit them.
 
@@ -380,6 +414,9 @@ game/                        # game rules, no Discord code
 ├── shop.py                  # market and crafting
 ├── gear.py                  # equipment, durability, combat stats
 ├── daily.py · exchange.py · assets.py   # daily, pay/trade/auction
+├── loans.py                 # loans between players, late penalty and collection
+├── species.py               # species and their bonus
+├── pve.py                   # the PVE dungeon: monsters, waves, fights and runs
 ├── leaderboard.py · seasons.py · duel.py
 ├── teams.py                 # teams, team bonus and weekly team season
 ├── tournament.py            # weekend tournament

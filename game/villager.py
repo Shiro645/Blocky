@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, time, timedelta
 
-from game import assets, enchants, players, potions, settings
+from game import assets, enchants, players, potions, settings, species
 from game.db import Ctx
 from game.errors import GameError
 
@@ -145,20 +145,24 @@ def take(ctx: Ctx, user_id: int, visit_id: int, slot: int) -> dict:
         raise GameError("This offer doesn't exist.")
     if offer["taken_by"] is not None:
         raise GameError(f"Too late! <@{offer['taken_by']}> got it first.")
+    # Villagers (the species) get better prices from him.
+    trade = species.bonus(ctx, user_id, "villager")
     if offer["kind"] == "buy":
+        price = round(offer["price"] * (1 + trade))
         assets.take(ctx, user_id, offer["asset"], offer["amount"])
         # Like /sell: the blocks' value was scored when mined, only his bonus is new.
         players.give_emeralds(ctx, user_id, offer["value"])
-        players.earn_emeralds(ctx, user_id, offer["price"] - offer["value"])
+        players.earn_emeralds(ctx, user_id, price - offer["value"])
     else:
-        players.spend_emeralds(ctx, user_id, offer["price"])
+        price = max(1, round(offer["price"] * (1 - trade)))
+        players.spend_emeralds(ctx, user_id, price)
         assets.give(ctx, user_id, offer["asset"], offer["amount"])
     ctx.execute(
         "UPDATE villager_offers SET taken_by=?, taken_at=? WHERE visit_id=? AND slot=?;",
         (user_id, int(ctx.now), visit_id, slot),
     )
     players.bump_stat(ctx, user_id, "villager_trades")
-    return {"offer": {**offer, "taken_by": user_id}, "visit": get_visit(ctx, visit_id)}
+    return {"offer": {**offer, "taken_by": user_id}, "price": price, "visit": get_visit(ctx, visit_id)}
 
 
 def leave_now(ctx: Ctx) -> dict:

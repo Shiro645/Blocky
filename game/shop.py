@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from game import enchants, gear, players, potions, settings
+from game import enchants, gear, players, potions, settings, species
 from game.catalog import MATERIALS, RECIPES
 from game.db import Ctx
 from game.errors import GameError
@@ -39,7 +39,8 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
     if units <= 0:
         raise GameError("Quantity must be greater than 0.")
     offer = offers[key]
-    total_price = units * offer["price"]
+    full_price = units * offer["price"]
+    total_price = max(1, round(full_price * (1 - species.bonus(ctx, user_id, "villager"))))
     players.spend_emeralds(ctx, user_id, total_price)
     amount = units * offer["unit_size"]
     players.add_item(ctx, user_id, offer["item"], offer["material"], amount)
@@ -47,6 +48,7 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
         "offer": offer,
         "amount": amount,
         "price": total_price,
+        "saved": full_price - total_price,
         "balance": players.get_emeralds(ctx, user_id),
     }
 

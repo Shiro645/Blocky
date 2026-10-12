@@ -279,7 +279,7 @@ class DuelCog(commands.Cog):
         view.message = await interaction.original_response()
 
     # ---------- potions ----------
-    @app_commands.command(name="potions", description="Your potions and what they do in duels.")
+    @app_commands.command(name="potions", description="Your potions and what they do in duels and the dungeon.")
     async def potions_cmd(self, interaction: discord.Interaction):
         owned = await self.bot.db.run(potions.owned, interaction.user.id)
         keys = list(potions.POTIONS) + sorted(k for k in owned if k not in potions.POTIONS)

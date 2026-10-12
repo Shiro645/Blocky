@@ -51,6 +51,9 @@ CATEGORIES = {
     "villager": "🧑‍🌾 Villager",
     "games": "🎲 Mini-games",
     "rob": "🦹 Robberies",
+    "loans": "💳 Loans",
+    "species": "🧬 Species",
+    "pve": "⚔️ PVE dungeon",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -163,6 +166,12 @@ FIELDS: list[Field] = [
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
           help="Given to the winner of the last weekend tournament.", item="assign"),
+    Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
+          help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
+    *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
+            help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
+      for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
+                        ("miner", "Miner"))],
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -329,6 +338,9 @@ FIELDS: list[Field] = [
     _pct("teams.max_xp_bonus", "teams", "Max team XP bonus", max=10),
     _b("teams.season_rewards", "teams", "Team season rewards", "Emeralds for the #1, #2, #3… teams, shared by "
        "what each member brought.", "list", None, item="int", max_items=10),
+    _b("teams.log_score", "teams", "Logarithmic team score", "On: the best earner counts in full, the others less "
+       "and less, so 5 members earning the same score ×2.6 instead of ×5 (big teams don't win just by being big). "
+       "Off: the sum of what the members earned.", kind="bool", min=None),
     # ---- tournament ----
     _b("tournament.entry_fee", "tournament", "Entry fee"),
     _b("tournament.house_bonus", "tournament", "Server bonus added to the pot"),
@@ -381,6 +393,49 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    # ---- PVE dungeon ----
+    _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
+    _b("pve.max_players", "pve", "Players per group", min=1, max=10),
+    _b("pve.cooldown_minutes", "pve", "Minutes between two runs", "From the start of a run.", max=10_080),
+    _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
+    _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
+       "Then everyone still in leaves with their loot.", min=1, max=60),
+    _b("pve.max_potions", "pve", "Potions per player and run", "One reinforced (II) at most.", max=20),
+    _pct("pve.wave_growth", "pve", "Monsters stronger each wave", "Health and damage.", max=2),
+    _pct("pve.clear_bonus", "pve", "Bonus for clearing wave 5", "Added to the loot.", max=10),
+    _b("pve.xp_per_wave", "pve", "XP per wave cleared", max=10_000),
+    *[_b(f"pve.wave_rewards.{i}", "pve", f"Wave {i + 1} reward (× difficulty)",
+         "Emeralds for clearing this wave, multiplied by the difficulty's reward. Lost on death.")
+      for i in range(5)],
+    *[f for key, name in (("easy", "Easy"), ("normal", "Normal"), ("hard", "Hard"), ("hardcore", "Hardcore"),
+                          ("nightmare", "Nightmare"))
+      for f in (
+          _b(f"pve.difficulties.{key}.entry", "pve", f"{name}: entry fee"),
+          _b(f"pve.difficulties.{key}.strength", "pve", f"{name}: monster strength",
+             "Multiplies the monsters' health and damage (Normal = 1).", kind="float", min=0.1, max=100),
+          _b(f"pve.difficulties.{key}.reward", "pve", f"{name}: reward multiplier",
+             "Multiplies the wave rewards.", kind="float", min=0, max=1000),
+      )],
+    # ---- species ----
+    _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),
+    _b("species.change_days", "species", "Days between two changes", kind="float", max=365),
+    _pct("species.villager_trade", "species", "Villager: better prices",
+         "/sell gives more, the market and the wandering villager's goods cost less, he pays more for blocks."),
+    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Duels, tournaments and bosses."),
+    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels."),
+    _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
+    _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
+    # ---- loans ----
+    _b("loans.min_amount", "loans", "Smallest loan", min=1),
+    _b("loans.max_amount", "loans", "Biggest loan", min=1),
+    _pct("loans.max_interest", "loans", "Highest interest", "The lender picks the interest, from 0 up to this."),
+    _b("loans.min_days", "loans", "Shortest loan (days)", min=1, max=365),
+    _b("loans.max_days", "loans", "Longest loan (days)", min=1, max=365),
+    _b("loans.max_loans_out", "loans", "Unpaid loans a lender can have", min=1, max=100),
+    _b("loans.offer_minutes", "loans", "Minutes to accept an offer", min=1, max=1440),
+    _pct("loans.late_penalty", "loans", "Late penalty", "Added to what's left at the deadline."),
+    _pct("loans.garnish", "loans", "Taken from a late borrower's income",
+         "Share of every emerald a late borrower receives that goes to the lender until it's paid."),
 ]
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 

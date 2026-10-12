@@ -1,4 +1,4 @@
-"""Potions: used in duels only, one per turn, the effect is for that turn.
+"""Potions: used in duels (one per turn, the effect is for that turn) and in the dungeon (game/pve.py).
 
 Potions are stackable items (items table): ("potion", "<kind>") for level I
 and ("potion", "<kind>:2") for the reinforced level II, sold only by the

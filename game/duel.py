@@ -15,7 +15,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from game import gear, players, potions, settings
+from game import gear, players, potions, settings, species
 from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
@@ -34,6 +34,7 @@ class Fighter:
     strong_potion_used: bool = False  # level II potions: one per duel
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
+    potion_boost: float = 0.0  # Witches: potion effects +X%
     gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
@@ -140,21 +141,22 @@ class Fight:
         attacker, defender = self.current, self.other
         turn = Turn(attacker.user_id, defender.user_id, potion)
         kind, level = potions.parse(potion)
+        boost = 1.0 + attacker.potion_boost
         attacker.potions_used += 1
         attacker.strong_potion_used = attacker.strong_potion_used or level >= 2
         if kind == "healing":
-            turn.healed = min(potions.effect(potion, "healing_hp"), attacker.max_hp - attacker.hp)
+            turn.healed = min(potions.effect(potion, "healing_hp") * boost, attacker.max_hp - attacker.hp)
             attacker.hp += turn.healed
         elif kind == "harming":
             # Armor softens it too (it used to ignore armor and decided duels on its own).
-            damage = potions.effect(potion, "harming_damage") * (1 - defender.reduction)
+            damage = potions.effect(potion, "harming_damage") * boost * (1 - defender.reduction)
             turn.direct = round(min(damage, defender.hp), 1)
             defender.hp = max(0.0, defender.hp - damage)
         elif kind == "speed":
             attacker.speed_turns = int(p["speed_turns"])
-            attacker.speed_chance = min(1.0, potions.effect(potion, "speed_chance"))
+            attacker.speed_chance = min(1.0, potions.effect(potion, "speed_chance") * boost)
         elif kind == "strength":
-            self._min_bonus = potions.effect(potion, "strength_min_bonus")
+            self._min_bonus = potions.effect(potion, "strength_min_bonus") * boost
         turn.attacker_hp, turn.defender_hp = round(attacker.hp, 1), round(defender.hp, 1)
         self.pending = turn
         return turn
@@ -212,9 +214,11 @@ def simulate(rng: random.Random, a: Fighter, b: Fighter) -> FightResult:
 def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
     equipped = gear.get_equipped(ctx, user_id)
     hp = float(settings.get()["duel"]["hp"])
+    strength = 1.0 + species.bonus(ctx, user_id, "dwarf")  # Dwarves hit harder
     fighter = Fighter(
-        user_id, gear.attack_damage(equipped), gear.damage_reduction(equipped), hp,
-        min_attack=float(settings.get()["duel"]["min_damage"]),
+        user_id, float(gear.attack_damage(equipped)) * strength, gear.damage_reduction(equipped), hp,
+        min_attack=float(settings.get()["duel"]["min_damage"]) * strength,
+        potion_boost=species.bonus(ctx, user_id, "witch"),
     )
     fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
     return fighter, equipped

@@ -42,3 +42,12 @@ class ChallengeCompleted:
     user_id: int
     text: str
     reward: int
+
+
+@dataclass(frozen=True)
+class LoanRepaid:
+    loan_id: int
+    lender_id: int
+    borrower_id: int
+    total: int
+    auto: bool  # collected by the bot from a late borrower (not with /loan repay)

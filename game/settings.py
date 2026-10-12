@@ -155,6 +155,9 @@ DEFAULTS: dict[str, Any] = {
         "max_xp_bonus": 0.20,
         # Weekly team season: top teams' rewards, shared by contribution.
         "season_rewards": [600, 300, 150],
+        # Team score = the best earner in full, then less and less for the others
+        # (n members earning the same: ×(1 + ln n), so 5 members ≈ ×2.6, not ×5). False = the sum.
+        "log_score": True,
     },
     "enchants": {
         # Lapis lazuli: found while mining, spent to apply books.
@@ -227,6 +230,56 @@ DEFAULTS: dict[str, Any] = {
         "cooldown_hours": 6,  # between two robberies of a thief
         "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
         "min_victim_level": 5,  # players below this level can't be robbed
+    },
+    # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
+    # every wave cleared adds up but is lost on death. Monsters' health and damage: x strength of the
+    # difficulty, +wave_growth every wave. Wave rewards (emeralds, waves 1 to 5) are multiplied by the
+    # difficulty's reward; clearing wave 5 adds clear_bonus.
+    "pve": {
+        "hp": 20,
+        "max_players": 4,
+        "cooldown_minutes": 60,
+        "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
+        "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
+        "max_potions": 3,  # per player and per run (one reinforced II at most)
+        "wave_growth": 0.10,
+        "clear_bonus": 0.5,
+        "xp_per_wave": 15,
+        "wave_rewards": [5, 8, 12, 18, 27],
+        # Calibrated (solo, no potions, all 5 waves): Easy ~98% with iron gear; Normal ~90% diamond;
+        # Hard ~80% netherite; Hardcore ~80% enchanted netherite; Nightmare ~35% enchanted netherite.
+        "difficulties": {
+            "easy": {"entry": 30, "strength": 0.85, "reward": 1.0},
+            "normal": {"entry": 75, "strength": 1.0, "reward": 2.5},
+            "hard": {"entry": 200, "strength": 1.13, "reward": 6.0},
+            "hardcore": {"entry": 500, "strength": 1.26, "reward": 14.0},
+            "nightmare": {"entry": 1200, "strength": 1.42, "reward": 32.0},
+        },
+    },
+    # Species (/species): a small bonus each. The first choice is free, then changing costs
+    # change_cost emeralds, once every change_days days.
+    "species": {
+        "change_cost": 1000,
+        "change_days": 7,
+        "villager_trade": 0.05,  # /sell +5%, market and villager goods -5%, villager pays +5% for blocks
+        "dwarf_damage": 0.05,  # damage in duels, tournaments and against bosses
+        "witch_potions": 0.10,  # potion effects in duels
+        "mage_enchants": 0.10,  # enchantment effects
+        "miner_speed": 0.05,  # mining cooldown
+    },
+    # Loans between players (/loan). The lender picks the interest and the duration within these limits.
+    "loans": {
+        "min_amount": 50,
+        "max_amount": 5000,
+        "max_interest": 0.20,  # highest interest a lender can ask
+        "min_days": 1,
+        "max_days": 7,
+        "max_loans_out": 5,  # unpaid loans a lender can have at once
+        "offer_minutes": 15,  # time to accept an offer
+        # Late: this % of what's left is added, the bot takes what it can from the borrower's
+        # emeralds, then this share of every emerald they receive until it's paid.
+        "late_penalty": 0.10,
+        "garnish": 0.50,
     },
     # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
     "games": {
@@ -463,6 +516,13 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
             out.append((f"`balance.rob.{mode}_min` must not be above `{mode}_max`.", [("rob", f"{mode}_min"), ("rob", f"{mode}_max")]))
     if r["minutes_to_stop"] < 1:
         out.append(("`balance.rob.minutes_to_stop` must be at least 1.", [("rob", "minutes_to_stop")]))
+    lo = merged["loans"]
+    if lo["min_amount"] < 1 or lo["min_amount"] > lo["max_amount"]:
+        out.append(("Loans: the minimum amount must be at least 1 and not above the maximum.",
+                    [("loans", "min_amount"), ("loans", "max_amount")]))
+    if lo["min_days"] < 1 or lo["min_days"] > lo["max_days"]:
+        out.append(("Loans: the shortest duration must be at least 1 day and not above the longest.",
+                    [("loans", "min_days"), ("loans", "max_days")]))
     g = merged["games"]
     if g["roulette_zeros"] not in (1, 2):
         out.append(("`balance.games.roulette_zeros` is 1 (0 only) or 2 (0 and 00).", [("games", "roulette_zeros")]))

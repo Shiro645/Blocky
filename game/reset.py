@@ -9,7 +9,7 @@ from __future__ import annotations
 from game.db import Ctx
 
 PARTS: dict[str, str] = {
-    "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress
+    "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans
     "gear": "Gear and enchantments",
     "levels": "Levels, XP and talents",
     "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak
@@ -38,10 +38,20 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
         out["listings"] = ctx.execute(f"DELETE FROM auctions{seller};", seller_args).rowcount
         if user_id is None:
             ctx.execute("UPDATE robberies SET status='stopped' WHERE status='active';")
+            out["loans"] = ctx.execute("DELETE FROM loans WHERE status IN ('active', 'late');").rowcount
+            ctx.execute("DELETE FROM loan_offers WHERE status='open';")
         else:
             ctx.execute(
                 "UPDATE robberies SET status='stopped' WHERE status='active' AND (thief_id=? OR victim_id=?);",
                 (user_id, user_id),
+            )
+            # Their debts and the loans they gave are cancelled (emeralds are gone, nothing to pay back with).
+            out["loans"] = ctx.execute(
+                "DELETE FROM loans WHERE status IN ('active', 'late') AND (lender_id=? OR borrower_id=?);",
+                (user_id, user_id),
+            ).rowcount
+            ctx.execute(
+                "DELETE FROM loan_offers WHERE status='open' AND (lender_id=? OR borrower_id=?);", (user_id, user_id)
             )
 
     if "gear" in parts:

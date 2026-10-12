@@ -2,17 +2,19 @@
 
 - Anyone can create a team and becomes its leader. The leader invites players
   (invitations expire), kicks members, hands over the lead, renames or disbands.
-- Team season: a team's score is the emeralds its members earned while in the
-  team this week. The rewards of the top teams are shared between the players
-  who earned them, in proportion to what each one brought (so joining the
-  leading team on Sunday is worth little).
+- Team season: a team's score comes from the emeralds its members earned while
+  in the team this week, growing like a logarithm of the number of members (see
+  team_score), so a big team doesn't win just by being big. The rewards of the
+  top teams are shared between the players who earned them, in proportion to
+  what each one brought (so joining the leading team on Sunday is worth little).
 - Team bonus: mining XP +X% for each other member who already mined today.
 """
 from __future__ import annotations
 
+import math
 import re
 
-from game import players, seasons, settings
+from game import players, seasons, settings, species
 from game.db import Ctx
 from game.errors import GameError
 
@@ -106,6 +108,10 @@ def members(ctx: Ctx, team_id: int) -> list[dict]:
         (team_id,),
     )
     return [dict(r) for r in rows]
+
+
+def leader_ids(ctx: Ctx) -> set[int]:
+    return {r["leader_id"] for r in ctx.all("SELECT leader_id FROM teams;")}
 
 
 def member_count(ctx: Ctx, team_id: int) -> int:
@@ -345,22 +351,45 @@ def add_score(ctx: Ctx, user_id: int, amount: int) -> None:
     )
 
 
+def team_score(earned: list[int]) -> int:
+    """A team's season score from what each member earned for it.
+
+    With `log_score` the best earner counts in full and the next ones less and
+    less (×0.69, ×0.41, ×0.29, ×0.22…): n members earning the same score
+    (1 + ln n) times one of them (2 → ×1.7, 3 → ×2.1, 5 → ×2.6) instead of n
+    times. Earning more, or one more member earning anything, never lowers the
+    score. Without it, the score is the sum.
+    """
+    ranked = sorted((e for e in earned if e > 0), reverse=True)
+    if not _cfg()["log_score"]:
+        return sum(ranked)
+    return round(sum(e * (1.0 if i == 1 else math.log(i / (i - 1))) for i, e in enumerate(ranked, start=1)))
+
+
 def standings(ctx: Ctx, season_id: str) -> list[dict]:
     """Teams ranked for a season: at least `min_members_ranked` members scored for them."""
     rows = ctx.all(
         """
-        SELECT s.team_id, COALESCE(t.name, a.name) AS name, COALESCE(t.tag, a.tag) AS tag, SUM(s.score) AS score
+        SELECT s.team_id, COALESCE(t.name, a.name) AS name, COALESCE(t.tag, a.tag) AS tag, s.score
         FROM team_season_scores s
         LEFT JOIN teams t USING(team_id)
         LEFT JOIN team_archive a USING(team_id)
-        WHERE s.season_id=? AND COALESCE(t.name, a.name) IS NOT NULL
-        GROUP BY s.team_id
-        HAVING SUM(s.score) > 0 AND COUNT(DISTINCT CASE WHEN s.score > 0 THEN s.user_id END) >= ?
-        ORDER BY score DESC, s.team_id;
+        WHERE s.season_id=? AND s.score > 0 AND COALESCE(t.name, a.name) IS NOT NULL;
         """,
-        (season_id, int(_cfg()["min_members_ranked"])),
+        (season_id,),
     )
-    return [dict(r) for r in rows]
+    found: dict[int, dict] = {}
+    for r in rows:
+        team = found.setdefault(r["team_id"], {"team_id": r["team_id"], "name": r["name"], "tag": r["tag"], "shares": []})
+        team["shares"].append(r["score"])
+    need = int(_cfg()["min_members_ranked"])
+    out = [
+        {"team_id": t["team_id"], "name": t["name"], "tag": t["tag"], "score": team_score(t["shares"]),
+         "earned": sum(t["shares"]), "members": len(t["shares"])}
+        for t in found.values() if len(t["shares"]) >= need
+    ]
+    out.sort(key=lambda t: (-t["score"], t["team_id"]))
+    return out
 
 
 def contributions(ctx: Ctx, season_id: str, team_id: int) -> list[tuple[int, int]]:
@@ -425,7 +454,7 @@ def close_finished(ctx: Ctx) -> list[dict]:
             )
             podium.append({
                 "rank": rank, "team_id": team["team_id"], "name": team["name"], "tag": team["tag"],
-                "score": team["score"], "reward": reward,
+                "score": team["score"], "earned": team["earned"], "reward": reward,
                 "payout": sorted(payout.items(), key=lambda p: (-p[1], p[0])),
             })
         ctx.execute(
@@ -460,6 +489,7 @@ def overview(ctx: Ctx, team_id: int) -> dict:
     return {
         "team": team,
         "members": rows,
+        "species": species.emojis(ctx, [m["user_id"] for m in rows]),
         "max_members": max_members(),
         "rank": rank,
         "teams_ranked": len(table),

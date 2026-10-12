@@ -8,7 +8,7 @@ import discord
 
 from game import notices as n
 from utils.config import channel_id, load_config
-from utils.ui import gear_icon
+from utils.ui import dm, em, gear_icon
 
 log = logging.getLogger("announcer")
 
@@ -80,6 +80,19 @@ class Announcer:
     async def on_GearBroken(self, notice: n.GearBroken) -> None:
         icon = gear_icon(notice.item, notice.material)
         await self.send(f"🔨 <@{notice.user_id}>'s {icon} **{notice.material} {notice.item}** broke! Time to craft a new one.")
+
+    async def on_LoanRepaid(self, notice: n.LoanRepaid) -> None:
+        """Private messages: the lender got everything back; a late borrower is free again."""
+        guild = getattr(self.bot, "main_guild", None)
+        where = f" on **{guild.name}**" if guild else ""
+        lender, borrower = self.bot.get_user(notice.lender_id), self.bot.get_user(notice.borrower_id)
+        if lender is not None:
+            name = borrower.display_name if borrower else "A player"
+            await dm(lender, f"✅ {name} repaid their loan{where}: you got {em(notice.total)} back in total.")
+        if notice.auto and borrower is not None:
+            name = lender.display_name if lender else "your lender"
+            await dm(borrower, f"✅ Your late loan to {name}{where} is fully paid (collected automatically). "
+                               "You can use /pay, /trade, the auction and loans again.")
 
     async def sync_level_role(self, user_id: int, level: int) -> None:
         """Give the highest level role reached and remove the other level roles."""

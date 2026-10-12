@@ -13,6 +13,8 @@ from typing import Any, Callable
 from game import blockdle, enchants, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
+from game.pve import DIFFICULTIES as DUNGEON
+from game.species import SPECIES
 from utils.mc_commands import DEFAULT_BLOCKED
 
 Settings = dict[str, Any]
@@ -354,6 +356,8 @@ def _teams(s: Settings) -> list[str]:
         f"(max **+{pct(t['max_xp_bonus'])}**)",
         f"Team season rewards (emeralds): {rewards or 'none'} · ranked with at least "
         f"**{num(t['min_members_ranked'])}** members who scored",
+        "Team score: " + ("**logarithmic** (5 members earning the same ≈ ×2.6)" if t["log_score"]
+                          else "the **sum** of what the members earned"),
     ]
 
 
@@ -402,6 +406,46 @@ def _quiz(s: Settings) -> list[str]:
         if g["quiz_every_minutes"] else "Questions only come when the staff asks one (/event quiz)"
     return [every, f"**{duration(g['quiz_seconds'])}** to answer · reward: {em(g['quiz_reward'])} and "
                    f"**{num(g['quiz_xp'])}** XP"]
+
+
+def _species(s: Settings) -> list[str]:
+    sp = s["species"]
+    lines = [f"{v.emoji} **{v.name}**: " + v.text.format(pct(sp[v.setting])) for v in SPECIES.values()]
+    lines.append(f"First choice free · changing costs {em(sp['change_cost'])}, once every "
+                 f"**{num(sp['change_days'])}** day(s)")
+    return lines
+
+
+def _loans(s: Settings) -> list[str]:
+    lo = s["loans"]
+    return [
+        f"From {em(lo['min_amount'])} to {em(lo['max_amount'])} · interest **0–{pct(lo['max_interest'])}** · "
+        f"**{num(lo['min_days'])}–{num(lo['max_days'])}** day(s) to repay",
+        f"One unpaid loan per borrower · up to **{num(lo['max_loans_out'])}** unpaid loans per lender · "
+        f"an offer lasts **{duration(float(lo['offer_minutes']) * 60)}**",
+        f"Late: **+{pct(lo['late_penalty'])}** of what's left, the bot takes what it can from the borrower's "
+        f"emeralds, then **{pct(lo['garnish'])}** of every emerald they receive goes to the lender until it's "
+        "paid (and no /pay, /trade, auction listing or loan until then)",
+        "Loans, repayments and interest don't count for the seasons",
+    ]
+
+
+def _pve(s: Settings) -> list[str]:
+    p = s["pve"]
+    lines = []
+    for key, (name, emoji) in DUNGEON.items():
+        d = p["difficulties"][key]
+        loot = sum(round(int(r) * float(d["reward"])) for r in p["wave_rewards"])
+        lines.append(f"{emoji} **{name}**: entry {em(d['entry'])} · monsters ×{num(d['strength'])} · "
+                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
+    lines += [
+        f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
+        f"Up to **{num(p['max_players'])}** players (as many monsters per player) · a run every "
+        f"**{duration(float(p['cooldown_minutes']) * 60)}**",
+        f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
+        f"**{duration(float(p['decision_minutes']) * 60)}** to decide between waves",
+    ]
+    return lines
 
 
 def _rob(s: Settings) -> list[str]:
@@ -597,13 +641,71 @@ PAGES: list[Page] = [
         examples=("/talent_buy branch:efficiency points:2",),
         related=("talents", "xp"),
     ),
+    Page(
+        "species choose", "xp",
+        "Picks your species, for a small bonus. Your first choice is free; changing later costs emeralds and "
+        "can only be done once in a while (you confirm first). Your species is shown in /profile and as an "
+        "emoji before your name in /leaderboard, /season and /team info, and the server can give a role per "
+        "species.",
+        _species,
+        examples=("/species choose species:🔮 Mage",),
+        related=("species list", "profile"),
+    ),
+    Page(
+        "species list", "xp",
+        "Shows every species, its bonus and how many players chose it, plus yours and when you can change. "
+        "Only you see it.",
+        _species,
+        examples=("/species list",),
+        related=("species choose",),
+    ),
     # ---- trading ----
     Page(
         "pay", "trading",
-        "Sends emeralds to another player, instantly. Payments don't count for the seasons.",
+        "Sends emeralds to another player, instantly. Payments don't count for the seasons, but they count in "
+        "the **Top senders** leaderboard. Not possible while you have a late loan.",
         lambda s: [f"Minimum: {em(s['pay']['min_amount'])}"],
         examples=("/pay member:@Steve amount:100",),
-        related=("trade",),
+        related=("trade", "loan offer"),
+    ),
+    Page(
+        "loan offer", "trading",
+        "Offers a loan to a player: the amount, the interest you ask (in %, 0 = free) and the days they have to "
+        "repay. They accept or decline with the buttons (they still work after a restart); everything is checked "
+        "again when they accept, and the emeralds move at once. What you lend counts in the **Top senders** "
+        "leaderboard.",
+        _loans,
+        examples=("/loan offer member:@Steve amount:1000 interest:10 days:3",),
+        related=("loan ask", "loan list", "loan forgive"),
+    ),
+    Page(
+        "loan ask", "trading",
+        "Asks a player for a loan, with the interest and the duration you propose. They accept or decline "
+        "with the buttons.",
+        _loans,
+        examples=("/loan ask member:@Alex amount:500 interest:5 days:2",),
+        related=("loan offer", "loan repay"),
+    ),
+    Page(
+        "loan repay", "trading",
+        "Pays back your loan: everything left by default, or part of it with `amount`. If the deadline passes, "
+        "a penalty is added and the bot collects the rest automatically.",
+        _loans,
+        examples=("/loan repay", "/loan repay amount:300"),
+        related=("loan list",),
+    ),
+    Page(
+        "loan list", "trading",
+        "Shows what you owe (and the deadline) and what the players you lent to still owe you. Only you see it.",
+        _loans,
+        examples=("/loan list",),
+        related=("loan repay", "loan forgive"),
+    ),
+    Page(
+        "loan forgive", "trading",
+        "**Lender only.** Cancels what a player still owes you (asks for confirmation).",
+        examples=("/loan forgive member:@Steve",),
+        related=("loan list",),
     ),
     Page(
         "trade", "trading",
@@ -657,7 +759,8 @@ PAGES: list[Page] = [
     Page(
         "leaderboard", "competition",
         "Shows a server ranking: emeralds, level, total fortune (everything you own, valued in emeralds), "
-        "this week's season, or a stat (blocks mined, bedrock found, duels won, boss damage, achievements…).",
+        "this week's season, top senders (emeralds sent with /pay and lent with /loan), or a stat (blocks mined, "
+        "bedrock found, duels won, boss damage, achievements…).",
         examples=("/leaderboard", "/leaderboard board:Level"),
         related=("profile", "season"),
     ),
@@ -691,12 +794,13 @@ PAGES: list[Page] = [
     ),
     Page(
         "potions", "competition",
-        "Shows your potions and what they do. Potions only work in duels (not in the tournament): on your "
-        "turn, drink one from the menu, then attack. The effect lasts for that turn (Speed lasts a few turns). "
-        "Potions come from drops, bosses and the villager.",
+        "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
+        "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
+        "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
+        "(Harming hits every monster at its start). Potions come from drops, bosses and the villager.",
         _potions,
         examples=("/potions",),
-        related=("duel", "villager"),
+        related=("duel", "pve start", "villager"),
     ),
     Page(
         "challenges", "competition",
@@ -807,6 +911,27 @@ PAGES: list[Page] = [
         related=("blockdle guess",),
     ),
     Page(
+        "pve start", "games",
+        "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
+        "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
+        "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
+        "gear (and species). Your health isn't restored between waves: between two waves, the leader starts the "
+        "next one, anyone can drink a potion (Healing heals now, the others help during the next wave) or **leave "
+        "with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
+        "Clearing wave 5 gives a bonus. Gear wears out like in duels.",
+        _pve,
+        examples=("/pve start difficulty:🟡 Normal",),
+        related=("pve info", "potions", "species choose"),
+    ),
+    Page(
+        "pve info", "games",
+        "Shows the difficulties (entry, monster strength, loot), the waves and when you can play again. "
+        "Only you see it.",
+        _pve,
+        examples=("/pve info",),
+        related=("pve start",),
+    ),
+    Page(
         "rob", "games",
         "Robs a player. **Risky**: they get pinged, but the loot is big. **Discreet**: nobody is pinged, but the loot "
         "is small. The robbery is posted in the channel with a **Stop the thief!** button that only the victim can "
@@ -827,8 +952,8 @@ PAGES: list[Page] = [
     # ---- teams ----
     Page(
         "team create", "teams",
-        "Creates a team and makes you its leader. The tag (2 to 4 letters or digits) is shown next to the "
-        "members' names. You can only be in one team.",
+        "Creates a team and makes you its leader (with the team leader role, if the server set one). The tag "
+        "(2 to 4 letters or digits) is shown next to the members' names. You can only be in one team.",
         _teams,
         examples=("/team create name:Diamond Diggers tag:DIG",),
         related=("team invite", "team info"),
@@ -861,7 +986,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "team transfer", "teams",
-        "**Leader only.** Makes another member the leader.",
+        "**Leader only.** Makes another member the leader. The team leader role (if the server set one) moves "
+        "to them.",
         examples=("/team transfer member:@Steve",),
         related=("team info",),
     ),
@@ -887,8 +1013,10 @@ PAGES: list[Page] = [
     Page(
         "team top", "teams",
         "This week's team season: teams ranked by the emeralds their members earned while in the team. "
-        "The rewards of the top teams are shared between their members in proportion to what each one brought, "
-        "so joining the leading team on Sunday is worth little.",
+        "The best earner counts in full and the others less and less (×0.69, ×0.41, ×0.29, ×0.22), so a big "
+        "team doesn't win just by being big: 5 members earning the same score ×2.6, not ×5, and one more member "
+        "earning anything never lowers the score. The rewards of the top teams are shared between their members "
+        "in proportion to what each one brought, so joining the leading team on Sunday is worth little.",
         _teams,
         examples=("/team top",),
         related=("team info", "season"),
@@ -1041,7 +1169,7 @@ PAGES: list[Page] = [
     Page(
         "reset", "staff_economy",
         "A fresh start, for one player (`member`) or for **everyone** (leave `member` empty). Pick what to reset: "
-        "emeralds, blocks and items (with auction listings and robberies in progress), gear and enchantments, "
+        "emeralds, blocks and items (with auction listings, robberies in progress and loans), gear and enchantments, "
         "levels, XP and talents (level roles are removed), stats, achievements and seasons (with challenges, "
         "team season scores and the daily streak). Then press **Reset…** and type `RESET`.\n"
         "A backup of the database is made just before (restore it to undo). Minecraft links, moderation, teams, "
@@ -1080,6 +1208,14 @@ PAGES: list[Page] = [
         "The member gets a DM.",
         examples=("/player talents_reset member:@Steve",),
         related=("player talents_add",),
+    ),
+    Page(
+        "player species", "staff_economy",
+        "Sets a member's species (or none), for free and without the waiting time. Their species role "
+        "follows. The member gets a DM.",
+        _species,
+        examples=("/player species member:@Steve species:🪓 Dwarf",),
+        related=("species choose",),
     ),
     Page(
         "player sync_roles", "staff_economy",
