@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import duel, potions, settings
+from game import dummy, duel, potions, settings
 from game.errors import GameError
 from utils.ui import BaseView, em, join_lines, mark_handled, potion_icon, progress_bar, report_error
 
@@ -90,12 +90,34 @@ class PotionSelect(discord.ui.Select):
         await self.fight_view.drink(interaction, self.values[0])
 
 
-class FightView(discord.ui.View):
-    """A duel being fought: on their turn, a player can drink a potion, then attacks."""
+class DummyMember:
+    """The training dummy, where a fight view expects a member."""
 
-    def __init__(self, cog: "DuelCog", challenger: discord.Member, opponent: discord.Member, stake: int, setup: dict):
+    def __init__(self, gear_key: str):
+        self.id = dummy.DUMMY_ID
+        self.display_name = f"Training Dummy ({dummy.GEARS[gear_key]})"
+        self.mention = f"🎯 **{self.display_name}**"
+
+
+def free_potions() -> dict[str, int]:
+    """Training: every potion, as many as a duel allows (nothing is taken from the inventory)."""
+    out = {kind: potions.max_per_duel() for kind in potions.POTIONS}
+    out.update({potions.key_of(kind, 2): 1 for kind in potions.POTIONS})
+    return out
+
+
+class FightView(discord.ui.View):
+    """A duel being fought: on their turn, a player can drink a potion, then attacks.
+
+    `training`: a fight against the dummy (its gear): it plays its turns at once, potions are free,
+    nothing wears out, nothing is won or lost.
+    """
+
+    def __init__(self, cog: "DuelCog", challenger: discord.Member, opponent: discord.Member, stake: int, setup: dict,
+                 training: str | None = None):
         super().__init__(timeout=None)
         self.cog = cog
+        self.training = training
         self.members = {challenger.id: challenger, opponent.id: opponent}
         self.stake = stake
         self.duel_id: int = setup["duel_id"]
@@ -171,7 +193,10 @@ class FightView(discord.ui.View):
                 return
             uid = self.fight.current.user_id
             self.fight.check_potion(potion)
-            await self.cog.bot.db.run(potions.drink, uid, potion)
+            if self.owned[uid].get(potion, 0) <= 0:
+                raise GameError(f"You don't have a **{potions.label(potion)}** anymore.")
+            if not self.training:
+                await self.cog.bot.db.run(potions.drink, uid, potion)
             self.owned[uid][potion] -= 1
             self.missed[uid] = 0
             self.fight.drink(potion)
@@ -200,6 +225,7 @@ class FightView(discord.ui.View):
                 self.afk = uid
                 self.fight.auto_play(self.cog.rng)
             self.turn_no += 1
+            self.dummy_turn()
             if self.fight.over:
                 await self.end(interaction)
                 return
@@ -207,12 +233,22 @@ class FightView(discord.ui.View):
             self.start_timer()
             await self.show(interaction)
 
+    def dummy_turn(self) -> None:
+        """Training: the dummy plays its turn right away (a plain attack)."""
+        if self.training and not self.fight.over and self.fight.current.user_id == dummy.DUMMY_ID:
+            self.fight.play(self.cog.rng)
+            self.turn_no += 1
+
     async def end(self, interaction: discord.Interaction | None) -> None:
         if self.timer is not None and self.timer is not asyncio.current_task():
             self.timer.cancel()
         self.stop()
-        self.cog.finish(*self.members)
-        res = await self.cog.bot.db.run(duel.finish, self.duel_id, self.fight)
+        if self.training:
+            self.cog.busy.difference_update(self.members)
+            res = {"winner": self.fight.winner.user_id, "stake": 0, "rounds": self.fight.rounds, "broken": []}
+        else:
+            self.cog.finish(*self.members)
+            res = await self.cog.bot.db.run(duel.finish, self.duel_id, self.fight)
         embed = self.cog.result_embed(self, res)
         if interaction is not None:
             await interaction.response.edit_message(content=None, embed=embed, view=None)
@@ -246,6 +282,21 @@ class DuelCog(commands.Cog):
         left = self.cooldown_until.get(member.id, 0) - time.monotonic()
         if left > 0:
             raise GameError(f"{member.mention} is still recovering from a duel. Try again in **{left:.0f}s**.")
+
+    async def start_training(self, interaction: discord.Interaction, gear_key: str) -> None:
+        """/dummy duel: a duel against the training dummy."""
+        member = interaction.user
+        if member.id in self.busy:
+            raise GameError("You are already in a duel.")
+        fight = await self.bot.db.run(dummy.training_fight, member.id, gear_key, self.rng)
+        setup = {"duel_id": 0, "fight": fight, "potions": {member.id: free_potions(), dummy.DUMMY_ID: {}}}
+        self.busy.add(member.id)
+        view = FightView(self, member, DummyMember(gear_key), 0, setup, training=gear_key)  # type: ignore[arg-type]
+        view.dummy_turn()  # the dummy may strike first
+        view.build()
+        view.start_timer()
+        await interaction.response.send_message(embed=self.fight_embed(view), view=view)
+        view.message = await interaction.original_response()
 
     async def start_fight(self, interaction: discord.Interaction, request: DuelView) -> None:
         self.check_cooldown(request.challenger)
@@ -366,8 +417,9 @@ class DuelCog(commands.Cog):
             embed.add_field(name=name, value=value, inline=True)
         current = view.members[view.fight.current.user_id]
         todo = "now attack!" if pending is not None else "attack, or drink a potion first."
+        what = "training: nothing used up, nothing won" if view.training else f"pot {view.stake * 2:,} emeralds"
         embed.add_field(
-            name=f"Turn {view.fight.rounds + 1} · pot {view.stake * 2:,} emeralds",
+            name=f"Turn {view.fight.rounds + 1} · {what}",
             value=f"{current.mention}: {todo} Auto attack <t:{view.deadline}:R>.",
             inline=False,
         )
@@ -376,17 +428,25 @@ class DuelCog(commands.Cog):
     def result_embed(self, view: FightView, res: dict) -> discord.Embed:
         winner = view.members[res["winner"]]
         lines = [self.turn_line(view, t) for t in view.fight.log[-6:]]
+        if view.training:
+            title = ("🎯 Training: the dummy won this time" if res["winner"] == dummy.DUMMY_ID
+                     else f"🎯 Training: {winner.display_name} beat the dummy!")
+        else:
+            title = f"🏆 {winner.display_name} wins the duel!"
         embed = discord.Embed(
-            title=f"🏆 {winner.display_name} wins the duel!",
+            title=title,
             description=join_lines(lines, limit=3500),
             color=discord.Color.gold(),
         )
         for fighter in view.fight.fighters:
             name, value = self.fighter_field(view, fighter)
             embed.add_field(name=name, value=value, inline=True)
-        embed.add_field(
-            name="Pot", value=f"<@{res['winner']}> takes **{em(res['stake'] * 2)}** after {res['rounds']} turns", inline=False
-        )
+        if view.training:
+            embed.add_field(name="Training", value=f"{res['rounds']} turns · nothing used up, nothing won.", inline=False)
+        else:
+            embed.add_field(
+                name="Pot", value=f"<@{res['winner']}> takes **{em(res['stake'] * 2)}** after {res['rounds']} turns", inline=False
+            )
         if view.afk:
             embed.add_field(
                 name="⏱️ Auto", value=f"<@{view.afk}> missed their turns: the end was played automatically.", inline=False

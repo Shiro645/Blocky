@@ -478,6 +478,16 @@ MIGRATIONS: list[str] = [
         at INTEGER NOT NULL
     );
     """,
+    # 21: training dummy (damage tester records)
+    """
+    CREATE TABLE dummy_scores (
+        user_id INTEGER PRIMARY KEY,
+        best_total REAL NOT NULL DEFAULT 0,   -- best series of hits (total damage)
+        best_hit REAL NOT NULL DEFAULT 0,
+        series INTEGER NOT NULL DEFAULT 0,
+        last_at INTEGER NOT NULL DEFAULT 0
+    );
+    """,
 ]
 
 

@@ -68,7 +68,8 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
         )
 
     if "progress" in parts:
-        for table in ("stats", "achievements", "challenge_progress", "season_scores", "season_results", "team_season_scores"):
+        for table in ("stats", "achievements", "challenge_progress", "season_scores", "season_results", "team_season_scores",
+                      "dummy_scores"):
             ctx.execute(f"DELETE FROM {table}{where};", args)
         if user_id is None:
             ctx.execute("DELETE FROM team_season_results;")

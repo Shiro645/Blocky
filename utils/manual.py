@@ -812,6 +812,32 @@ PAGES: list[Page] = [
         related=("potions", "gear", "enchant info", "tournament info"),
     ),
     Page(
+        "dummy hit", "competition",
+        "Hits the training dummy a series of times with your current gear and species (rolled like duel hits, "
+        "critical hits included). Shows every hit, the total, the average, the min and max. The dummy has no "
+        "armor and doesn't hit back; nothing wears out and nothing is won. Your best series goes on the "
+        "leaderboard.",
+        lambda s: [f"**{num(s['dummy']['hits'])}** hits per series · one series every "
+                   f"**{duration(s['dummy']['cooldown_seconds'])}**"],
+        examples=("/dummy hit",),
+        related=("dummy top", "dummy duel", "gear"),
+    ),
+    Page(
+        "dummy top", "competition",
+        "The training dummy leaderboard: everyone's best series (total damage), with their best hit.",
+        examples=("/dummy top",),
+        related=("dummy hit",),
+    ),
+    Page(
+        "dummy duel", "competition",
+        "Trains for duels against a dummy that hits back like a player wearing the gear you pick (sword and "
+        "armor). Same buttons as a real duel: Attack, Attack + block with a shield, and **every potion for free** "
+        "to try them. The dummy plays its turn right away. Nothing is used up (no wear, no potions taken), "
+        "nothing is won or lost.",
+        examples=("/dummy duel", "/dummy duel gear:Netherite dummy"),
+        related=("duel", "dummy hit", "potions"),
+    ),
+    Page(
         "potions", "competition",
         "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
         "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "

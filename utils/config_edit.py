@@ -266,6 +266,8 @@ FIELDS: list[Field] = [
     _b("duel.crit_multiplier", "duels", "Critical hit multiplier", kind="float", min=1, max=10),
     _b("duel.second_player_bonus_hp", "duels", "Extra HP for the second player", "Makes up for not striking first.", max=1000),
     _b("duel.max_rounds", "duels", "Max rounds", "Then the player with the most HP wins.", min=1, max=1000),
+    _b("dummy.hits", "duels", "Dummy: hits per series", "The damage tester (/dummy hit).", min=1, max=50),
+    _b("dummy.cooldown_seconds", "duels", "Dummy: seconds between two series", max=86_400),
     _b("duel.cooldown_seconds", "duels", "Seconds between two duels", max=86_400),
     _b("duel.request_timeout_seconds", "duels", "Seconds to accept a challenge", min=10, max=840),
     _b("duel.xp_win", "duels", "XP for a win"),
