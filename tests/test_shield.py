@@ -29,33 +29,54 @@ class ShieldTests(GameTestCase):
             assets.parse("gear:gold:shield")
         self.assertIn("gear:iron:shield", assets.catalog())
 
-    async def test_blocks_hits_two_duels_then_repair(self):
+    async def test_blocks_wear_it_and_repair(self):
         await self.craft_shield()
-        alice, _ = await self.run_game(duel.make_fighter, ALICE)
-        bob, _ = await self.run_game(duel.make_fighter, BOB)
-        self.assertEqual((alice.block_chance, bob.block_chance), (0.25, 0.0))
         for uid in (ALICE, BOB):
             await self.run_game(players.give_emeralds, uid, 1000)
-        first = await self.run_game(duel.fight, ALICE, BOB, 10)
-        self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 50)
-        self.assertFalse(any("shield" in name for _, name in first["broken"]))
-        second = await self.run_game(duel.fight, ALICE, BOB, 10)
-        self.assertIn((ALICE, "iron shield (worn out: /repair it)"), second["broken"])
+
+        async def duel_where_alice_blocks(times: int) -> dict:
+            setup = await self.run_game(duel.start, ALICE, BOB, 10)
+            fight = setup["fight"]
+            alice = fight.fighter(ALICE)
+            fight.index = fight.fighters.index(alice)
+            for _ in range(times):
+                if fight.over:
+                    break
+                alice.hp = fight.fighter(BOB).hp = 1000  # keep it going
+                fight.play(fight_rng, block=True)
+                fight.play(fight_rng)
+            fight.fighter(BOB).hp = 0.1
+            fight.auto_play(fight_rng)
+            return await self.run_game(duel.finish, setup["duel_id"], fight), alice
+
+        import random as _random
+
+        fight_rng = _random.Random(3)
+        alice, _ = await self.run_game(duel.make_fighter, ALICE)
+        bob, _ = await self.run_game(duel.make_fighter, BOB)
+        self.assertEqual((alice.blocks_left, bob.blocks_left), (2, 0))
+        res, alice = await duel_where_alice_blocks(2)
+        self.assertEqual(alice.blocks_used, 2)
+        self.assertGreater(alice.blocked_damage, 0)
+        shield = (await self.run_game(gear.get_equipped, ALICE))["shield"]
+        self.assertEqual(shield["durability"], 80)  # 2 blocks x 10
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=10 WHERE gear_id=?;", (shield["gear_id"],)))
+        alice, _ = await self.run_game(duel.make_fighter, ALICE)
+        self.assertEqual(alice.blocks_left, 1)  # what's left of the shield
+        res, _ = await duel_where_alice_blocks(1)
+        self.assertIn((ALICE, "iron shield (worn out: /repair it)"), res["broken"])
         shield = (await self.run_game(gear.get_equipped, ALICE))["shield"]
         self.assertEqual(shield["durability"], 0)  # still there, but unusable
         alice, _ = await self.run_game(duel.make_fighter, ALICE)
-        self.assertEqual(alice.block_chance, 0.0)
-        await self.run_game(duel.fight, ALICE, BOB, 10)
-        self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 0)
-        cost = shop.repair_cost(shield)
-        self.assertEqual(cost, round(6 * shop.ingot_value("iron") * 0.6))
+        self.assertEqual(alice.blocks_left, 0)
+        self.assertEqual(shop.repair_cost(shield), round(6 * shop.ingot_value("iron") * 0.6))
         await self.run_game(shop.repair, ALICE, shield["gear_id"])
         self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 100)
 
-    async def test_a_tournament_match_uses_a_fight(self):
+    async def test_no_shield_in_the_tournament(self):
         await self.craft_shield()
         await self.run_game(tournament._fight, ALICE, BOB)
-        self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 50)
+        self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 100)
 
     async def test_the_dungeon_doesnt_use_it(self):
         from game import pve

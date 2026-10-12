@@ -1,6 +1,8 @@
 """Equipment: equip slots, durability and the bonuses each piece gives."""
 from __future__ import annotations
 
+import math
+
 from game import enchants, players, settings
 from game.catalog import ARMOR, GEAR_ITEMS, SHIELD
 from game.db import Ctx
@@ -113,19 +115,21 @@ def armor_points(equipped: dict[str, dict]) -> int | float:
     return _number(total)
 
 
-def block_chance(equipped: dict[str, dict]) -> float:
-    """Share of the hits a shield blocks (0 without one, or when it's worn out)."""
+def shield_blocks(equipped: dict[str, dict]) -> int:
+    """Attacks the shield can block in a duel (0 without one, or when it's worn out)."""
     shield = equipped.get(SHIELD)
     if not shield or shield["durability"] <= 0:
-        return 0.0
-    return float(settings.get()["gear"]["shield_block_chance"])
+        return 0
+    g = settings.get()["gear"]
+    per_block = max(1, int(g["shield_wear_per_block"]))
+    return min(int(g["shield_blocks_per_fight"]), math.ceil(shield["durability"] / per_block))
 
 
-def wear_shield(ctx: Ctx, piece: dict) -> bool:
-    """A fight used the shield. At 0 it stays (unusable until /repair). Returns True when it just wore out."""
-    if piece["durability"] <= 0:
+def wear_shield(ctx: Ctx, piece: dict, blocks: int) -> bool:
+    """The shield blocked `blocks` attacks. At 0 it stays (unusable until /repair). True when it just wore out."""
+    if piece["durability"] <= 0 or blocks <= 0:
         return False
-    left = max(0, piece["durability"] - int(settings.get()["gear"]["shield_wear_per_fight"]))
+    left = max(0, piece["durability"] - blocks * int(settings.get()["gear"]["shield_wear_per_block"]))
     ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (left, piece["gear_id"]))
     piece["durability"] = left
     return left == 0

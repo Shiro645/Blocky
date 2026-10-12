@@ -138,9 +138,9 @@ class EconomyCraftCog(commands.Cog):
             name="⚔️ Damage per hit", value=f"{d['min_damage']:g}–{gear.attack_damage(equipped):g}", inline=True
         )
         embed.add_field(name="🛡️ Damage reduction", value=f"{gear.damage_reduction(equipped):.0%}", inline=True)
-        block = gear.block_chance(equipped)
-        if block:
-            embed.add_field(name="🛡️ Shield", value=f"blocks {block:.0%} of the hits (duels, tournament)", inline=True)
+        blocks = gear.shield_blocks(equipped)
+        if blocks:
+            embed.add_field(name="🛡️ Shield", value=f"**Attack + block** in duels: {blocks}× per duel", inline=True)
         spare = [g for g in owned if not g["equipped"]]
         if spare:
             embed.add_field(name="Spare gear", value=join_lines([gear_label(g) for g in spare]), inline=False)

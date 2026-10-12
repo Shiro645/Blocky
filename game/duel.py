@@ -3,7 +3,10 @@
 The fight is turn based and luck matters a lot:
 - each hit deals a random amount between a minimum (1, raised by a Strength
   potion) and a maximum (raised by a better sword and Sharpness);
-- a hit can be blocked by a shield, or be a critical hit;
+- a hit can be a critical hit;
+- with a shield, a player can end their turn with "Attack + block": the
+  opponent's next attack (all its hits) is blocked, twice per duel at most.
+  Nobody sees it coming: only "X blocked N damage" when it happens;
 - armor reduces the damage taken, but only up to a cap.
 Better gear wins more often, not always. The player who plays second starts
 with a few extra HP to make up for not striking first. In a duel the players
@@ -35,7 +38,10 @@ class Fighter:
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
     potion_boost: float = 0.0  # Witches: potion effects +X%
-    block_chance: float = 0.0  # a shield blocks this share of the hits received
+    blocks_left: int = 0  # blocks the shield still allows in this duel
+    blocking: bool = False  # the shield is raised for the opponent's next attack
+    blocks_used: int = 0
+    blocked_damage: float = 0.0
     gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
@@ -57,6 +63,7 @@ class Turn:
     healed: float = 0.0
     direct: float = 0.0  # Harming damage
     hits: list[Hit] = field(default_factory=list)
+    blocked: float = 0.0  # damage the defender's shield stopped
     attacker_hp: float = 0.0
     defender_hp: float = 0.0
 
@@ -123,14 +130,14 @@ class Fight:
         d = settings.get()["duel"]
         attacker, defender = self.current, self.other
         attacker.attacks += 1
-        if defender.block_chance and rng.random() < defender.block_chance:
-            return Hit(0.0, False, blocked=True)
         low = min(attacker.min_attack + min_bonus, attacker.attack)
         damage = rng.uniform(low, attacker.attack)
         crit = rng.random() < d["crit_chance"]
         if crit:
             damage *= d["crit_multiplier"]
         damage = max(0.5, damage * (1 - defender.reduction))
+        if defender.blocking:
+            return Hit(damage, crit, blocked=True)  # what it would have dealt
         defender.hp = max(0.0, defender.hp - damage)
         defender.hits_taken += 1
         return Hit(damage, crit)
@@ -162,10 +169,15 @@ class Fight:
         self.pending = turn
         return turn
 
-    def play(self, rng: random.Random, potion: str | None = None) -> Turn:
-        """The current player attacks, with the potion drunk this turn (or `potion`, drunk first)."""
+    def play(self, rng: random.Random, potion: str | None = None, block: bool = False) -> Turn:
+        """The current player attacks, with the potion drunk this turn (or `potion`, drunk first).
+
+        `block`: then raise the shield against the opponent's next attack.
+        """
         if self.over:
             raise GameError("The duel is over.")
+        if block and self.current.blocks_left <= 0:
+            raise GameError("Your shield can't block any more attacks in this duel.")
         if potion:
             self.drink(potion)
         attacker, defender = self.current, self.other
@@ -179,6 +191,14 @@ class Fight:
             attacker.speed_turns -= 1
             if defender.hp > 0 and rng.random() < attacker.speed_chance:
                 turn.hits.append(self._hit(rng))
+        if defender.blocking:  # this whole attack hit the shield
+            turn.blocked = round(sum(h.damage for h in turn.hits if h.blocked), 1)
+            defender.blocking = False
+            defender.blocks_left -= 1
+            defender.blocks_used += 1
+            defender.blocked_damage += turn.blocked
+        if block:
+            attacker.blocking = True  # for the opponent's next attack (nobody is told)
 
         turn.attacker_hp, turn.defender_hp = round(attacker.hp, 1), round(defender.hp, 1)
         self.log.append(turn)
@@ -220,7 +240,7 @@ def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
         user_id, float(gear.attack_damage(equipped)) * strength, gear.damage_reduction(equipped), hp,
         min_attack=float(settings.get()["duel"]["min_damage"]) * strength,
         potion_boost=species.bonus(ctx, user_id, "witch"),
-        block_chance=gear.block_chance(equipped),
+        blocks_left=gear.shield_blocks(equipped),
     )
     fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
     return fighter, equipped
@@ -286,7 +306,7 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
             piece = equipped.get(slot)
             if piece and fighter.hits_taken and gear.wear(ctx, piece, fighter.hits_taken):
                 broken.append((fighter.user_id, f"{piece['material']} {slot}"))
-        if fighter.block_chance and SHIELD in equipped and gear.wear_shield(ctx, equipped[SHIELD]):
+        if fighter.blocks_used and SHIELD in equipped and gear.wear_shield(ctx, equipped[SHIELD], fighter.blocks_used):
             broken.append((fighter.user_id, "iron shield (worn out: /repair it)"))
 
     return {

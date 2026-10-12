@@ -138,9 +138,9 @@ def _armor(s: Settings) -> str:
 
 def _shield(s: Settings) -> str:
     g = s["gear"]
-    return (f"Shield (iron only): blocks **{pct(g['shield_block_chance'])}** of the hits in duels and the tournament · "
-            f"durability **{num(g['shield_durability'])}**, **{num(g['shield_wear_per_fight'])}** per fight · "
-            "at 0 it stays, unusable until /repair")
+    return (f"Shield (iron only), duels: **Attack + block** blocks the opponent's next attack, "
+            f"**{num(g['shield_blocks_per_fight'])}** times per duel · durability **{num(g['shield_durability'])}**, "
+            f"**{num(g['shield_wear_per_block'])}** per block · at 0 it stays, unusable until /repair")
 
 
 def _mining(s: Settings) -> list[str]:
@@ -266,8 +266,9 @@ def _duel(s: Settings) -> list[str]:
         f"HP: **{num(d['hp'])}** each (**+{num(d['second_player_bonus_hp'])}** for the player who strikes second)",
         f"A hit deals **{num(d['min_damage'])}** to your sword's maximum",
         _sword(s),
-        f"Critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])}) · no dodge: only a shield blocks "
-        f"(**{pct(s['gear']['shield_block_chance'])}** of the hits)",
+        f"Critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])}) · no dodge: with a shield, "
+        f"**Attack + block** blocks the opponent's next attack (**{num(s['gear']['shield_blocks_per_fight'])}** "
+        "times per duel)",
         _armor(s),
         f"Potions: up to **{num(p['max_per_duel'])}** per duel, one per turn",
         f"Minimum stake: {em(d['min_stake'])} · **{duration(d['cooldown_seconds'])}** between two duels · "
@@ -565,8 +566,8 @@ PAGES: list[Page] = [
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
         "Tools wear out when they give their bonus while mining. The sword wears out in duels and against "
-        "bosses, armor in duels. The shield uses one of its fights in each duel and tournament match; "
-        "tournament fights don't wear anything else.",
+        "bosses, armor in duels, the shield each time it blocks an attack in a duel. Tournament fights don't "
+        "wear anything (and nobody blocks there).",
         _gear,
         examples=("/gear",),
         related=("equip", "equip_best", "repair", "enchant info"),
@@ -800,8 +801,11 @@ PAGES: list[Page] = [
         "Challenges a player: both bet the stake and the winner takes the pot. The other player accepts with "
         "the button, then it's **turn by turn**: on your turn you can drink a potion first, then press **Attack**.\n"
         "Each hit deals a random amount between the minimum damage and your sword's maximum (potions of "
-        "Strength raise the minimum). It can be a critical hit, armor reduces it, and a **shield** can block it. "
-        "Your sword and armor wear out a little, and the shield uses one of its fights. Duel pots don't count "
+        "Strength raise the minimum). It can be a critical hit, and armor reduces it.\n"
+        "With a **shield**, end your turn with **Attack + block** instead of Attack: the opponent's next attack "
+        "(all its hits) is blocked. Nobody sees it coming; the duel then shows how much damage it stopped. "
+        "Twice per duel at most.\n"
+        "Your sword and armor wear out a little, the shield a little for each block. Duel pots don't count "
         "for the seasons.",
         _duel,
         examples=("/duel member:@Steve stake:100",),

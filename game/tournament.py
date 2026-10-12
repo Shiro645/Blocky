@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
 
-from game import duel, gear, players, settings
+from game import duel, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -260,14 +260,11 @@ def staff_cancel(ctx: Ctx) -> dict:
 
 # ---------------- rounds ----------------
 def _fight(ctx: Ctx, p1: int, p2: int) -> tuple[int, int, float]:
-    """(winner, loser, winner HP left). Same rules as duels, but the gear doesn't wear out (except the
-    shield: each match is one of its fights)."""
-    a, gear_a = duel.make_fighter(ctx, p1)
-    b, gear_b = duel.make_fighter(ctx, p2)
+    """(winner, loser, winner HP left). Same rules as duels, but the gear doesn't wear out and
+    nobody blocks (the shield is a choice made during a duel)."""
+    a, _ = duel.make_fighter(ctx, p1)
+    b, _ = duel.make_fighter(ctx, p2)
     result = duel.simulate(ctx.rng, a, b)
-    for fighter, equipped in ((a, gear_a), (b, gear_b)):
-        if fighter.block_chance:
-            gear.wear_shield(ctx, equipped["shield"])
     winner, loser = (a, b) if result.winner == 0 else (b, a)
     return winner.user_id, loser.user_id, round(winner.hp, 1)
 

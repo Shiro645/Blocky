@@ -253,9 +253,10 @@ FIELDS: list[Field] = [
       for m in MATERIALS for slot in ARMOR],
     _pct("gear.damage_reduction_per_armor_point", "combat_gear", "Damage reduction per armor point"),
     _pct("gear.max_damage_reduction", "combat_gear", "Max damage reduction"),
-    _pct("gear.shield_block_chance", "combat_gear", "Shield: share of hits blocked", "Duels and the tournament."),
+    _b("gear.shield_blocks_per_fight", "combat_gear", "Shield: blocks per duel",
+       "Times a player can \"Attack + block\" in a duel (it blocks the opponent's next attack).", min=0, max=20),
     _b("gear.shield_durability", "combat_gear", "Shield: durability", "Of a new or repaired shield.", min=1, max=100_000),
-    _b("gear.shield_wear_per_fight", "combat_gear", "Shield: durability used per fight",
+    _b("gear.shield_wear_per_block", "combat_gear", "Shield: durability used per block",
        "At 0 it stays, unusable until /repair.", min=1, max=100_000),
     # ---- duels ----
     _b("duel.min_stake", "duels", "Minimum stake", min=1),

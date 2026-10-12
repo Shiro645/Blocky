@@ -46,5 +46,5 @@ GEAR_EFFECTS = {
     "chestplate": "Damage reduction in duels (capped)",
     "leggings": "Damage reduction in duels (capped)",
     "boots": "Damage reduction in duels (capped)",
-    "shield": "Blocks some of the hits received in duels and the tournament (2 fights, then /repair)",
+    "shield": "In duels: \"Attack + block\" blocks the opponent's next attack, twice per duel",
 }

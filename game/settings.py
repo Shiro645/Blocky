@@ -72,11 +72,12 @@ DEFAULTS: dict[str, Any] = {
         },
         "damage_reduction_per_armor_point": 0.012,
         "max_damage_reduction": 0.35,
-        # Shield (iron only, /craft): blocks this share of the hits received in duels and the tournament.
-        # Each fight uses shield_wear_per_fight durability; at 0 it stays, unusable until /repair.
-        "shield_block_chance": 0.25,
+        # Shield (iron only, /craft), duels only: "Attack + block" blocks the opponent's next attack,
+        # up to shield_blocks_per_fight times per duel. Each block uses shield_wear_per_block durability;
+        # at 0 it stays, unusable until /repair.
+        "shield_blocks_per_fight": 2,
         "shield_durability": 100,
-        "shield_wear_per_fight": 50,
+        "shield_wear_per_block": 10,
     },
     # /repair: a piece with no durability left costs this % of its crafting value to repair.
     "repair": {"cost_percent": 60},
