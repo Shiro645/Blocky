@@ -519,7 +519,8 @@ PAGES: list[Page] = [
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "
         "**drop** appear: the first player to click it gets the reward.\n\n"
         "In **spam channels** you don't mine blocks: each reward is a tiny amount of emeralds instead, saved "
-        "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons).",
+        "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons). Messages in your private "
+        "guide channel, in DMs or in another server don't mine at all.",
         _mining,
         related=("inventory", "sell", "gear", "talents"),
         title="⛏️ Mining (chat)",

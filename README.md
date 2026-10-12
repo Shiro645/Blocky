@@ -29,7 +29,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **A private guide channel for every Blocky player** — Only members with the **Blocky player role** (`roles.blocky_player`, `/config` → Roles) get one. Give it with a question in Discord's onboarding (*Server Settings → Onboarding → Customization questions*, e.g. "Do you want to play Blocky?" with an answer giving the role): as soon as a member gets the role (when joining or later in *Channels & Roles*), the bot creates a channel only they and the staff can see, in the guide category (`channels.guide_category`, `/config` → Channels). If they lose the role, the channel is deleted (the checklist progress is kept). Without the role set, no guide channel is created. It holds a welcome message with a **checklist of first steps**, then the guide: mining and emeralds, gear, species and profile, fighting, playing with others, and how to get more info with `/help`.
 - **Checklist**: mine by chatting, `/daily`, `/sell`, pick a species, look at your `/profile`, hit the training dummy (or play a training duel). Each step is checked by itself as soon as it's done, with a line in the channel; steps done before the guide count too. Doing them all pays **200 emeralds**, **once per player ever** (a guide sent again never pays twice). The reward doesn't count for the seasons.
 - **Cleanup**: the channel is deleted 3 days after the checklist is done (or right away with the **Delete this channel now** button), after 30 days if it's never done (progress is kept), and when the member leaves. Each category holds 50 channels: when it's full the bot adds `"<name> 2"`, `"<name> 3"`… (removed once empty), and it stops a little before Discord's limit of 500 channels per server.
-- Mini-games work in guide channels too, so new players can try what the guide explains.
+- Mini-games work in guide channels too, so new players can try what the guide explains. Writing in a guide channel doesn't mine (nobody else sees it: chat mining belongs in the server's channels).
 - `/guide` — Your checklist and a link to your guide channel; if you don't have one anymore, it opens a new one. Without the Blocky player role, it tells you to answer the question in *Channels & Roles* (with a link). Without a guide category, it shows the whole guide privately and the checklist still works.
 - Staff: `/guide_resend [member]` (see Staff commands). Blocky players already in the server when this is installed get a guide channel with `/guide_resend` (everyone) or `/guide`.
 - The bot needs the **Manage Channels** and **Manage Roles** permissions (it sets the channel permissions). Tuned with `balance.guide` (`/config` → Guide).
@@ -250,7 +250,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 
 | Key | Description |
 |---|---|
-| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice) |
+| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice). **Blocky only plays there**: commands, buttons, menus and chat mining don't work in DMs or in another server the bot was added to |
 | `staff.role_id` | ID of the staff role allowed to use staff commands |
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |

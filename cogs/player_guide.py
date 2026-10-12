@@ -59,7 +59,8 @@ def guide_pages() -> list[discord.Embed]:
         ("⛏️ 1. Mining and emeralds", (
             "**Chat to mine.** Every message you write in the server mines **1 to 6 blocks**: cobblestone, gravel, "
             f"deepslate, sometimes obsidian and, rarely, bedrock. It works once every **{s['mining']['cooldown_seconds']} s** "
-            "(spam channels give almost nothing). You can chat right here too.\n\n"
+            "(spam channels give almost nothing). Writing here, in your guide channel, doesn't mine: chat in the "
+            "server's channels.\n\n"
             "`/inventory` — your blocks, emeralds, items and gear.\n"
             f"`/sell` — sells all your blocks: cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
             f"deepslate {values['deepslate']}, obsidian {values['obsidian']}, bedrock {values['bedrock']} emeralds each.\n"

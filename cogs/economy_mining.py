@@ -39,6 +39,10 @@ class EconomyMiningCog(commands.Cog):
     async def on_message(self, message: discord.Message):
         if message.guild is None or message.author.bot:
             return
+        if not self.bot.in_main_guild(message.guild.id):  # type: ignore[attr-defined]
+            return  # Blocky only plays in its own server
+        if message.channel.id in getattr(self.bot, "guide_channels", {}):
+            return  # a private guide channel: nobody would see someone writing there just to mine
 
         user_id = message.author.id
         now = time.monotonic()
