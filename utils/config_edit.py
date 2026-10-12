@@ -163,6 +163,8 @@ FIELDS: list[Field] = [
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
           help="Given to the winner of the last weekend tournament.", item="assign"),
+    Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
+          help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -329,6 +331,9 @@ FIELDS: list[Field] = [
     _pct("teams.max_xp_bonus", "teams", "Max team XP bonus", max=10),
     _b("teams.season_rewards", "teams", "Team season rewards", "Emeralds for the #1, #2, #3… teams, shared by "
        "what each member brought.", "list", None, item="int", max_items=10),
+    _b("teams.log_score", "teams", "Logarithmic team score", "On: the best earner counts in full, the others less "
+       "and less, so 5 members earning the same score ×2.6 instead of ×5 (big teams don't win just by being big). "
+       "Off: the sum of what the members earned.", kind="bool", min=None),
     # ---- tournament ----
     _b("tournament.entry_fee", "tournament", "Entry fee"),
     _b("tournament.house_bonus", "tournament", "Server bonus added to the pot"),

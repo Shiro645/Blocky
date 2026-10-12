@@ -354,6 +354,8 @@ def _teams(s: Settings) -> list[str]:
         f"(max **+{pct(t['max_xp_bonus'])}**)",
         f"Team season rewards (emeralds): {rewards or 'none'} · ranked with at least "
         f"**{num(t['min_members_ranked'])}** members who scored",
+        "Team score: " + ("**logarithmic** (5 members earning the same ≈ ×2.6)" if t["log_score"]
+                          else "the **sum** of what the members earned"),
     ]
 
 
@@ -827,8 +829,8 @@ PAGES: list[Page] = [
     # ---- teams ----
     Page(
         "team create", "teams",
-        "Creates a team and makes you its leader. The tag (2 to 4 letters or digits) is shown next to the "
-        "members' names. You can only be in one team.",
+        "Creates a team and makes you its leader (with the team leader role, if the server set one). The tag "
+        "(2 to 4 letters or digits) is shown next to the members' names. You can only be in one team.",
         _teams,
         examples=("/team create name:Diamond Diggers tag:DIG",),
         related=("team invite", "team info"),
@@ -861,7 +863,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "team transfer", "teams",
-        "**Leader only.** Makes another member the leader.",
+        "**Leader only.** Makes another member the leader. The team leader role (if the server set one) moves "
+        "to them.",
         examples=("/team transfer member:@Steve",),
         related=("team info",),
     ),
@@ -887,8 +890,10 @@ PAGES: list[Page] = [
     Page(
         "team top", "teams",
         "This week's team season: teams ranked by the emeralds their members earned while in the team. "
-        "The rewards of the top teams are shared between their members in proportion to what each one brought, "
-        "so joining the leading team on Sunday is worth little.",
+        "The best earner counts in full and the others less and less (×0.69, ×0.41, ×0.29, ×0.22), so a big "
+        "team doesn't win just by being big: 5 members earning the same score ×2.6, not ×5, and one more member "
+        "earning anything never lowers the score. The rewards of the top teams are shared between their members "
+        "in proportion to what each one brought, so joining the leading team on Sunday is worth little.",
         _teams,
         examples=("/team top",),
         related=("team info", "season"),

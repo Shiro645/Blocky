@@ -130,10 +130,11 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
 - `/team invite <member>` — The leader invites a player, who answers with the buttons (they still work after a restart) or later with `/team join <tag>`. Invitations last 48h.
 - `/team leave` — Leave the team. When the leader leaves, the oldest member becomes leader; the last one to leave disbands the team.
 - Leader: `/team kick`, `/team transfer`, `/team rename [name] [tag]`, `/team disband`.
+- **Team leader role** — If `roles.team_leader` is set (`/config` → Roles), the bot gives that role to every team leader and takes it back when they no longer lead a team (transfer, leaving, disbanding, team deleted by staff). It is checked again at every start and when a member rejoins the server; changing the role in `/config` moves it.
 - `/team info [team]` — Members, what each one earned for the team this week, team rank, today's bonus.
 - **Team tag** — `[ABC]` is shown in `/profile`, `/leaderboard` and `/season`.
 - **Team bonus** — Mining XP +5% for each teammate who already mined today (up to +20%).
-- **Weekly team season** (`/team top`) — A team's score is the season score (see above) its members made while in the team (Monday to Sunday). Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
+- **Weekly team season** (`/team top`) — A team's score comes from the season score (see above) its members made while in the team (Monday to Sunday), and grows like a logarithm of the number of members: the best earner counts in full, the next ones ×0.69, ×0.41, ×0.29, ×0.22… So 5 members earning the same score ×2.6 instead of ×5 (2 → ×1.7, 3 → ×2.1), and one more member earning anything never lowers the score. `/team top` shows the score in points next to the emeralds earned. Only teams where at least **2 members** scored are ranked. The top 3 teams win 600 / 300 / 150 emeralds, shared between the players in proportion to what each one earned for the team (players who left during the week keep their share). Results are announced with the season results.
 
 ### 🔐 Staff commands
 
@@ -193,6 +194,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
+| `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
@@ -269,7 +271,7 @@ The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sel
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 
-Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus` and `season_rewards` (e.g. `[600, 300, 150]`).
+Teams are tuned with `balance.teams`: `max_members`, `create_cost` (emeralds, 0 = free), `min_members_ranked`, `invite_hours`, `xp_bonus_per_active_member`, `max_xp_bonus`, `season_rewards` (e.g. `[600, 300, 150]`) and `log_score` (`true`: the logarithmic team score above; `false`: the sum of what the members earned).
 
 > ⚠️ `.env`, `config.json`, the database files (`*.db`, `*.db-wal`, `*.db-shm`) and the `backups/` folder (it holds copies of `config.json`, with the RCON password) contain secrets or user data. They are ignored by git and Docker — never commit them.
 

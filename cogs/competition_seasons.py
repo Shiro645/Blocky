@@ -83,7 +83,7 @@ class SeasonsCog(commands.Cog):
             medal = MEDALS.get(p["rank"], f"#{p['rank']}")
             shares = ", ".join(f"<@{uid}> +{amount:,}" for uid, amount in p["payout"][:10])
             lines.append(
-                f"{medal} **[{p['tag']}] {p['name']}** — {em(p['score'])} earned · "
+                f"{medal} **[{p['tag']}] {p['name']}** — {p['score']:,} pts ({em(p['earned'])} earned) · "
                 f"reward **{em(p['reward'])}**\n└ {shares}"
             )
         winner = podium[0]

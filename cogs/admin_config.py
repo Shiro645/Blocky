@@ -115,12 +115,15 @@ class ConfigCog(commands.Cog):
 
     async def save(self, user: discord.abc.User, field: ce.Field, value: Any) -> str:
         """Set a field (None = clear it, or back to the default for a game setting)."""
-        before = show(field, ce.current_value(load_config(), field))
+        old = ce.current_value(load_config(), field)
+        before = show(field, old)
         if value is None and field.is_balance:
             after = show(field, ce.default_value(field)) + " *(default)*"
         else:
             after = show(field, value)
-        return await self.apply(user, field.label, before, after, lambda cfg: ce.set_field(cfg, field, value))
+        text = await self.apply(user, field.label, before, after, lambda cfg: ce.set_field(cfg, field, value))
+        self.bot.dispatch("blocky_config_changed", field.key, old)
+        return text
 
     async def save_whole(self, user: discord.abc.User, field: ce.Field, value: Any, what: str) -> str:
         """Replace a list, the automatic mutes or a table (`what` says what changed)."""

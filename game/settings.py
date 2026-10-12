@@ -155,6 +155,9 @@ DEFAULTS: dict[str, Any] = {
         "max_xp_bonus": 0.20,
         # Weekly team season: top teams' rewards, shared by contribution.
         "season_rewards": [600, 300, 150],
+        # Team score = the best earner in full, then less and less for the others
+        # (n members earning the same: ×(1 + ln n), so 5 members ≈ ×2.6, not ×5). False = the sum.
+        "log_score": True,
     },
     "enchants": {
         # Lapis lazuli: found while mining, spent to apply books.

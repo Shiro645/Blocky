@@ -181,8 +181,9 @@ class TeamSeasonTests(TeamTestCase):
         await self.run_game(players.earn_emeralds, CAROL, 500)  # no team
         await self.run_game(players.give_emeralds, ALICE, 1000)  # not earned
         data = await self.run_game(teams.season_overview, BOB)
-        self.assertEqual([(t["tag"], t["score"]) for t in data["top"]], [("DIG", 50)])
-        self.assertEqual((data["rank"], data["score"]), (1, 50))
+        # 30 in full + 20 × ln 2 (the second earner counts less).
+        self.assertEqual([(t["tag"], t["score"], t["earned"], t["members"]) for t in data["top"]], [("DIG", 44, 50, 2)])
+        self.assertEqual((data["rank"], data["score"]), (1, 44))
 
     async def test_earnings_before_joining_stay_out(self):
         team = await self.make_team()
@@ -208,7 +209,7 @@ class TeamSeasonTests(TeamTestCase):
         closed = await self.run_game(teams.close_finished)
         self.assertEqual(len(closed), 1)
         podium = closed[0]["podium"]
-        self.assertEqual([(p["tag"], p["score"], p["reward"]) for p in podium], [("DIG", 400, 600), ("RED", 50, 300)])
+        self.assertEqual([(p["tag"], p["score"], p["reward"]) for p in podium], [("DIG", 369, 600), ("RED", 50, 300)])
         self.assertEqual(podium[0]["payout"], [(ALICE, 450), (BOB, 150)])
         # Alice and Bob also unlock "Squad Goals" (+150).
         self.assertEqual(await self.run_game(players.get_emeralds, ALICE), before[ALICE] + 450 + 150)
@@ -239,7 +240,20 @@ class TeamSeasonTests(TeamTestCase):
         self.assertEqual((await self.run_game(teams.season_overview, ALICE))["top"], [])  # only Alice scored
         await self.run_game(players.earn_emeralds, BOB, 10)
         top = (await self.run_game(teams.season_overview, ALICE))["top"]
-        self.assertEqual([(t["tag"], t["score"]) for t in top], [("DIG", 310)])
+        self.assertEqual([(t["tag"], t["score"]) for t in top], [("DIG", 307)])
+
+    async def test_a_big_team_doesnt_win_by_its_size(self):
+        await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB, CAROL, DAVE, EVE)
+        await self.make_team(FRANK, "Red Stone", "RED")
+        for uid in (ALICE, BOB, CAROL, DAVE, EVE):
+            await self.run_game(players.earn_emeralds, uid, 100)
+        await self.run_game(players.earn_emeralds, FRANK, 300)
+        top = (await self.run_game(teams.season_overview, ALICE))["top"]
+        # 5 × 100 earned counts like 261, not 500: one player earning 300 beats them.
+        self.assertEqual([(t["tag"], t["score"], t["earned"]) for t in top], [("RED", 300, 300), ("DIG", 261, 500)])
+        settings.load({"teams": {"create_cost": 0, "min_members_ranked": 1, "log_score": False}})
+        top = (await self.run_game(teams.season_overview, ALICE))["top"]
+        self.assertEqual([(t["tag"], t["score"]) for t in top], [("DIG", 500), ("RED", 300)])
 
     async def test_disbanded_team_is_not_ranked(self):
         await self.make_team()
@@ -247,6 +261,42 @@ class TeamSeasonTests(TeamTestCase):
         await self.run_game(teams.disband, ALICE)
         self.advance(7 * DAY)
         self.assertEqual(await self.run_game(teams.close_finished), [])
+
+
+class TeamScoreTests(unittest.TestCase):
+    def setUp(self):
+        settings.load()
+
+    def tearDown(self):
+        settings.load()
+
+    def test_members_earning_the_same_grow_like_a_logarithm(self):
+        self.assertEqual([teams.team_score([100] * n) for n in range(1, 6)], [100, 169, 210, 239, 261])
+        self.assertEqual(teams.team_score([20, 30]), teams.team_score([30, 20]))  # order doesn't matter
+        self.assertEqual(teams.team_score([]), 0)
+
+    def test_a_member_never_lowers_the_score(self):
+        earned = [500, 120, 80]
+        for extra in (1, 50, 80, 300, 1000):
+            with self.subTest(extra=extra):
+                self.assertGreaterEqual(teams.team_score([*earned, extra]), teams.team_score(earned))
+        self.assertGreater(teams.team_score([500, 130, 80]), teams.team_score(earned))
+
+    def test_off_it_is_the_sum(self):
+        settings.load({"teams": {"log_score": False}})
+        self.assertEqual(teams.team_score([100] * 5), 500)
+
+
+class LeaderTests(TeamTestCase):
+    async def test_leader_ids_follow_the_lead(self):
+        await self.make_team(ALICE, "Diamond Diggers", "DIG", BOB)
+        await self.make_team(CAROL, "Red Stone", "RED")
+        self.assertEqual(await self.run_game(teams.leader_ids), {ALICE, CAROL})
+        await self.run_game(teams.transfer, ALICE, BOB)
+        await self.run_game(teams.disband, CAROL)
+        self.assertEqual(await self.run_game(teams.leader_ids), {BOB})
+        await self.run_game(teams.leave, BOB)  # Alice leads again
+        self.assertEqual(await self.run_game(teams.leader_ids), {ALICE})
 
 
 class TagTests(TeamTestCase):

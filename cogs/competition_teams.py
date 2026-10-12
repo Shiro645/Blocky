@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 
@@ -10,6 +11,7 @@ from discord.ext import commands
 from game import settings, teams
 from game.errors import GameError
 from utils.checks import staff_only
+from utils.config import role_id
 from utils.ui import ConfirmView, em, report_error
 
 log = logging.getLogger("teams")
@@ -68,6 +70,7 @@ class TeamsCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._role_lock = asyncio.Lock()
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(TeamInviteButton)
@@ -78,6 +81,55 @@ class TeamsCog(commands.Cog):
     async def say(self, interaction: discord.Interaction, text: str) -> None:
         """Public answer that shows names without pinging anyone."""
         await interaction.response.send_message(text, allowed_mentions=NO_PINGS)
+
+    # ---------- team leader role ----------
+    async def sync_leader_role(self, old_role_id: int = 0) -> None:
+        """Give roles.team_leader to every team leader and take it back from everyone else.
+
+        `old_role_id`: the role set before a /config change, taken back from everyone.
+        """
+        guild = getattr(self.bot, "main_guild", None)
+        if guild is None:
+            return
+        async with self._role_lock:
+            leaders = await self.bot.db.run(teams.leader_ids)
+            rid = role_id("team_leader")
+            changes: list[tuple[discord.Member, discord.Role, bool]] = []  # (member, role, give)
+            old = guild.get_role(old_role_id) if old_role_id and old_role_id != rid else None
+            if old is not None:
+                changes += [(m, old, False) for m in old.members]
+            role = guild.get_role(rid) if rid else None
+            if rid and role is None:
+                log.warning("roles.team_leader %s not found", rid)
+            if role is not None:
+                changes += [(m, role, False) for m in role.members if m.id not in leaders]
+                for uid in leaders:
+                    member = guild.get_member(uid)
+                    if member is not None and role not in member.roles:
+                        changes.append((member, role, True))
+            for member, r, give in changes:
+                try:
+                    if give:
+                        await member.add_roles(r, reason="Blocky: team leader")
+                    else:
+                        await member.remove_roles(r, reason="Blocky: no longer a team leader")
+                except discord.HTTPException:
+                    log.warning("Could not update the team leader role of %s (check Manage Roles and role order)", member)
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        await self.sync_leader_role()
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        guild = getattr(self.bot, "main_guild", None)
+        if guild is not None and member.guild.id == guild.id:
+            await self.sync_leader_role()
+
+    @commands.Cog.listener()
+    async def on_blocky_config_changed(self, key: str, before) -> None:
+        if key == "role_team_leader":
+            await self.sync_leader_role(int(before or 0))
 
     # ---------- autocomplete ----------
     async def team_autocomplete(self, interaction: discord.Interaction, current: str):
@@ -108,6 +160,7 @@ class TeamsCog(commands.Cog):
             f"🛡️ {interaction.user.mention} created the team {team_label(team)}{paid}! "
             f"Invite up to {teams.max_members() - 1} players with `/team invite`.",
         )
+        await self.sync_leader_role()
 
     @team.command(name="invite", description="LEADER: Invite a player to your team.")
     @app_commands.describe(member="Who you want in your team")
@@ -171,6 +224,8 @@ class TeamsCog(commands.Cog):
                 text = f"👋 {user.mention} left {label}."
             await i.response.edit_message(content="Done.", view=None)
             await i.followup.send(text, allowed_mentions=NO_PINGS)
+            if team["leader_id"] == user.id:
+                await self.sync_leader_role()
 
         warning = ""
         if team["leader_id"] == user.id:
@@ -193,6 +248,7 @@ class TeamsCog(commands.Cog):
     async def transfer(self, interaction: discord.Interaction, member: discord.Member):
         team = await self.bot.db.run(teams.transfer, interaction.user.id, member.id)
         await self.say(interaction, f"👑 {member.mention} is the new leader of {team_label(team)}.")
+        await self.sync_leader_role()
 
     @team.command(name="rename", description="LEADER: Change the name and/or the tag of your team.")
     @app_commands.describe(name="New name (leave empty to keep it)", tag="New tag (leave empty to keep it)")
@@ -216,6 +272,7 @@ class TeamsCog(commands.Cog):
             res = await self.bot.db.run(teams.disband, user.id)
             await i.response.edit_message(content="Done.", view=None)
             await i.followup.send(f"💥 {team_label(res)} was disbanded by {user.mention}.", allowed_mentions=NO_PINGS)
+            await self.sync_leader_role()
 
         await interaction.response.send_message(
             f"Disband {team_label(team)}? Every member leaves the team and this week's team score is lost. "
@@ -250,7 +307,7 @@ class TeamsCog(commands.Cog):
         embed.add_field(
             name=f"Members ({len(lines)}/{data['max_members']})", value="\n".join(lines) or "—", inline=False
         )
-        season = f"#{data['rank']} of {data['teams_ranked']} — {em(data['score'])}" if data["rank"] else "Not ranked yet"
+        season = f"#{data['rank']} of {data['teams_ranked']} — **{data['score']:,} pts**" if data["rank"] else "Not ranked yet"
         embed.add_field(name="Team season", value=f"{season}\nEnds <t:{data['ends_at']}:R>", inline=True)
         max_bonus = float(settings.get()["teams"]["max_xp_bonus"])
         if data["bonus"] > 0:
@@ -267,15 +324,20 @@ class TeamsCog(commands.Cog):
     async def top(self, interaction: discord.Interaction):
         data = await self.bot.db.run(teams.season_overview, interaction.user.id)
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} {team_label(t)} — **{em(t['score'])}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {team_label(t)} — **{t['score']:,} pts** "
+            f"({em(t['earned'])} by {t['members']} member{'s' if t['members'] > 1 else ''})"
             for i, t in enumerate(data["top"], start=1)
         ]
         rewards = " · ".join(f"{MEDALS.get(i, f'#{i}')} {em(r)}" for i, r in enumerate(data["rewards"], start=1))
+        if settings.get()["teams"]["log_score"]:
+            how = ("Score: what the members earned this week (same as /season), the best earner in full and the others "
+                   "less and less, so 5 members earning the same score ×2.6, not ×5.")
+        else:
+            how = "Score: what the members earned this week (same as /season)."
         embed = discord.Embed(
             title=f"🛡️ Team season {data['season_id']}",
             description=(
-                "Score = what the members created this week (same as /season). The reward is shared between them, "
-                "in proportion to what each one earned for the team.\n"
+                f"{how} The reward is shared between them, in proportion to what each one earned for the team.\n"
                 f"Ends <t:{data['ends_at']}:R>. Rewards: {rewards}\n\n"
                 + ("\n".join(lines) or "No team has scored yet. Be the first!")
             ),
@@ -285,7 +347,7 @@ class TeamsCog(commands.Cog):
             w = data["last_winner"]
             embed.add_field(name="🚩 Last winner", value=f"{team_label(w)} ({w['season_id']})", inline=True)
         if data["team"]:
-            mine = f"#{data['rank']} — {em(data['score'])}" if data["rank"] else "Not ranked yet"
+            mine = f"#{data['rank']} — {data['score']:,} pts" if data["rank"] else "Not ranked yet"
             embed.add_field(name=f"[{data['team']['tag']}] {data['team']['name']}", value=mine, inline=True)
         else:
             embed.add_field(name="Your team", value="You are not in a team: `/team create`", inline=True)
@@ -307,6 +369,7 @@ class TeamsCog(commands.Cog):
             color=discord.Color.orange(),
         )
         await self.bot.announcer.send(embed=embed, channel="staff_log")
+        await self.sync_leader_role()
 
 
 async def setup(bot: commands.Bot):
