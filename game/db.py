@@ -488,6 +488,30 @@ MIGRATIONS: list[str] = [
         last_at INTEGER NOT NULL DEFAULT 0
     );
     """,
+    # 22: profile customization and team banners
+    """
+    CREATE TABLE profiles (
+        user_id INTEGER PRIMARY KEY,
+        bio TEXT,
+        color TEXT,                    -- a dye key or "#rrggbb"
+        title TEXT,                    -- a title key, or "custom:<text>"
+        frame TEXT,                    -- a frame key
+        showcase TEXT                  -- JSON list of up to 3 achievement codes
+    );
+    CREATE TABLE profile_unlocks (
+        user_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,            -- color | hex | frame | custom_title
+        key TEXT NOT NULL,
+        at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, kind, key)
+    );
+    CREATE TABLE team_banners (
+        team_id INTEGER PRIMARY KEY,
+        base TEXT NOT NULL,            -- a dye key
+        layers TEXT NOT NULL,          -- JSON [[pattern, dye], ...] (3 at most)
+        updated_at INTEGER NOT NULL
+    );
+    """,
 ]
 
 

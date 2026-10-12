@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, backups, players, reset, settings, species
+from game import assets, backups, players, profiles, reset, settings, species
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.checks import staff_only
@@ -206,6 +206,29 @@ class StaffEconomyCog(commands.Cog):
         cog = self.bot.get_cog("SpeciesCog")
         if cog is not None:
             await cog.sync_roles(member.id)  # type: ignore[attr-defined]
+
+    @player.command(name="title", description="STAFF: Give a member a custom title (shown on their profile card).")
+    @app_commands.describe(member="Who gets the title", title="The title (40 characters at most)")
+    @staff_only()
+    async def give_title(self, interaction: discord.Interaction, member: discord.Member, title: app_commands.Range[str, 1, 40]):
+        text = await self.bot.db.run(profiles.give_title, member.id, title)
+        await self.answer(interaction, f"✅ {member.mention} now wears the title **{text}**.",
+                          member, f"🎖️ The staff gave you the title **{text}** (change it with /customize title)")
+
+    @player.command(name="profile_reset", description="STAFF: Remove a member's bio and/or title (and their custom titles).")
+    @app_commands.describe(member="Whose profile", part="What to remove", reason="Why (sent to the member)")
+    @app_commands.choices(part=[
+        app_commands.Choice(name="Bio", value="bio"),
+        app_commands.Choice(name="Title (and custom titles)", value="title"),
+        app_commands.Choice(name="Both", value="all"),
+    ])
+    @staff_only()
+    async def profile_reset(self, interaction: discord.Interaction, member: discord.Member, part: str,
+                            reason: app_commands.Range[str, 1, 400] | None = None):
+        await self.bot.db.run(profiles.reset, member.id, part)
+        what = {"bio": "bio", "title": "title", "all": "bio and title"}[part]
+        await self.answer(interaction, f"✅ {member.mention}'s {what} was removed.", member,
+                          f"🧹 The staff removed your profile {what}", reason)
 
     @player.command(name="sync_roles", description="STAFF: Give every member the level role matching their level.")
     @staff_only()

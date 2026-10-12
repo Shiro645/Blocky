@@ -8,7 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import settings, teams
+from cogs.player_profile import banner_file
+from game import profiles, settings, teams
 from game.errors import GameError
 from utils.checks import staff_only
 from utils.config import role_id
@@ -18,6 +19,8 @@ log = logging.getLogger("teams")
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 NO_PINGS = discord.AllowedMentions.none()
+DYE_CHOICES = [app_commands.Choice(name=name, value=key) for key, (name, _) in profiles.DYES.items()]
+PATTERN_CHOICES = [app_commands.Choice(name=label, value=key) for key, label in profiles.PATTERNS.items()]
 
 
 def team_label(team: dict) -> str:
@@ -319,7 +322,44 @@ class TeamsCog(commands.Cog):
         if data["wins"]:
             embed.add_field(name="🏆 Team seasons won", value=str(data["wins"]), inline=True)
         embed.set_footer(text="⛏️ = mined today")
-        await interaction.response.send_message(embed=embed)
+        file = banner_file(data["banner"]) if data.get("banner") else None
+        if file is None:
+            await interaction.response.send_message(embed=embed)
+            return
+        embed.set_thumbnail(url="attachment://banner.png")
+        await interaction.response.send_message(embed=embed, file=file)
+
+    @team.command(name="banner", description="LEADER: Design your team's banner (shown on the members' profiles).")
+    @app_commands.describe(
+        base="The banner's color", pattern1="A pattern (Minecraft banner patterns)", color1="Its color",
+        pattern2="Another pattern, on top", color2="Its color", pattern3="A third pattern, on top", color3="Its color",
+    )
+    @app_commands.choices(
+        base=DYE_CHOICES, color1=DYE_CHOICES, color2=DYE_CHOICES, color3=DYE_CHOICES,
+        pattern1=PATTERN_CHOICES, pattern2=PATTERN_CHOICES, pattern3=PATTERN_CHOICES,
+    )
+    async def banner(
+        self, interaction: discord.Interaction, base: str,
+        pattern1: str | None = None, color1: str | None = None, pattern2: str | None = None,
+        color2: str | None = None, pattern3: str | None = None, color3: str | None = None,
+    ):
+        user = interaction.user
+        layers = [(p, c or "white") for p, c in ((pattern1, color1), (pattern2, color2), (pattern3, color3)) if p]
+        design = profiles.check_banner(base, layers)
+        team = await self.bot.db.run(teams.team_of, user.id)
+        if team is None or team["leader_id"] != user.id:
+            raise GameError("Only a team leader can change the team banner.")
+        cost = int(settings.get()["profiles"]["banner_cost"])
+
+        async def do(i: discord.Interaction) -> None:
+            await self.bot.db.run(profiles.set_banner, user.id, design["base"], design["layers"])
+            await i.response.edit_message(content=f"✅ New banner for {team_label(team)} (-{em(cost)}).", view=None)
+
+        file = banner_file(design)
+        await interaction.response.send_message(
+            f"Save this banner for {team_label(team)} for {em(cost)}? It shows on every member's profile.",
+            files=[file] if file else [], view=ConfirmView(user.id, f"Save ({cost:,})", do), ephemeral=True,
+        )
 
     @team.command(name="top", description="This week's team season standings.")
     async def top(self, interaction: discord.Interaction):

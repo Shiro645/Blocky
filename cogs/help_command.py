@@ -29,8 +29,11 @@ def short(description: str) -> str:
     return description.removeprefix("STAFF: ").strip()
 
 
-def option_line(p: app_commands.Parameter) -> str:
-    """'`stake` · whole number, at least 1 · required — Emeralds each player bets'"""
+def option_line(p: app_commands.Parameter, seen: dict | None = None) -> str:
+    """'`stake` · whole number, at least 1 · required — Emeralds each player bets'
+
+    `seen` remembers the choice lists already shown on the page, so options sharing
+    the same list (e.g. the colors of /team banner) don't repeat it."""
     kind = TYPE_NAMES.get(p.type, "value")
     lo, hi = p.min_value, p.max_value
     if p.choices:
@@ -57,6 +60,11 @@ def option_line(p: app_commands.Parameter) -> str:
     if p.description and p.description != NO_DESCRIPTION:
         line += f" — {p.description}"
     if p.choices:
+        key = tuple(c.value for c in p.choices)
+        if seen is not None and key in seen:
+            return line + f"\n  ↳ same choices as `{seen[key]}`"
+        if seen is not None:
+            seen[key] = p.display_name
         names = ", ".join(c.name for c in p.choices[:12])
         line += f"\n  ↳ {names}{'…' if len(p.choices) > 12 else ''}"
     return line
@@ -115,7 +123,8 @@ class HelpCog(commands.Cog):
         embed = discord.Embed(title=page.heading, description=page.text, color=COLOR)
         cmd = self.tree_command(page.name)
         if cmd is not None:
-            options = [option_line(p) for p in cmd.parameters]
+            seen: dict = {}
+            options = [option_line(p, seen) for p in cmd.parameters]
             embed.add_field(name="⚙️ Options", value=join_lines(options, empty="No options."), inline=False)
         values = page.current_values(settings.get())
         if values:

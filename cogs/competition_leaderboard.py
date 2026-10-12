@@ -4,7 +4,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import leaderboard, players, species
+from cogs.player_profile import card_file
+from game import leaderboard, players, profiles, species
 from game.catalog import TALENT_BRANCHES
 from utils.ui import em, gear_label, join_lines, progress_bar, tag_prefix
 
@@ -77,26 +78,39 @@ class LeaderboardCog(commands.Cog):
         if target.bot:
             return await interaction.response.send_message("❌ Bots don't play.", ephemeral=True)
         p = await self.bot.db.run(leaderboard.profile, target.id)
-        embed = self.build_profile_embed(target, p)
-        await interaction.response.send_message(embed=embed)
+        file = await card_file(target, p)
+        embed = self.build_profile_embed(target, p, card=file is not None)
+        if file is None:
+            await interaction.response.send_message(embed=embed)
+            return
+        embed.set_image(url="attachment://profile.png")
+        await interaction.response.send_message(embed=embed, file=file)
 
-    def build_profile_embed(self, target: discord.abc.User, p: dict) -> discord.Embed:
+    def build_profile_embed(self, target: discord.abc.User, p: dict, card: bool = False) -> discord.Embed:
+        """The details under the card (with `card`), or the whole profile as text (without Pillow)."""
         u = p["user"]
         req = players.xp_required_for_level(u["level"])
-        title = f"{target.display_name}'s profile"
-        if p["team"]:
-            title = f"[{p['team']['tag']}] " + title
-        if p["is_champion"]:
-            title = "👑 " + title + " — Season champion"
-        embed = discord.Embed(
-            title=title,
-            description=(
-                f"**Level {u['level']}** ({rank_text(p['level_rank'])}) — {u['xp']}/{req} XP\n"
-                f"`{progress_bar(u['xp'], req)}`"
-            ),
-            color=discord.Color.blurple(),
-        )
-        embed.set_thumbnail(url=target.display_avatar.url)
+        color = discord.Color.from_rgb(*profiles.color_rgb(p["custom"]["color"]))
+        if card:
+            embed = discord.Embed(color=color)
+        else:
+            title = f"{target.display_name}'s profile"
+            if p["team"]:
+                title = f"[{p['team']['tag']}] " + title
+            if p["is_champion"]:
+                title = "👑 " + title + " — Season champion"
+            label = profiles.title_label(p["custom"]["title"])
+            embed = discord.Embed(
+                title=title,
+                description=(
+                    (f"« {label} »\n" if label else "")
+                    + (f"*{p['custom']['bio']}*\n" if p["custom"]["bio"] else "")
+                    + f"**Level {u['level']}** ({rank_text(p['level_rank'])}) — {u['xp']}/{req} XP\n"
+                    f"`{progress_bar(u['xp'], req)}`"
+                ),
+                color=color,
+            )
+            embed.set_thumbnail(url=target.display_avatar.url)
         embed.add_field(name="Emeralds", value=em(u["emeralds"]), inline=True)
         embed.add_field(name="Fortune", value=f"{em(p['fortune'])} ({rank_text(p['fortune_rank'])})", inline=True)
         if p["link"] and p["link"]["status"] == "approved":
