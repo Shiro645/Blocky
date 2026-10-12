@@ -144,7 +144,11 @@ def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:
     base = sum(amt * block_value(b) for b, amt in sold.items())
     if base == 0:
         raise GameError("You have no blocks to sell.")
-    bonus = int(round(base * (trader_multiplier(user["trader_points"]) - 1.0)))
+    # Imported here: species depends on this module.
+    from game import species
+
+    extra = trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager")
+    bonus = int(round(base * extra))
     ctx.execute("UPDATE blocks SET amount = 0 WHERE user_id=?;", (user_id,))
     # The blocks' value was scored when they were mined: only the trader bonus is new.
     give_emeralds(ctx, user_id, base)

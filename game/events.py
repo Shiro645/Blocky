@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import enchants, gear, players, potions, settings
+from game import enchants, gear, players, potions, settings, species
 from game.db import Ctx
 from game.errors import GameError
 
@@ -110,8 +110,9 @@ def attack_boss(ctx: Ctx, user_id: int, boss_id: int | None = None) -> dict:
 
     equipped = gear.get_equipped(ctx, user_id)
     # Same roll as duels: between the minimum damage and the sword's maximum.
-    top = float(gear.attack_damage(equipped))
-    damage = ctx.rng.uniform(min(float(settings.get()["duel"]["min_damage"]), top), top)
+    strength = 1.0 + species.bonus(ctx, user_id, "dwarf")  # Dwarves hit harder
+    top = float(gear.attack_damage(equipped)) * strength
+    damage = ctx.rng.uniform(min(float(settings.get()["duel"]["min_damage"]) * strength, top), top)
     crit = ctx.rng.random() < b["crit_chance"]
     if crit:
         damage *= b["crit_multiplier"]
@@ -160,7 +161,7 @@ def _defeat(ctx: Ctx, boss: dict) -> dict:
         if i == 0:
             share += int(b["top_damage_bonus"])
         sword = gear.get_equipped(ctx, r["user_id"]).get("sword")
-        looting = int(share * enchants.bonus("looting", enchants.level_of(sword, "looting")))
+        looting = int(share * enchants.effect(sword, "looting"))
         players.earn_emeralds(ctx, r["user_id"], share + looting)
         players.add_xp(ctx, r["user_id"], int(b["xp_reward"]))
         players.bump_stat(ctx, r["user_id"], "bosses_defeated")

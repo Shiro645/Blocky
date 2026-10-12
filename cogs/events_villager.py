@@ -168,10 +168,13 @@ class VillagerCog(commands.Cog):
         await interaction.response.edit_message(embed=visit_embed(res["visit"]), view=visit_view(res["visit"]))
         o = res["offer"]
         what = f"{asset_icon(o['asset'])} **{assets.describe(o['asset'], o['amount'])}**".strip()
+        price = res["price"]
         if o["kind"] == "buy":
-            text = f"✅ You sold {what} to the villager for **{em(o['price'])}**."
+            text = f"✅ You sold {what} to the villager for **{em(price)}**."
         else:
-            text = f"✅ You bought {what} for **{em(o['price'])}**."
+            text = f"✅ You bought {what} for **{em(price)}**."
+        if price != o["price"]:
+            text += " 🧑‍🌾 (Villager price)"
         await interaction.followup.send(text, ephemeral=True)
 
     # ---------- commands ----------

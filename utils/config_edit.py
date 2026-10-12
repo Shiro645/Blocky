@@ -52,6 +52,7 @@ CATEGORIES = {
     "games": "🎲 Mini-games",
     "rob": "🦹 Robberies",
     "loans": "💳 Loans",
+    "species": "🧬 Species",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -166,6 +167,10 @@ FIELDS: list[Field] = [
           help="Given to the winner of the last weekend tournament.", item="assign"),
     Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
           help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
+    *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
+            help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
+      for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
+                        ("miner", "Miner"))],
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -387,6 +392,15 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    # ---- species ----
+    _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),
+    _b("species.change_days", "species", "Days between two changes", kind="float", max=365),
+    _pct("species.villager_trade", "species", "Villager: better prices",
+         "/sell gives more, the market and the wandering villager's goods cost less, he pays more for blocks."),
+    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Duels, tournaments and bosses."),
+    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels."),
+    _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
+    _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
     # ---- loans ----
     _b("loans.min_amount", "loans", "Smallest loan", min=1),
     _b("loans.max_amount", "loans", "Biggest loan", min=1),

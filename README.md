@@ -69,6 +69,19 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - Branches (each has a cap): **Miner** (better blocks), **Trader** (sell bonus), **Lucky** (bedrock chance), **Efficiency** (shorter cooldown).
 - Level-ups are announced, and configurable **level roles** are given automatically.
 
+### 🧬 Species
+
+- `/species choose <species>` — Pick a species for a small bonus. The first choice is free; changing costs 1,000 emeralds (you confirm first) and is possible once every 7 days.
+  - 🧑‍🌾 **Villager** — 5% better prices: `/sell` gives 5% more, the market and the wandering villager's goods cost 5% less, and he pays 5% more for blocks.
+  - 🪓 **Dwarf** — +5% damage in duels, tournaments and against bosses.
+  - 🧪 **Witch** — +10% potion effects in duels.
+  - 🔮 **Mage** — +10% enchantment effects (Efficiency, Fortune, Unbreaking, Sharpness, Looting, Protection). A Fortune that isn't a whole number gives the rest as a chance of one more.
+  - ⚒️ **Miner** — 5% shorter mining cooldown (even below the minimum cooldown).
+- `/species list` — Every species, its bonus, how many players chose it, yours and when you can change (private).
+- Your species is shown in `/profile` and as an emoji before your name in `/leaderboard`, `/season` and `/team info`.
+- **Species roles** — `roles.species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner` (`/config` → Roles): the bot gives each player the role of their species and takes the others back. Checked at every start and when a member rejoins; changing a role in `/config` moves it.
+- All values in `/config` → 🧬 Species (`balance.species`). `/reset` doesn't change species.
+
 ### 🤝 Trading
 
 - `/pay <member> <amount>` — Send emeralds
@@ -80,7 +93,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### 🏆 Competition
 
 - `/leaderboard [board]` — Rankings by emeralds, level, total fortune, this week's season, top senders (emeralds sent with `/pay` plus emeralds lent with `/loan`; repayments don't count), blocks mined, bedrock, crafts, duels won, boss damage, achievements.
-- `/profile [member]` — Public profile: level, fortune and rank, team, equipment, achievements, stats, linked account, champion badge.
+- `/profile [member]` — Public profile: level, fortune and rank, team, species, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the value you *created* during the week (Monday to Sunday): the value of the blocks you mine (counted when mined, not when sold), daily rewards, drops, bosses, challenges, the server share of the tournament pot, and the trader/villager bonus when you sell. Spending doesn't lower it; emeralds or blocks received from other players, duel pots and auction sales don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. If the bot restarts during a duel, both stakes are refunded.
   - **Luck matters**: each hit deals a random amount between **1** and your sword's **maximum** (no sword 6 · gold 8 · iron 10 · diamond 12 · netherite 14, +1/+2/+3 with Sharpness). 10% of hits are **dodged**, 15% are **critical** (x2). Armor reduces the damage taken by 1.2% per point, 35% at most. The player who plays second starts with **+2 HP**.
@@ -152,11 +165,11 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
   - Members above the moderator or the bot, staff members and the owner can't be sanctioned. The bot needs the *Moderate Members*, *Kick*, *Ban*, *Manage Messages*, *Manage Channels* and *Manage Roles* permissions (`/lock` edits channel permissions; it keeps the bot and the staff role able to write, and `/unlock` puts back exactly the permissions the channel had).
 - Economy: `/give <member> <item> [amount] [reason]` gives anything (emeralds, blocks, sticks, ingots, lapis, books, potions, gear; type e.g. `gear:diamond:sword:sharpness3` for an enchanted piece). `/take <member> <item> [amount] [reason]` removes anything the member owns (the suggestions are what they have), after a confirmation button, and never more than they have. The member gets a DM with the reason. Staff gifts don't count for the seasons.
 - Fresh start: `/reset [member]` resets, for one player or the whole server, what you pick: emeralds/blocks/items (and auction listings, loans: the debts are cancelled), gear, levels/XP/talents (level roles removed), stats/achievements/seasons. You confirm by typing `RESET`, and a backup of the database is made just before. Minecraft links, moderation, teams and settings are kept.
-- Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
+- Players: `/player xp_add`, `/player xp_set`, `/player level`, `/player talents_add`, `/player talents_reset` (refunds points), `/player species` (set or remove a member's species, free and without waiting) — the member gets a DM — and `/player sync_roles` (gives everyone the level role matching their level).
 - Events: `/event boss [name] [hp]`, `/event drop`, `/event quiz` (a quiz question in this channel now), `/event tournament` (open registrations now, run the next step now — draw, then the next round — or cancel and refund; handy to test without waiting for the weekend), `/event villager` (come now for the usual visit length, or leave).
 - Whitelist: `/whitelist add`, `/whitelist remove`, `/whitelist list`, and `/unlink <member>` (removes a link and its whitelist entry)
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
-- Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies and loans. Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies, loans and species (the category menu is paged when there are more than 25). Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -196,6 +209,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
 | `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
+| `roles.species_villager` … `species_miner` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`) |
 | `roles.event_ping` | Role pinged when a boss appears (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
@@ -271,6 +285,8 @@ Moderation is tuned with `balance.moderation`: `warn_expire_days` (0 = warnings 
 The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sell_discount`, `buy_bonus`, `goods` (what he can sell), `buys` (blocks he buys and how many), `book_iii_price` and `potion_ii_price`. Reinforced potions use `balance.potions.level2_multiplier` and `value_ii`.
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
+
+Species are tuned with `balance.species`: `change_cost`, `change_days`, and the bonus of each one: `villager_trade` (e.g. `0.05`), `dwarf_damage`, `witch_potions`, `mage_enchants`, `miner_speed`.
 
 Loans are tuned with `balance.loans`: `min_amount`, `max_amount`, `max_interest` (e.g. `0.2` = 20%), `min_days`, `max_days`, `max_loans_out` (unpaid loans per lender), `offer_minutes`, `late_penalty` (e.g. `0.1`) and `garnish` (share of a late borrower's income that goes to the lender, e.g. `0.5`).
 
@@ -386,6 +402,7 @@ game/                        # game rules, no Discord code
 ├── gear.py                  # equipment, durability, combat stats
 ├── daily.py · exchange.py · assets.py   # daily, pay/trade/auction
 ├── loans.py                 # loans between players, late penalty and collection
+├── species.py               # species and their bonus
 ├── leaderboard.py · seasons.py · duel.py
 ├── teams.py                 # teams, team bonus and weekly team season
 ├── tournament.py            # weekend tournament

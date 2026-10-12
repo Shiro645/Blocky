@@ -432,6 +432,11 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_loans_lender ON loans(lender_id, status);
     CREATE INDEX idx_loans_due ON loans(status, due_at);
     """,
+    # 18: species
+    """
+    ALTER TABLE users ADD COLUMN species TEXT;
+    ALTER TABLE users ADD COLUMN species_changed_at INTEGER;
+    """,
 ]
 
 

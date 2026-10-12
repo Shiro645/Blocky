@@ -70,9 +70,11 @@ def wear(ctx: Ctx, piece: dict, amount: int = 1) -> bool:
     """Use a piece of gear. Returns True if it broke (it is then destroyed)."""
     if "enchants" not in piece:
         piece["enchants"] = enchants.of_gear(ctx, [piece["gear_id"]]).get(piece["gear_id"], {})
+    if "enchant_boost" not in piece:
+        piece["enchant_boost"] = enchants.boost_of(ctx, piece["user_id"])
     unbreaking = enchants.level_of(piece, "unbreaking")
     if unbreaking:
-        keep = enchants.bonus("unbreaking", unbreaking)
+        keep = enchants.effect(piece, "unbreaking")
         amount = sum(1 for _ in range(amount) if ctx.rng.random() >= keep)
         if amount <= 0:
             return False
@@ -98,7 +100,7 @@ def attack_damage(equipped: dict[str, dict]) -> int | float:
     dmg = settings.get()["gear"]["sword_max_damage"]
     sword = equipped.get("sword")
     base = float(dmg[sword["material"]] if sword else dmg["none"])
-    return _number(base + enchants.bonus("sharpness", enchants.level_of(sword, "sharpness")))
+    return _number(base + enchants.effect(sword, "sharpness"))
 
 
 def armor_points(equipped: dict[str, dict]) -> int | float:
@@ -107,7 +109,7 @@ def armor_points(equipped: dict[str, dict]) -> int | float:
     for slot in ARMOR:
         piece = equipped.get(slot)
         if piece:
-            total += float(table[piece["material"]][slot]) + enchants.bonus("protection", enchants.level_of(piece, "protection"))
+            total += float(table[piece["material"]][slot]) + enchants.effect(piece, "protection")
     return _number(total)
 
 

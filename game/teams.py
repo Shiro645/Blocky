@@ -14,7 +14,7 @@ from __future__ import annotations
 import math
 import re
 
-from game import players, seasons, settings
+from game import players, seasons, settings, species
 from game.db import Ctx
 from game.errors import GameError
 
@@ -489,6 +489,7 @@ def overview(ctx: Ctx, team_id: int) -> dict:
     return {
         "team": team,
         "members": rows,
+        "species": species.emojis(ctx, [m["user_id"] for m in rows]),
         "max_members": max_members(),
         "rank": rank,
         "teams_ranked": len(table),

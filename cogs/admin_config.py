@@ -56,6 +56,7 @@ class Screen:
     field: str | None = None  # a key of ce.FIELDS_BY_KEY
     mode: str | None = None  # "add": picking what a new table line gives
     role_page: int = 0  # page of the role list (level roles, role settings)
+    category_page: int = 0  # page of the category menu (more than 25 categories)
 
 
 def role_list(guild: discord.Guild | None, assignable: bool) -> list[discord.Role]:
@@ -225,7 +226,7 @@ class ConfigView(BaseView):
     def __init__(self, cog: ConfigCog, user_id: int, screen: Screen, guild: discord.Guild | None = None):
         super().__init__(allowed_ids={user_id}, timeout=600)
         self.cog, self.user_id, self.screen, self.guild = cog, user_id, screen, guild
-        self.add_item(CategorySelect(screen.category))
+        self.add_item(CategorySelect(screen.category, screen.category_page))
         field = ce.FIELDS_BY_KEY.get(screen.field) if screen.field else None
         if field is not None:
             self.field_controls(field)
@@ -320,18 +321,39 @@ class ConfigView(BaseView):
 
 
 # ---------- navigation ----------
+def category_pages() -> list[list[str]]:
+    """The categories, cut in pages when a single menu (25 options) can't hold them all."""
+    keys = list(ce.CATEGORIES)
+    if len(keys) <= 25:
+        return [keys]
+    per_page = 23  # + "Previous" and "More" options
+    return [keys[i:i + per_page] for i in range(0, len(keys), per_page)]
+
+
 class CategorySelect(discord.ui.Select):
     view: ConfigView
 
-    def __init__(self, current: str | None):
+    def __init__(self, current: str | None, page: int = 0):
+        pages = category_pages()
+        if current is not None:
+            page = next((i for i, keys in enumerate(pages) if current in keys), 0)
+        page = max(0, min(page, len(pages) - 1))
         options = [
-            discord.SelectOption(label=label, value=key, default=key == current)
-            for key, label in ce.CATEGORIES.items()
+            discord.SelectOption(label=ce.CATEGORIES[key], value=key, default=key == current) for key in pages[page]
         ]
-        super().__init__(placeholder="Choose a category…", options=options, row=0)
+        if page > 0:
+            options.insert(0, discord.SelectOption(label="Previous categories…", value=f"page:{page - 1}", emoji="⬅️"))
+        if page + 1 < len(pages):
+            options.append(discord.SelectOption(label="More categories…", value=f"page:{page + 1}", emoji="➡️"))
+        where = f" ({page + 1}/{len(pages)})" if len(pages) > 1 else ""
+        super().__init__(placeholder=f"Choose a category…{where}", options=options, row=0)
 
     async def callback(self, interaction: discord.Interaction):
-        await self.view.show(interaction, Screen(category=self.values[0]))
+        value = self.values[0]
+        if value.startswith("page:"):
+            await self.view.show(interaction, Screen(category_page=int(value.split(":", 1)[1])))
+        else:
+            await self.view.show(interaction, Screen(category=value))
 
 
 class FieldSelect(discord.ui.Select):

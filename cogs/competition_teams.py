@@ -12,7 +12,7 @@ from game import settings, teams
 from game.errors import GameError
 from utils.checks import staff_only
 from utils.config import role_id
-from utils.ui import ConfirmView, em, report_error
+from utils.ui import ConfirmView, em, report_error, tag_prefix
 
 log = logging.getLogger("teams")
 
@@ -296,7 +296,8 @@ class TeamsCog(commands.Cog):
         data = await self.bot.db.run(load)
         t = data["team"]
         lines = [
-            ("👑 " if m["is_leader"] else "") + f"<@{m['user_id']}> — {em(m['score'])} this week" + (" ⛏️" if m["active"] else "")
+            ("👑 " if m["is_leader"] else "") + tag_prefix({}, m["user_id"], data["species"])
+            + f"<@{m['user_id']}> — {em(m['score'])} this week" + (" ⛏️" if m["active"] else "")
             for m in data["members"]
         ]
         embed = discord.Embed(

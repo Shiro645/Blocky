@@ -231,6 +231,17 @@ DEFAULTS: dict[str, Any] = {
         "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
         "min_victim_level": 5,  # players below this level can't be robbed
     },
+    # Species (/species): a small bonus each. The first choice is free, then changing costs
+    # change_cost emeralds, once every change_days days.
+    "species": {
+        "change_cost": 1000,
+        "change_days": 7,
+        "villager_trade": 0.05,  # /sell +5%, market and villager goods -5%, villager pays +5% for blocks
+        "dwarf_damage": 0.05,  # damage in duels, tournaments and against bosses
+        "witch_potions": 0.10,  # potion effects in duels
+        "mage_enchants": 0.10,  # enchantment effects
+        "miner_speed": 0.05,  # mining cooldown
+    },
     # Loans between players (/loan). The lender picks the interest and the duration within these limits.
     "loans": {
         "min_amount": 50,

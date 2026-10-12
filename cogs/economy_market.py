@@ -25,7 +25,8 @@ class QuantityModal(discord.ui.Modal, title="Enter quantity"):
         res = await self.bot.db.run(shop.buy, interaction.user.id, self.key, units)
         offer = res["offer"]
         await interaction.response.send_message(
-            f"✅ Bought **{item_label(offer['item'], offer['material'], res['amount'])}** for **{em(res['price'])}**.\n"
+            f"✅ Bought **{item_label(offer['item'], offer['material'], res['amount'])}** for **{em(res['price'])}**"
+            + (f" (🧑‍🌾 Villager price: -{em(res['saved'])})" if res["saved"] else "") + ".\n"
             f"New balance: **{em(res['balance'])}**.",
             ephemeral=True,
         )

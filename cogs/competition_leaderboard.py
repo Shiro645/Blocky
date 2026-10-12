@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import leaderboard, players
+from game import leaderboard, players, species
 from game.catalog import TALENT_BRANCHES
 from utils.ui import em, gear_label, join_lines, progress_bar, tag_prefix
 
@@ -54,7 +54,7 @@ class LeaderboardCog(commands.Cog):
         data = await self.bot.db.run(leaderboard.leaderboard, board, interaction.user.id)
 
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid)}<@{uid}> — **{format_value(board, value)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'])}<@{uid}> — **{format_value(board, value)}**"
             for i, (uid, value) in enumerate(data["top"], start=1)
         ]
         embed = discord.Embed(
@@ -104,6 +104,13 @@ class LeaderboardCog(commands.Cog):
         if p["team"]:
             leader = " 👑" if p["team"]["leader_id"] == target.id else ""
             embed.add_field(name="Team", value=f"🛡️ [{p['team']['tag']}] {p['team']['name']}{leader}", inline=True)
+        kind = u.get("species")
+        embed.add_field(
+            name="Species",
+            value=f"{species.label(kind)} — {species.describe(kind)}" if kind in species.SPECIES
+            else "None yet: `/species choose`",
+            inline=False,
+        )
         talents = " · ".join(f"{b} {u[b + '_points']}" for b in TALENT_BRANCHES)
         embed.add_field(name="Talents", value=talents, inline=False)
 

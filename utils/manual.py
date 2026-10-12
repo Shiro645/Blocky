@@ -13,6 +13,7 @@ from typing import Any, Callable
 from game import blockdle, enchants, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
+from game.species import SPECIES
 from utils.mc_commands import DEFAULT_BLOCKED
 
 Settings = dict[str, Any]
@@ -406,6 +407,14 @@ def _quiz(s: Settings) -> list[str]:
                    f"**{num(g['quiz_xp'])}** XP"]
 
 
+def _species(s: Settings) -> list[str]:
+    sp = s["species"]
+    lines = [f"{v.emoji} **{v.name}**: " + v.text.format(pct(sp[v.setting])) for v in SPECIES.values()]
+    lines.append(f"First choice free · changing costs {em(sp['change_cost'])}, once every "
+                 f"**{num(sp['change_days'])}** day(s)")
+    return lines
+
+
 def _loans(s: Settings) -> list[str]:
     lo = s["loans"]
     return [
@@ -612,6 +621,24 @@ PAGES: list[Page] = [
         _talents,
         examples=("/talent_buy branch:efficiency points:2",),
         related=("talents", "xp"),
+    ),
+    Page(
+        "species choose", "xp",
+        "Picks your species, for a small bonus. Your first choice is free; changing later costs emeralds and "
+        "can only be done once in a while (you confirm first). Your species is shown in /profile and as an "
+        "emoji before your name in /leaderboard, /season and /team info, and the server can give a role per "
+        "species.",
+        _species,
+        examples=("/species choose species:🔮 Mage",),
+        related=("species list", "profile"),
+    ),
+    Page(
+        "species list", "xp",
+        "Shows every species, its bonus and how many players chose it, plus yours and when you can change. "
+        "Only you see it.",
+        _species,
+        examples=("/species list",),
+        related=("species choose",),
     ),
     # ---- trading ----
     Page(
@@ -1140,6 +1167,14 @@ PAGES: list[Page] = [
         "The member gets a DM.",
         examples=("/player talents_reset member:@Steve",),
         related=("player talents_add",),
+    ),
+    Page(
+        "player species", "staff_economy",
+        "Sets a member's species (or none), for free and without the waiting time. Their species role "
+        "follows. The member gets a DM.",
+        _species,
+        examples=("/player species member:@Steve species:🪓 Dwarf",),
+        related=("species choose",),
     ),
     Page(
         "player sync_roles", "staff_economy",

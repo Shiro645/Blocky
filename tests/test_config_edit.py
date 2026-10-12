@@ -124,7 +124,8 @@ class RegistryTests(unittest.TestCase):
                 if field.kind == "choice":
                     self.assertIn(ce.default_value(field), [v for _, v in field.choices])
         self.assertEqual(len(ce.CATEGORIES), len(set(ce.CATEGORIES.values())))
-        self.assertLessEqual(len(ce.CATEGORIES), 25)  # one select menu
+        # More than 25 categories are paged in /config (cogs/admin_config.category_pages).
+        self.assertTrue(all(len(label) <= 100 and not key.startswith("page:") for key, label in ce.CATEGORIES.items()))
 
     def test_a_value_inside_a_list(self):
         cost = ce.FIELDS_BY_KEY["enchants.apply_cost.1"]

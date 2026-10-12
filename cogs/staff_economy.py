@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, backups, players, reset, settings
+from game import assets, backups, players, reset, settings, species
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.checks import staff_only
@@ -29,7 +29,7 @@ def what(key: str, amount: int) -> str:
 class StaffEconomyCog(commands.Cog):
     """Staff: give and take anything, change a member's XP, level and talents. Members get a DM."""
 
-    player = app_commands.Group(name="player", description="STAFF: Change a member's XP, level and talents.")
+    player = app_commands.Group(name="player", description="STAFF: Change a member's XP, level, talents and species.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -187,6 +187,25 @@ class StaffEconomyCog(commands.Cog):
             interaction, f"✅ {member.mention}'s talents were reset. Unspent points: **{p['talent_points']}**.",
             member, f"🌟 The staff reset your talents: you have **{p['talent_points']}** points to spend again with /talent_buy",
         )
+
+    @player.command(name="species", description="STAFF: Set a member's species (free, no waiting).")
+    @app_commands.describe(member="Whose species to set", kind="The species (None = no species)")
+    @app_commands.rename(kind="species")
+    @app_commands.choices(kind=[
+        *[app_commands.Choice(name=f"{s.emoji} {s.name}", value=s.key) for s in species.SPECIES.values()],
+        app_commands.Choice(name="None", value="none"),
+    ])
+    @staff_only()
+    async def set_species(self, interaction: discord.Interaction, member: discord.Member, kind: str):
+        key = None if kind == "none" else kind
+        res = await self.bot.db.run(species.staff_set, member.id, key)
+        await self.answer(
+            interaction, f"✅ {member.mention}: {species.label(res['before'])} → **{species.label(key)}**.",
+            member, f"🧬 The staff set your species to **{species.label(key)}**",
+        )
+        cog = self.bot.get_cog("SpeciesCog")
+        if cog is not None:
+            await cog.sync_roles(member.id)  # type: ignore[attr-defined]
 
     @player.command(name="sync_roles", description="STAFF: Give every member the level role matching their level.")
     @staff_only()

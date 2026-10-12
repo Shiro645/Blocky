@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import links, players, progress, seasons, shop, teams
+from game import links, players, progress, seasons, shop, species, teams
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -77,6 +77,7 @@ def leaderboard(ctx: Ctx, board: str, user_id: int, limit: int = 10) -> dict:
     return {
         "top": rows[:limit],
         "tags": teams.tags_of(ctx, [uid for uid, _ in rows[:limit]]),
+        "species": species.emojis(ctx, [uid for uid, _ in rows[:limit]]),
         "rank": rank,
         "value": rows[rank - 1][1] if rank else 0,
         "players": len(rows),
