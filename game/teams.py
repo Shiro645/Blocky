@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import json
 import math
 import re
 
@@ -296,6 +297,7 @@ def _drop_team(ctx: Ctx, team: dict) -> None:
     )
     ctx.execute("DELETE FROM team_season_scores WHERE team_id=? AND season_id=?;", (team["team_id"], ctx.week_id))
     ctx.execute("DELETE FROM teams WHERE team_id=?;", (team["team_id"],))
+    ctx.execute("DELETE FROM team_banners WHERE team_id=?;", (team["team_id"],))
 
 
 def _delete(ctx: Ctx, team: dict) -> dict:
@@ -486,9 +488,11 @@ def overview(ctx: Ctx, team_id: int) -> dict:
     rank = next((i for i, t in enumerate(table, start=1) if t["team_id"] == team_id), None)
     active = sum(1 for m in rows if m["active"])
     wins = ctx.one("SELECT COUNT(*) AS n FROM team_season_results WHERE team_id=? AND rank=1;", (team_id,))["n"]
+    banner = ctx.one("SELECT base, layers FROM team_banners WHERE team_id=?;", (team_id,))
     return {
         "team": team,
         "members": rows,
+        "banner": {"base": banner["base"], "layers": json.loads(banner["layers"])} if banner else None,
         "species": species.emojis(ctx, [m["user_id"] for m in rows]),
         "max_members": max_members(),
         "rank": rank,

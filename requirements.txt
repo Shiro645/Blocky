@@ -3,3 +3,4 @@ python-dotenv
 aiohttp
 mcstatus
 tzdata
+Pillow>=10.1

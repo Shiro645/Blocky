@@ -13,6 +13,7 @@ from typing import Any, Callable
 from game import blockdle, enchants, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
+from game.profiles import FRAMES
 from game.pve import DIFFICULTIES as DUNGEON
 from game.species import SPECIES
 from utils.mc_commands import DEFAULT_BLOCKED
@@ -426,6 +427,18 @@ def _species(s: Settings) -> list[str]:
     return lines
 
 
+def _profiles(s: Settings) -> list[str]:
+    p = s["profiles"]
+    sold = " · ".join(f"{FRAMES[k].name} {num(v)}" for k, v in p["frame_prices"].items() if k in FRAMES)
+    earned = " · ".join(f"{f.name} ({f.how})" for f in FRAMES.values() if f.unlock)
+    return [
+        f"Colors: {em(p['color_price'])} each (16 dye colors) · any #hex: {em(p['hex_price'])} once",
+        f"Frames sold (emeralds): {sold}",
+        f"Frames earned: {earned}",
+        f"Team banner: {em(p['banner_cost'])} per change",
+    ]
+
+
 def _loans(s: Settings) -> list[str]:
     lo = s["loans"]
     return [
@@ -781,10 +794,11 @@ PAGES: list[Page] = [
     ),
     Page(
         "profile", "competition",
-        "Shows a player's profile: level, emeralds, fortune and main stats. Yours by default.",
+        "Shows a player's profile card: their frame and color, avatar, name and team tag, title, level and XP, "
+        "emeralds, fortune rank, species, bio, 3 showcased achievements and their team's banner; then their "
+        "equipment, talents, achievements and stats. Yours by default. Customize yours with /customize.",
         examples=("/profile", "/profile member:@Steve"),
-        related=("leaderboard", "achievements", "xp"),
-    ),
+        related=("customize list", "leaderboard", "achievements")    ),
     Page(
         "season", "competition",
         "Shows this week's season standings. A season runs from Monday 00:00 to Sunday 23:59. Your score is "
@@ -810,6 +824,57 @@ PAGES: list[Page] = [
         _duel,
         examples=("/duel member:@Steve stake:100",),
         related=("potions", "gear", "enchant info", "tournament info"),
+    ),
+    Page(
+        "customize bio", "competition",
+        "Writes the bio of your profile card (leave it empty to remove it). Free.",
+        lambda s: [f"**{num(s['profiles']['bio_max'])}** characters at most · emoji show in text, not on the card"],
+        examples=("/customize bio text:Je mine donc je suis",),
+        related=("profile", "customize list"),
+    ),
+    Page(
+        "customize color", "competition",
+        "Changes the color of your profile card (and of the profile message). The 16 Minecraft dye colors are "
+        "bought once each, then yours for good; the default color is free. You see a preview before buying.",
+        _profiles,
+        examples=("/customize color color:Lime",),
+        related=("customize hex", "customize list"),
+    ),
+    Page(
+        "customize hex", "competition",
+        "Uses any color by its code, like `#ff8800`. Paying once unlocks every code for good.",
+        _profiles,
+        examples=("/customize hex code:#ff8800",),
+        related=("customize color",),
+    ),
+    Page(
+        "customize frame", "competition",
+        "Puts a patterned frame around your profile card. Some frames are bought (you see a preview first), the "
+        "rarest are earned by playing: the suggestions show the price, or how to earn them.",
+        _profiles,
+        examples=("/customize frame frame:Diamond",),
+        related=("customize list", "profile"),
+    ),
+    Page(
+        "customize title", "competition",
+        "Shows a title under your name: earned by playing (bosses, duels, dungeon, tournament, seasons, level…), "
+        "or given by the staff. The suggestions list yours; /customize list shows how to earn the others.",
+        examples=("/customize title title:Boss Slayer",),
+        related=("customize list",),
+    ),
+    Page(
+        "customize showcase", "competition",
+        "Picks up to 3 of your achievements to show on your card. Leave them empty to show your latest ones.",
+        examples=("/customize showcase badge1:Boss Slayer badge2:Squad Goals",),
+        related=("achievements", "profile"),
+    ),
+    Page(
+        "customize list", "competition",
+        "Shows your colors, frames and titles, the prices of the others and how to earn the rare ones. "
+        "Only you see it.",
+        _profiles,
+        examples=("/customize list",),
+        related=("customize color", "customize frame", "customize title"),
     ),
     Page(
         "dummy hit", "competition",
@@ -1035,6 +1100,15 @@ PAGES: list[Page] = [
         "to them.",
         examples=("/team transfer member:@Steve",),
         related=("team info",),
+    ),
+    Page(
+        "team banner", "teams",
+        "**Leader only.** Designs the team banner, like in Minecraft: a base color and up to 3 patterns (stripes, "
+        "chevron, cross, border, roundel, gradient, creeper…), each with its color, drawn on top of each other. "
+        "You see it before saving. It shows on every member's profile card and in /team info.",
+        lambda s: [f"Each change: {em(s['profiles']['banner_cost'])}"],
+        examples=("/team banner base:Blue pattern1:Chevron color1:Yellow pattern2:Bordure color2:Black",),
+        related=("team info", "profile"),
     ),
     Page(
         "team rename", "teams",
@@ -1282,6 +1356,20 @@ PAGES: list[Page] = [
         _species,
         examples=("/player species member:@Steve species:🪓 Dwarf",),
         related=("species choose",),
+    ),
+    Page(
+        "player title", "staff_economy",
+        "Gives a member a custom title (40 characters at most) and puts it on their profile card. They keep it "
+        "in their titles. The member gets a DM.",
+        examples=("/player title member:@Steve title:The Architect",),
+        related=("player profile_reset", "customize title"),
+    ),
+    Page(
+        "player profile_reset", "staff_economy",
+        "Removes a member's bio, their title (and the custom titles the staff gave them), or both. The member "
+        "gets a DM with the reason.",
+        examples=("/player profile_reset member:@Steve part:Bio reason:Insult",),
+        related=("player title",),
     ),
     Page(
         "player sync_roles", "staff_economy",

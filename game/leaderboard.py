@@ -1,7 +1,7 @@
 """Rankings and player profiles."""
 from __future__ import annotations
 
-from game import links, players, progress, seasons, shop, species, teams
+from game import links, players, profiles, progress, seasons, shop, species, teams
 from game.db import Ctx
 
 # key -> (label, unit shown after the value)
@@ -100,4 +100,10 @@ def profile(ctx: Ctx, user_id: int) -> dict:
         "achievements": progress.achievements_overview(ctx, user_id),
         "link": links.get_link(ctx, user_id),
         "team": teams.team_of(ctx, user_id),
-    }
+        "custom": profiles.get(ctx, user_id),
+    } | _banner(ctx, user_id)
+
+
+def _banner(ctx: Ctx, user_id: int) -> dict:
+    team = teams.team_of(ctx, user_id)
+    return {"banner": profiles.banner_of(ctx, team["team_id"]) if team else None}

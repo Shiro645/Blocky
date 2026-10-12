@@ -261,6 +261,15 @@ DEFAULTS: dict[str, Any] = {
             "nightmare": {"entry": 1200, "strength": 1.42, "reward": 32.0},
         },
     },
+    # Profile customization (/customize) and team banners (/team banner).
+    "profiles": {
+        "bio_max": 150,
+        "color_price": 300,  # each dye color, bought once
+        "hex_price": 1500,  # unlocks any #hex color, once
+        "banner_cost": 200,  # each change of a team banner (paid by the leader)
+        # Frames sold for emeralds (the others are earned, see game/profiles.py).
+        "frame_prices": {"stone": 200, "gold": 500, "redstone": 800, "lapis": 1000, "diamond": 2000, "emerald": 3000},
+    },
     # Training dummy (/dummy): a damage tester (series of hits, with a leaderboard) and training duels.
     "dummy": {
         "hits": 10,

@@ -54,6 +54,7 @@ CATEGORIES = {
     "loans": "💳 Loans",
     "species": "🧬 Species",
     "pve": "⚔️ PVE dungeon",
+    "profiles": "🎨 Profiles",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -399,6 +400,14 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    # ---- profiles ----
+    _b("profiles.bio_max", "profiles", "Bio: maximum characters", min=10, max=300),
+    _b("profiles.color_price", "profiles", "Price of a profile color", "Each of the 16 dye colors, bought once."),
+    _b("profiles.hex_price", "profiles", "Price of custom #hex colors", "Paid once: then any #hex color."),
+    _b("profiles.banner_cost", "profiles", "Price of a team banner change", "Paid by the leader."),
+    *[_b(f"profiles.frame_prices.{key}", "profiles", f"Frame price: {name}", "The rarer frames are earned, not sold.")
+      for key, name in (("stone", "Stone"), ("gold", "Gold"), ("redstone", "Redstone"), ("lapis", "Lapis"),
+                        ("diamond", "Diamond"), ("emerald", "Emerald"))],
     # ---- PVE dungeon ----
     _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
     _b("pve.max_players", "pve", "Players per group", min=1, max=10),

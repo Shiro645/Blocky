@@ -45,6 +45,7 @@ EXTENSIONS = [
     "cogs.economy_exchange",
     "cogs.economy_loans",
     "cogs.player_species",
+    "cogs.player_profile",
     "cogs.economy_auction",
     "cogs.staff_economy",
     "cogs.admin_tools",
