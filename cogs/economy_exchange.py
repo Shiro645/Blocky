@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, exchange
+from game import assets, exchange, loans
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.ui import BaseView, asset_icon, em
@@ -103,8 +103,10 @@ class ExchangeCog(commands.Cog):
             raise GameError("Pick another player.")
 
         def check(ctx):
+            loans.check_not_late(ctx, interaction.user.id, "trades")
             exchange.check_owns(ctx, interaction.user.id, give, give_amount)
             if get:
+                loans.check_not_late(ctx, member.id, "trades")
                 exchange.check_owns(ctx, member.id, get, get_amount)
 
         await self.bot.db.run(check)

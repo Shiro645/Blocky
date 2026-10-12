@@ -406,6 +406,20 @@ def _quiz(s: Settings) -> list[str]:
                    f"**{num(g['quiz_xp'])}** XP"]
 
 
+def _loans(s: Settings) -> list[str]:
+    lo = s["loans"]
+    return [
+        f"From {em(lo['min_amount'])} to {em(lo['max_amount'])} · interest **0–{pct(lo['max_interest'])}** · "
+        f"**{num(lo['min_days'])}–{num(lo['max_days'])}** day(s) to repay",
+        f"One unpaid loan per borrower · up to **{num(lo['max_loans_out'])}** unpaid loans per lender · "
+        f"an offer lasts **{duration(float(lo['offer_minutes']) * 60)}**",
+        f"Late: **+{pct(lo['late_penalty'])}** of what's left, the bot takes what it can from the borrower's "
+        f"emeralds, then **{pct(lo['garnish'])}** of every emerald they receive goes to the lender until it's "
+        "paid (and no /pay, /trade, auction listing or loan until then)",
+        "Loans, repayments and interest don't count for the seasons",
+    ]
+
+
 def _rob(s: Settings) -> list[str]:
     r = s["rob"]
     return [
@@ -602,10 +616,50 @@ PAGES: list[Page] = [
     # ---- trading ----
     Page(
         "pay", "trading",
-        "Sends emeralds to another player, instantly. Payments don't count for the seasons.",
+        "Sends emeralds to another player, instantly. Payments don't count for the seasons, but they count in "
+        "the **Top senders** leaderboard. Not possible while you have a late loan.",
         lambda s: [f"Minimum: {em(s['pay']['min_amount'])}"],
         examples=("/pay member:@Steve amount:100",),
-        related=("trade",),
+        related=("trade", "loan offer"),
+    ),
+    Page(
+        "loan offer", "trading",
+        "Offers a loan to a player: the amount, the interest you ask (in %, 0 = free) and the days they have to "
+        "repay. They accept or decline with the buttons (they still work after a restart); everything is checked "
+        "again when they accept, and the emeralds move at once. What you lend counts in the **Top senders** "
+        "leaderboard.",
+        _loans,
+        examples=("/loan offer member:@Steve amount:1000 interest:10 days:3",),
+        related=("loan ask", "loan list", "loan forgive"),
+    ),
+    Page(
+        "loan ask", "trading",
+        "Asks a player for a loan, with the interest and the duration you propose. They accept or decline "
+        "with the buttons.",
+        _loans,
+        examples=("/loan ask member:@Alex amount:500 interest:5 days:2",),
+        related=("loan offer", "loan repay"),
+    ),
+    Page(
+        "loan repay", "trading",
+        "Pays back your loan: everything left by default, or part of it with `amount`. If the deadline passes, "
+        "a penalty is added and the bot collects the rest automatically.",
+        _loans,
+        examples=("/loan repay", "/loan repay amount:300"),
+        related=("loan list",),
+    ),
+    Page(
+        "loan list", "trading",
+        "Shows what you owe (and the deadline) and what the players you lent to still owe you. Only you see it.",
+        _loans,
+        examples=("/loan list",),
+        related=("loan repay", "loan forgive"),
+    ),
+    Page(
+        "loan forgive", "trading",
+        "**Lender only.** Cancels what a player still owes you (asks for confirmation).",
+        examples=("/loan forgive member:@Steve",),
+        related=("loan list",),
     ),
     Page(
         "trade", "trading",
@@ -659,7 +713,8 @@ PAGES: list[Page] = [
     Page(
         "leaderboard", "competition",
         "Shows a server ranking: emeralds, level, total fortune (everything you own, valued in emeralds), "
-        "this week's season, or a stat (blocks mined, bedrock found, duels won, boss damage, achievements…).",
+        "this week's season, top senders (emeralds sent with /pay and lent with /loan), or a stat (blocks mined, "
+        "bedrock found, duels won, boss damage, achievements…).",
         examples=("/leaderboard", "/leaderboard board:Level"),
         related=("profile", "season"),
     ),
@@ -1046,7 +1101,7 @@ PAGES: list[Page] = [
     Page(
         "reset", "staff_economy",
         "A fresh start, for one player (`member`) or for **everyone** (leave `member` empty). Pick what to reset: "
-        "emeralds, blocks and items (with auction listings and robberies in progress), gear and enchantments, "
+        "emeralds, blocks and items (with auction listings, robberies in progress and loans), gear and enchantments, "
         "levels, XP and talents (level roles are removed), stats, achievements and seasons (with challenges, "
         "team season scores and the daily streak). Then press **Reset…** and type `RESET`.\n"
         "A backup of the database is made just before (restore it to undo). Minecraft links, moderation, teams, "

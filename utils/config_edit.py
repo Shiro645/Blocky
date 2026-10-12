@@ -51,6 +51,7 @@ CATEGORIES = {
     "villager": "🧑‍🌾 Villager",
     "games": "🎲 Mini-games",
     "rob": "🦹 Robberies",
+    "loans": "💳 Loans",
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -386,6 +387,17 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    # ---- loans ----
+    _b("loans.min_amount", "loans", "Smallest loan", min=1),
+    _b("loans.max_amount", "loans", "Biggest loan", min=1),
+    _pct("loans.max_interest", "loans", "Highest interest", "The lender picks the interest, from 0 up to this."),
+    _b("loans.min_days", "loans", "Shortest loan (days)", min=1, max=365),
+    _b("loans.max_days", "loans", "Longest loan (days)", min=1, max=365),
+    _b("loans.max_loans_out", "loans", "Unpaid loans a lender can have", min=1, max=100),
+    _b("loans.offer_minutes", "loans", "Minutes to accept an offer", min=1, max=1440),
+    _pct("loans.late_penalty", "loans", "Late penalty", "Added to what's left at the deadline."),
+    _pct("loans.garnish", "loans", "Taken from a late borrower's income",
+         "Share of every emerald a late borrower receives that goes to the lender until it's paid."),
 ]
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 

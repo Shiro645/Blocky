@@ -61,10 +61,19 @@ def add_score(ctx: Ctx, user_id: int, amount: int) -> None:
 
 
 def give_emeralds(ctx: Ctx, user_id: int, amount: int) -> None:
-    """Emeralds added without counting as earned (transfers, refunds, staff)."""
+    """Emeralds added without counting as earned (transfers, refunds, staff).
+
+    A late borrower gives part of it to their lender (game/loans.py).
+    """
     if amount <= 0:
         return
     ensure_user(ctx, user_id)
+    # Imported here: loans depends on this module.
+    from game import loans
+
+    amount -= loans.garnish(ctx, user_id, amount)
+    if amount <= 0:
+        return
     ctx.execute("UPDATE users SET emeralds = emeralds + ? WHERE user_id=?;", (amount, user_id))
 
 

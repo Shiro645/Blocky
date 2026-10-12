@@ -400,6 +400,38 @@ MIGRATIONS: list[str] = [
         value TEXT NOT NULL
     );
     """,
+    # 17: loans between players
+    """
+    CREATE TABLE loan_offers (
+        offer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lender_id INTEGER NOT NULL,
+        borrower_id INTEGER NOT NULL,
+        proposer_id INTEGER NOT NULL,   -- the lender (offer) or the borrower (ask)
+        amount INTEGER NOT NULL,
+        interest INTEGER NOT NULL,      -- percent
+        days INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open'  -- open | accepted | declined
+    );
+    CREATE TABLE loans (
+        loan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lender_id INTEGER NOT NULL,
+        borrower_id INTEGER NOT NULL,
+        amount INTEGER NOT NULL,        -- lent
+        interest INTEGER NOT NULL,      -- percent
+        due INTEGER NOT NULL,           -- to repay: amount + interest
+        penalty INTEGER NOT NULL DEFAULT 0,  -- added when late
+        repaid INTEGER NOT NULL DEFAULT 0,
+        started_at INTEGER NOT NULL,
+        due_at INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',  -- active | late | repaid | forgiven
+        closed_at INTEGER
+    );
+    CREATE INDEX idx_loans_borrower ON loans(borrower_id, status);
+    CREATE INDEX idx_loans_lender ON loans(lender_id, status);
+    CREATE INDEX idx_loans_due ON loans(status, due_at);
+    """,
 ]
 
 

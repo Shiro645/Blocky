@@ -231,6 +231,20 @@ DEFAULTS: dict[str, Any] = {
         "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
         "min_victim_level": 5,  # players below this level can't be robbed
     },
+    # Loans between players (/loan). The lender picks the interest and the duration within these limits.
+    "loans": {
+        "min_amount": 50,
+        "max_amount": 5000,
+        "max_interest": 0.20,  # highest interest a lender can ask
+        "min_days": 1,
+        "max_days": 7,
+        "max_loans_out": 5,  # unpaid loans a lender can have at once
+        "offer_minutes": 15,  # time to accept an offer
+        # Late: this % of what's left is added, the bot takes what it can from the borrower's
+        # emeralds, then this share of every emerald they receive until it's paid.
+        "late_penalty": 0.10,
+        "garnish": 0.50,
+    },
     # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
     "games": {
         "min_bet": 1,
@@ -466,6 +480,13 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
             out.append((f"`balance.rob.{mode}_min` must not be above `{mode}_max`.", [("rob", f"{mode}_min"), ("rob", f"{mode}_max")]))
     if r["minutes_to_stop"] < 1:
         out.append(("`balance.rob.minutes_to_stop` must be at least 1.", [("rob", "minutes_to_stop")]))
+    lo = merged["loans"]
+    if lo["min_amount"] < 1 or lo["min_amount"] > lo["max_amount"]:
+        out.append(("Loans: the minimum amount must be at least 1 and not above the maximum.",
+                    [("loans", "min_amount"), ("loans", "max_amount")]))
+    if lo["min_days"] < 1 or lo["min_days"] > lo["max_days"]:
+        out.append(("Loans: the shortest duration must be at least 1 day and not above the longest.",
+                    [("loans", "min_days"), ("loans", "max_days")]))
     g = merged["games"]
     if g["roulette_zeros"] not in (1, 2):
         out.append(("`balance.games.roulette_zeros` is 1 (0 only) or 2 (0 and 00).", [("games", "roulette_zeros")]))

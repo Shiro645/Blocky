@@ -5,7 +5,7 @@ inflate the weekly season score.
 """
 from __future__ import annotations
 
-from game import assets, players, settings
+from game import assets, loans, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -16,6 +16,7 @@ DAY = 86400
 def pay(ctx: Ctx, from_id: int, to_id: int, amount: int) -> dict:
     if from_id == to_id:
         raise GameError("You can't pay yourself.")
+    loans.check_not_late(ctx, from_id, "/pay")
     minimum = int(settings.get()["pay"]["min_amount"])
     if amount < minimum:
         raise GameError(f"The minimum payment is **{minimum}** emeralds.")
@@ -42,6 +43,9 @@ def trade(ctx: Ctx, a_id: int, b_id: int, a_key: str, a_amount: int, b_key: str 
     """A gives `a_amount` of `a_key` to B, and B gives `b_amount` of `b_key` to A (if any)."""
     if a_id == b_id:
         raise GameError("You can't trade with yourself.")
+    loans.check_not_late(ctx, a_id, "trades")
+    if b_key:
+        loans.check_not_late(ctx, b_id, "trades")
     check_owns(ctx, a_id, a_key, a_amount)
     if b_key:
         check_owns(ctx, b_id, b_key, b_amount)
@@ -63,6 +67,7 @@ def list_for_sale(ctx: Ctx, seller_id: int, key: str, amount: int, price: int) -
         raise GameError("You can't sell emeralds for emeralds.")
     if price <= 0:
         raise GameError("The price must be greater than 0.")
+    loans.check_not_late(ctx, seller_id, "auction listings")
     count = ctx.one("SELECT COUNT(*) AS n FROM auctions WHERE seller_id=?;", (seller_id,))["n"]
     if count >= int(a["max_listings"]):
         raise GameError(f"You can't have more than **{a['max_listings']}** listings at once.")

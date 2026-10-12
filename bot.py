@@ -42,6 +42,7 @@ EXTENSIONS = [
     "cogs.economy_xp",
     "cogs.economy_daily",
     "cogs.economy_exchange",
+    "cogs.economy_loans",
     "cogs.economy_auction",
     "cogs.staff_economy",
     "cogs.admin_tools",
