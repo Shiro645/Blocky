@@ -40,11 +40,15 @@ def is_staff_command(command: object) -> bool:
 
 
 def check_game_channel(interaction: discord.Interaction) -> None:
-    """Mini-games only work in the game channels (config.json channels.games), or anywhere when there are none."""
+    """Mini-games only work in the game channels (config.json channels.games), or anywhere when there are none.
+
+    Guide channels count as game channels, so new players can try the games the guide talks about."""
     allowed = channel_ids("games")
     channel = interaction.channel
     if not allowed or channel is None:
         return
     if channel.id in allowed or getattr(channel, "parent_id", None) in allowed:
+        return
+    if channel.id in getattr(interaction.client, "guide_channels", {}):  # a player's guide channel: try things there
         return
     raise GameError("Games are played in " + ", ".join(f"<#{c}>" for c in sorted(allowed)) + ".")

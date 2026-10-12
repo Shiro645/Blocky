@@ -73,6 +73,8 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             ctx.execute(f"DELETE FROM {table}{where};", args)
         if user_id is None:
             ctx.execute("DELETE FROM team_season_results;")
+        # The guide checklist starts over (its steps are read from the stats), reward included.
+        ctx.execute(f"UPDATE guides SET done='', completed_at=NULL, rewarded_at=NULL{where};", args)
         # The streak goes back to 0 but today's daily stays claimed (no free second claim).
         ctx.execute(f"UPDATE users SET daily_streak=0{where};", args)
     return out

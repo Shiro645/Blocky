@@ -9,7 +9,7 @@ import random
 from dataclasses import dataclass
 from typing import Callable
 
-from game import enchants, gear, players, settings
+from game import enchants, gear, guide, players, settings
 from game.catalog import ARMOR
 from game.db import Ctx
 from game.notices import AchievementUnlocked, AllChallengesCompleted, ChallengeCompleted
@@ -244,6 +244,7 @@ def weekly_challenges(ctx: Ctx, user_id: int) -> list[dict]:
 def on_stat(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
     advance_challenges(ctx, user_id, stat, amount)
     check_achievements(ctx, user_id)
+    guide.check(ctx, user_id)
 
 
 def achievements_overview(ctx: Ctx, user_id: int) -> dict:

@@ -495,8 +495,10 @@ class ChannelPicker(discord.ui.ChannelSelect):
 
     def __init__(self, field: ce.Field):
         many = field.kind == "channels"
+        category = field.item == "category"
         super().__init__(
-            channel_types=TEXT_CHANNELS, placeholder="Choose channels…" if many else "Choose a channel…",
+            channel_types=[discord.ChannelType.category] if category else TEXT_CHANNELS,
+            placeholder="Choose a category…" if category else "Choose channels…" if many else "Choose a channel…",
             min_values=1, max_values=25 if many else 1, row=1,
         )
         self.many = many

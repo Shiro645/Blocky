@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from game import players, settings
+from game import guide, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -98,6 +98,7 @@ def choose(ctx: Ctx, user_id: int, key: str) -> dict:
             raise GameError(f"You can change your species again <t:{terms['ready_at']}:R>.")
         players.spend_emeralds(ctx, user_id, terms["cost"])
     ctx.execute("UPDATE users SET species=?, species_changed_at=? WHERE user_id=?;", (key, int(ctx.now), user_id))
+    guide.check(ctx, user_id)
     return {"species": key, "before": terms["current"], "cost": terms["cost"]}
 
 
@@ -108,6 +109,7 @@ def staff_set(ctx: Ctx, user_id: int, key: str | None) -> dict:
     before = of(ctx, user_id)
     players.ensure_user(ctx, user_id)
     ctx.execute("UPDATE users SET species=? WHERE user_id=?;", (key, user_id))
+    guide.check(ctx, user_id)
     return {"species": key, "before": before}
 
 

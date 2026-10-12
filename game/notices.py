@@ -51,3 +51,15 @@ class LoanRepaid:
     borrower_id: int
     total: int
     auto: bool  # collected by the bot from a late borrower (not with /loan repay)
+
+
+@dataclass(frozen=True)
+class GuideProgress:
+    user_id: int
+    channel_id: int | None  # the player's guide channel (None if it was deleted)
+    message_id: int | None  # its checklist message
+    steps: tuple[str, ...]  # steps just done
+    done: int
+    total: int
+    completed: bool
+    reward: int  # paid now (0 if it was already paid once)

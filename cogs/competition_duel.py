@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import dummy, duel, potions, settings
+from game import dummy, duel, players, potions, settings
 from game.errors import GameError
 from utils.ui import BaseView, em, join_lines, mark_handled, potion_icon, progress_bar, report_error
 
@@ -254,6 +254,10 @@ class FightView(discord.ui.View):
             await interaction.response.edit_message(content=None, embed=embed, view=None)
         elif self.message is not None:
             await self.message.edit(content=None, embed=embed, view=None)
+        if self.training:
+            for uid in self.members:
+                if uid != dummy.DUMMY_ID:
+                    await self.cog.bot.db.run(players.bump_stat, uid, "training_duels")  # a guide step
 
 
 class DuelCog(commands.Cog):

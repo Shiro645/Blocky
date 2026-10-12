@@ -82,9 +82,10 @@ class LeaderboardCog(commands.Cog):
         embed = self.build_profile_embed(target, p, card=file is not None)
         if file is None:
             await interaction.response.send_message(embed=embed)
-            return
-        embed.set_image(url="attachment://profile.png")
-        await interaction.response.send_message(embed=embed, file=file)
+        else:
+            embed.set_image(url="attachment://profile.png")
+            await interaction.response.send_message(embed=embed, file=file)
+        await self.bot.db.run(players.bump_stat, interaction.user.id, "profiles_viewed")  # a guide step
 
     def build_profile_embed(self, target: discord.abc.User, p: dict, card: bool = False) -> discord.Embed:
         """The details under the card (with `card`), or the whole profile as text (without Pillow)."""

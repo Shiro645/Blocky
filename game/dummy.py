@@ -51,6 +51,7 @@ def hit_series(ctx: Ctx, user_id: int) -> dict:
         """,
         (user_id, total, best_hit, int(ctx.now)),
     )
+    players.bump_stat(ctx, user_id, "dummy_series")
     table = ranking(ctx)
     rank = next((i for i, r in enumerate(table, start=1) if r["user_id"] == user_id), None)
     return {

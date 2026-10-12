@@ -512,6 +512,20 @@ MIGRATIONS: list[str] = [
         updated_at INTEGER NOT NULL
     );
     """,
+    # 23: the guide (a private channel per player with a checklist of first steps)
+    """
+    CREATE TABLE guides (
+        user_id INTEGER PRIMARY KEY,
+        channel_id INTEGER,            -- the player's guide channel (NULL once deleted)
+        message_id INTEGER,            -- its checklist message
+        created_at INTEGER NOT NULL,
+        done TEXT NOT NULL DEFAULT '', -- steps already done, comma separated
+        completed_at INTEGER,
+        rewarded_at INTEGER,           -- the reward is paid once ever
+        delete_at INTEGER              -- when the bot deletes the channel
+    );
+    CREATE INDEX guides_channel ON guides(channel_id);
+    """,
 ]
 
 

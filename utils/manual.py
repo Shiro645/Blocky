@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, potions, progress, roulette
+from game import blockdle, enchants, guide, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
@@ -164,6 +164,20 @@ def _market(s: Settings) -> list[str]:
     return [
         f"Sticks: **{num(m['stick_pack']['amount'])}** for {em(m['stick_pack']['price'])}",
         "Ingots: " + listing(m["ingots"]),
+    ]
+
+
+def _days(n: Any) -> str:
+    return "kept" if not float(n) else f"**{float(n):g}** day{'s' if float(n) != 1 else ''}"
+
+
+def _guide(s: Settings) -> list[str]:
+    g = s["guide"]
+    return [
+        f"Steps: {', '.join(f'**{step.key}**' for step in guide.STEPS)}",
+        f"Reward for every step: {em(g['reward'])} (once per player, ever)",
+        f"A finished guide channel is deleted after: {_days(g['delete_after_days'])}",
+        f"An unfinished one is deleted after: {_days(g['expire_days'])} (progress is kept)",
     ]
 
 
@@ -550,6 +564,19 @@ PAGES: list[Page] = [
         _daily,
         examples=("/daily",),
         related=("challenges", "profile"),
+    ),
+    Page(
+        "guide", "basics",
+        "Every new member gets a **private guide channel** (only them and the staff see it): how the game works, "
+        "step by step, and a **checklist of first steps**: mine by chatting, `/daily`, `/sell`, pick a species, "
+        "look at your `/profile`, and hit the training dummy (or play a training duel). Each step is checked by "
+        "itself as soon as you do it, even if you did it before; doing them all pays a reward, once.\n"
+        "`/guide` shows your checklist and a link to your guide channel. If you don't have one anymore (it's deleted "
+        "a few days after the checklist is done, or after a while), it opens a new one; your progress is kept. "
+        "Mini-games work in your guide channel too.",
+        _guide,
+        examples=("/guide",),
+        related=("help", "daily", "species choose"),
     ),
     # ---- gear ----
     Page(
@@ -1307,11 +1334,24 @@ PAGES: list[Page] = [
         related=("give",),
     ),
     Page(
+        "guide_resend", "staff_economy",
+        "Sends the guide again in a **new private channel** (the old one is deleted): to one `member`, or to "
+        "**every member** when it's empty (you confirm first; the newest members first). Steps already done stay "
+        "checked and the checklist reward is never paid twice.\n"
+        "Discord allows 500 channels per server and 50 per category: the bot adds categories named after the guide "
+        "category (\"Guides 2\"…) when one is full, and stops a little before 500 (the report says who was left "
+        "out). Sending to everyone runs in the background; the result is also posted in the staff channel.\n"
+        "Needs the guide category (`/config` → Channels) and the *Manage Channels* and *Manage Roles* permissions.",
+        _guide,
+        examples=("/guide_resend member:@Steve", "/guide_resend"),
+        related=("guide", "config"),
+    ),
+    Page(
         "reset", "staff_economy",
         "A fresh start, for one player (`member`) or for **everyone** (leave `member` empty). Pick what to reset: "
         "emeralds, blocks and items (with auction listings, robberies in progress and loans), gear and enchantments, "
         "levels, XP and talents (level roles are removed), stats, achievements and seasons (with challenges, "
-        "team season scores and the daily streak). Then press **Reset…** and type `RESET`.\n"
+        "team season scores, the daily streak and the guide checklist, reward included). Then press **Reset…** and type `RESET`.\n"
         "A backup of the database is made just before (restore it to undo). Minecraft links, moderation, teams, "
         "settings, bosses, tournaments, the villager and the Blockdle are never touched.",
         examples=("/reset", "/reset member:@Steve"),

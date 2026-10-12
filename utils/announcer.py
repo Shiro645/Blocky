@@ -81,6 +81,10 @@ class Announcer:
         icon = gear_icon(notice.item, notice.material)
         await self.send(f"🔨 <@{notice.user_id}>'s {icon} **{notice.material} {notice.item}** broke! Time to craft a new one.")
 
+    async def on_GuideProgress(self, notice: n.GuideProgress) -> None:
+        # The guide cog updates the player's checklist (cogs/player_guide.py).
+        self.bot.dispatch("guide_progress", notice)
+
     async def on_LoanRepaid(self, notice: n.LoanRepaid) -> None:
         """Private messages: the lender got everything back; a late borrower is free again."""
         guild = getattr(self.bot, "main_guild", None)

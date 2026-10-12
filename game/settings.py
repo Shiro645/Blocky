@@ -270,6 +270,13 @@ DEFAULTS: dict[str, Any] = {
         # Frames sold for emeralds (the others are earned, see game/profiles.py).
         "frame_prices": {"stone": 200, "gold": 500, "redstone": 800, "lapis": 1000, "diamond": 2000, "emerald": 3000},
     },
+    # The guide: a private channel for every new player (in channels.guide_category) with
+    # a checklist of first steps. The reward is paid once per player, ever.
+    "guide": {
+        "reward": 200,
+        "delete_after_days": 3,  # after the checklist is done (0 = kept)
+        "expire_days": 30,  # if it is never done (0 = kept)
+    },
     # Training dummy (/dummy): a damage tester (series of hits, with a leaderboard) and training duels.
     "dummy": {
         "hits": 10,
