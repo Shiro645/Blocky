@@ -261,6 +261,11 @@ DEFAULTS: dict[str, Any] = {
             "nightmare": {"entry": 1200, "strength": 1.42, "reward": 32.0},
         },
     },
+    # Training dummy (/dummy): a damage tester (series of hits, with a leaderboard) and training duels.
+    "dummy": {
+        "hits": 10,
+        "cooldown_seconds": 60,  # between two series of the damage tester
+    },
     # Species (/species): a small bonus each. The first choice is free, then changing costs
     # change_cost emeralds, once every change_days days.
     "species": {

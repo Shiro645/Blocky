@@ -66,6 +66,7 @@ EXTENSIONS = [
     "cogs.games_quiz",
     "cogs.games_rob",
     "cogs.games_pve",
+    "cogs.games_dummy",
     "cogs.help_command",
 ]
 
