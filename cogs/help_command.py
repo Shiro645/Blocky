@@ -78,10 +78,10 @@ class HelpCog(commands.Cog):
     # ---------- command tree ----------
     def tree_command(self, name: str) -> app_commands.Command | None:
         """The slash command of a page ('team create' -> the create subcommand of /team)."""
-        first, _, rest = name.partition(" ")
+        first, *rest = name.split()
         cmd = self.bot.tree.get_command(first)
-        if rest and isinstance(cmd, app_commands.Group):
-            cmd = cmd.get_command(rest)
+        for part in rest:  # groups inside groups ("team channel create")
+            cmd = cmd.get_command(part) if isinstance(cmd, app_commands.Group) else None
         return cmd if isinstance(cmd, app_commands.Command) else None
 
     def summary(self, page: manual.Page) -> str:

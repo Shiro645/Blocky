@@ -357,6 +357,10 @@ FIELDS: list[Field] = [
     _b("teams.create_cost", "teams", "Team creation cost", "0 = free."),
     _b("teams.min_members_ranked", "teams", "Members who scored, to be ranked", min=1, max=25),
     _b("teams.invite_hours", "teams", "Invitations last (hours)", min=1, max=720),
+    _b("teams.space_cost", "teams", "Team category price", "Paid once by the leader (/team category) for the team's "
+       "private category, where the leader creates channels. 0 = free."),
+    _b("teams.max_channels", "teams", "Channels per team category", "Text and voice channels together.", min=1,
+       max=20),
     _pct("teams.xp_bonus_per_active_member", "teams", "XP bonus per active teammate",
          "For each other member who mined today."),
     _pct("teams.max_xp_bonus", "teams", "Max team XP bonus", max=10),
