@@ -158,8 +158,8 @@ FIELDS: list[Field] = [
           help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
                "but no automatic quiz)."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
-          help="The bot keeps one message there with every auction listing, always up to date, with a menu "
-               "to buy. Best as a channel where members can't write."),
+          help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
+               "auction listing, each with a menu to buy. Best as a channel where members can't write."),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",

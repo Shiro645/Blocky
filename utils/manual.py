@@ -513,7 +513,8 @@ PAGES: list[Page] = [
     Page(
         "market", "basics",
         "Opens the server market: choose an item in the menu, then type the quantity. "
-        "Sticks and ingots are used to craft gear with /craft.",
+        "Sticks and ingots are used to craft gear with /craft. The market is also always shown in the market "
+        "channel, if the staff set one.",
         _market,
         examples=("/market",),
         related=("craft", "craftlist", "villager"),
@@ -731,7 +732,8 @@ PAGES: list[Page] = [
     Page(
         "auction browse", "trading",
         "Lists what's for sale, page by page, with the listing #number, price and seller. Filter by name with `search`.\n"
-        "If the staff set a market channel, it always shows every listing, with a menu to buy.",
+        "If the staff set a market channel, it always shows the market (fixed prices) and then every listing, "
+        "each with a menu to buy.",
         examples=("/auction browse search:netherite", "/auction browse page:2"),
         related=("auction buy", "auction sell"),
     ),
@@ -1073,6 +1075,27 @@ PAGES: list[Page] = [
         "Removes all the warnings of a member.",
         examples=("/clearwarns member:@Steve",),
         related=("unwarn", "history"),
+    ),
+    Page(
+        "blocky ban", "staff_moderation",
+        "Blocks a player from Blocky: they can't use any of the bot's commands, buttons or menus until the end "
+        "(`30m`, `2h`, `3d`, `1w`…) or until you lift it (`perm`). They keep everything they own and still mine "
+        "by chatting. They get a DM with the reason and the end, and see it again when they try a command. "
+        "A new block replaces the previous one. Staff members can't be blocked. Logged in the staff channel.",
+        examples=("/blocky ban member:@Steve duration:3d reason:Auction scam", "/blocky ban member:@Steve duration:perm reason:Bug abuse"),
+        related=("blocky unban", "blocky list"),
+    ),
+    Page(
+        "blocky unban", "staff_moderation",
+        "Lifts a player's Blocky block before its end. They get a DM.",
+        examples=("/blocky unban member:@Steve",),
+        related=("blocky ban", "blocky list"),
+    ),
+    Page(
+        "blocky list", "staff_moderation",
+        "Shows the players blocked from Blocky, until when, by whom and why.",
+        examples=("/blocky list",),
+        related=("blocky ban",),
     ),
     Page(
         "history", "staff_moderation",

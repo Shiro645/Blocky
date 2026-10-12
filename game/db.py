@@ -468,6 +468,16 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_pve_runs_status ON pve_runs(status, deadline);
     CREATE INDEX idx_pve_members_user ON pve_members(user_id);
     """,
+    # 20: players blocked from Blocky by the staff
+    """
+    CREATE TABLE blocky_bans (
+        user_id INTEGER PRIMARY KEY,
+        until INTEGER,                 -- NULL = until the staff lifts it
+        reason TEXT,
+        by_id INTEGER NOT NULL,
+        at INTEGER NOT NULL
+    );
+    """,
 ]
 
 

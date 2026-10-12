@@ -8,14 +8,59 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from game import assets, botstate, exchange, settings
+from cogs.economy_market import QuantityModal, market_options
+from game import assets, botstate, exchange, settings, shop
 from utils.autocomplete import owned_asset_choices
 from utils.config import channel_id
 from utils.ui import ConfirmView, asset_icon, em, report_error
 
 log = logging.getLogger("auction")
-BOARD_KEY = "market_board"  # "channel_id:message_id" of the board in the market channel
+BOARD_KEY = "market_board"  # "channel_id:message_id" of the auction board in the market channel
+SHOP_KEY = "shop_board"  # "channel_id:message_id" of the market (fixed prices) message, above it
 BOARD_PAGE = 10
+
+
+# ---------------- the market message (fixed prices), above the auctions ----------------
+def shop_embed() -> discord.Embed:
+    lines = []
+    for offer in shop.market_offers().values():
+        icon = asset_icon("stick" if offer["item"] == "stick" else f"ingot:{offer['material']}") or "•"
+        lines.append(f"{icon} **{offer['label']}** — {em(offer['price'])}")
+    embed = discord.Embed(
+        title="🛒 Market",
+        description="Buy from the server at fixed prices: pick an item in the menu, then the quantity.\n\n"
+                    + "\n".join(lines),
+        color=discord.Color.gold(),
+    )
+    villager = float(settings.get()["species"]["villager_trade"])
+    if villager:
+        embed.set_footer(text=f"🧑‍🌾 Villagers (/species) pay {villager:.0%} less.")
+    return embed
+
+
+def shop_view() -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(ShopBuySelect())
+    return view
+
+
+class ShopBuySelect(discord.ui.DynamicItem[discord.ui.Select], template=r"blocky:shop:buy"):
+    """The market message's menu: pick an item, then type the quantity. It survives restarts."""
+
+    def __init__(self) -> None:
+        super().__init__(discord.ui.Select(placeholder="Buy an item…", custom_id="blocky:shop:buy",
+                                           options=market_options()))
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Select, match: re.Match[str], /):
+        return cls()
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        key = str((interaction.data or {}).get("values", [""])[0])
+        if key not in shop.market_offers():
+            await interaction.response.send_message("❌ This item isn't sold anymore.", ephemeral=True)
+            return
+        await interaction.response.send_modal(QuantityModal(interaction.client, key))  # type: ignore[arg-type]
 
 
 def listing_line(r: dict) -> str:
@@ -107,9 +152,10 @@ class AuctionCog(commands.Cog):
         self.bot = bot
         self.board_lock = asyncio.Lock()
         self._board_shown: dict | None = None  # last board posted, to skip edits that change nothing
+        self._shop_shown: tuple | None = None  # same for the market message
 
     async def cog_load(self) -> None:
-        self.bot.add_dynamic_items(MarketPageButton, MarketBuySelect)
+        self.bot.add_dynamic_items(MarketPageButton, MarketBuySelect, ShopBuySelect)
         self.expire_loop.start()
 
     async def cog_unload(self) -> None:
@@ -156,21 +202,29 @@ class AuctionCog(commands.Cog):
         if not isinstance(channel, discord.abc.Messageable):
             return
         async with self.board_lock:
+            reposted = await self.ensure_shop(channel, cid)
             content = {"rows": data["rows"], "page": data["page"], "pages": data["pages"], "channel": cid}
-            if content == self._board_shown:
+            if content == self._board_shown and not reposted:
                 return
             saved = await self.bot.db.run(botstate.get, BOARD_KEY)
             if saved and saved.startswith(f"{cid}:"):
-                try:
-                    message = await channel.fetch_message(int(saved.split(":")[1]))
-                    await message.edit(embed=embed, view=view)
-                    self._board_shown = content
-                    return
-                except discord.NotFound:
-                    pass  # deleted: post a new one
-                except discord.HTTPException:
-                    log.warning("Could not update the market board", exc_info=True)
-                    return
+                if reposted:
+                    # The market message was posted again: the auctions go back below it.
+                    try:
+                        await channel.get_partial_message(int(saved.split(":")[1])).delete()
+                    except discord.HTTPException:
+                        pass
+                else:
+                    try:
+                        message = await channel.fetch_message(int(saved.split(":")[1]))
+                        await message.edit(embed=embed, view=view)
+                        self._board_shown = content
+                        return
+                    except discord.NotFound:
+                        pass  # deleted: post a new one
+                    except discord.HTTPException:
+                        log.warning("Could not update the market board", exc_info=True)
+                        return
             try:
                 message = await channel.send(embed=embed, view=view)
             except discord.HTTPException:
@@ -178,6 +232,39 @@ class AuctionCog(commands.Cog):
                 return
             await self.bot.db.run(botstate.put, BOARD_KEY, f"{cid}:{message.id}")
             self._board_shown = content
+
+    async def ensure_shop(self, channel: discord.abc.Messageable, cid: int) -> bool:
+        """Keep the market message (fixed prices) up to date. Returns True if it had to be posted again."""
+        embed = shop_embed()
+        signature = (cid, repr(shop.market_offers()), embed.footer.text)
+        saved = await self.bot.db.run(botstate.get, SHOP_KEY)
+        if saved and saved.startswith(f"{cid}:"):
+            try:
+                message = await channel.fetch_message(int(saved.split(":")[1]))  # type: ignore[attr-defined]
+                if signature != self._shop_shown:
+                    await message.edit(embed=embed, view=shop_view())
+                    self._shop_shown = signature
+                return False
+            except discord.NotFound:
+                pass  # deleted: post it again
+            except discord.HTTPException:
+                log.warning("Could not update the market message", exc_info=True)
+                return False
+        try:
+            message = await channel.send(embed=embed, view=shop_view())
+        except discord.HTTPException:
+            log.warning("Could not post the market message in channel %s", cid, exc_info=True)
+            return False
+        await self.bot.db.run(botstate.put, SHOP_KEY, f"{cid}:{message.id}")
+        self._shop_shown = signature
+        return True
+
+    @commands.Cog.listener()
+    async def on_blocky_config_changed(self, key: str, before) -> None:
+        """New prices or a new market channel: update the messages."""
+        if key.startswith("market.") or key in ("ch_market", "species.villager_trade"):
+            self._board_shown = None
+            await self.refresh_board()
 
     async def offer(self, interaction: discord.Interaction, listing_id: int) -> None:
         """A listing picked on the board: ask the buyer to confirm (only they see it)."""
