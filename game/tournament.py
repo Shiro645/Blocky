@@ -260,7 +260,8 @@ def staff_cancel(ctx: Ctx) -> dict:
 
 # ---------------- rounds ----------------
 def _fight(ctx: Ctx, p1: int, p2: int) -> tuple[int, int, float]:
-    """(winner, loser, winner HP left). Same rules as duels, but the gear doesn't wear out."""
+    """(winner, loser, winner HP left). Same rules as duels, but the gear doesn't wear out and
+    nobody blocks (the shield is a choice made during a duel)."""
     a, _ = duel.make_fighter(ctx, p1)
     b, _ = duel.make_fighter(ctx, p2)
     result = duel.simulate(ctx.rng, a, b)

@@ -16,8 +16,8 @@ def fighters(attack: float = 10, reduction: float = 0.0) -> tuple[duel.Fighter, 
 
 class FightEngineTests(unittest.TestCase):
     def setUp(self):
-        # Exact numbers: no crits, no dodges, no bonus HP for the second player.
-        settings.load({"duel": {"crit_chance": 0, "dodge_chance": 0, "second_player_bonus_hp": 0}})
+        # Exact numbers: no crits, no bonus HP for the second player.
+        settings.load({"duel": {"crit_chance": 0, "second_player_bonus_hp": 0}})
 
     def test_turns_alternate(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
@@ -111,12 +111,41 @@ class FightEngineTests(unittest.TestCase):
             hit = fight.play(random.Random(i)).hits[0]
             self.assertTrue(1 <= hit.damage <= 10, hit.damage)
 
-    def test_dodges(self):
-        settings.load({"duel": {"dodge_chance": 1, "second_player_bonus_hp": 0}})
+    def test_no_dodge_every_hit_lands(self):
         fight = duel.Fight(random.Random(1), *fighters())
-        turn = fight.play(random.Random(1))
-        self.assertTrue(turn.hits[0].dodged)
-        self.assertEqual(fight.current.hp, 20)
+        for i in range(40):
+            fight.current.hp = fight.other.hp = 1000
+            hit = fight.play(random.Random(i)).hits[0]
+            self.assertFalse(hit.blocked)
+            self.assertGreater(hit.damage, 0)
+
+    def test_attack_and_block_stops_the_next_attack(self):
+        a, b = fighters()
+        p, q = fighters()
+        for f in (a, b, p, q):
+            f.hp = f.max_hp = 100  # long enough for 4 turns
+        a.blocks_left = 2
+        fight = duel.Fight(random.Random(1), a, b)
+        fight.index = 0  # Alice plays first
+        plain = duel.Fight(random.Random(1), p, q)
+        plain.index = 0
+        fight.play(random.Random(2), block=True)
+        plain.play(random.Random(2))
+        self.assertTrue(a.blocking)
+        bob_turn = fight.play(random.Random(3))
+        same_turn = plain.play(random.Random(3))
+        self.assertTrue(all(h.blocked for h in bob_turn.hits))
+        self.assertEqual(bob_turn.blocked, round(same_turn.hits[0].damage, 1))  # what it would have dealt
+        self.assertEqual((a.hp, a.blocks_left, a.blocks_used, a.blocking), (100, 1, 1, False))
+        fight.play(random.Random(4))  # Alice attacks without blocking
+        fight.play(random.Random(5))
+        self.assertLess(a.hp, 100)  # Bob's attack landed
+        fight.play(random.Random(6), block=True)
+        fight.play(random.Random(7))
+        self.assertEqual((a.blocks_left, a.blocks_used), (0, 2))
+        with self.assertRaisesRegex(GameError, "can't block any more"):
+            fight.play(random.Random(8), "strength", block=True)
+        self.assertEqual(a.potions_used, 0)  # refused before the potion
 
     def test_second_player_starts_with_bonus_hp(self):
         settings.load({"duel": {"second_player_bonus_hp": 2}})

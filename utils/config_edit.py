@@ -158,8 +158,8 @@ FIELDS: list[Field] = [
           help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
                "but no automatic quiz)."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
-          help="The bot keeps one message there with every auction listing, always up to date, with a menu "
-               "to buy. Best as a channel where members can't write."),
+          help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
+               "auction listing, each with a menu to buy. Best as a channel where members can't write."),
     Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
           help="Mentioned when a boss appears. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
@@ -253,11 +253,15 @@ FIELDS: list[Field] = [
       for m in MATERIALS for slot in ARMOR],
     _pct("gear.damage_reduction_per_armor_point", "combat_gear", "Damage reduction per armor point"),
     _pct("gear.max_damage_reduction", "combat_gear", "Max damage reduction"),
+    _b("gear.shield_blocks_per_fight", "combat_gear", "Shield: blocks per duel",
+       "Times a player can \"Attack + block\" in a duel (it blocks the opponent's next attack).", min=0, max=20),
+    _b("gear.shield_durability", "combat_gear", "Shield: durability", "Of a new or repaired shield.", min=1, max=100_000),
+    _b("gear.shield_wear_per_block", "combat_gear", "Shield: durability used per block",
+       "At 0 it stays, unusable until /repair.", min=1, max=100_000),
     # ---- duels ----
     _b("duel.min_stake", "duels", "Minimum stake", min=1),
     _b("duel.hp", "duels", "HP of each player", min=1, max=10_000),
     _b("duel.min_damage", "duels", "Minimum damage of a hit", "Strength potions raise it for a turn.", "float", 0, 1000),
-    _pct("duel.dodge_chance", "duels", "Dodge chance"),
     _pct("duel.crit_chance", "duels", "Critical hit chance"),
     _b("duel.crit_multiplier", "duels", "Critical hit multiplier", kind="float", min=1, max=10),
     _b("duel.second_player_bonus_hp", "duels", "Extra HP for the second player", "Makes up for not striking first.", max=1000),

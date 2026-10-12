@@ -3,19 +3,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from game import settings
+from game import restrictions, settings
 from game.db import Database
 from utils.announcer import Announcer
 from utils.config import balance_overrides, load_config, staff_role_id
 from utils import staff_log, staff_visibility
 from utils.checks import is_staff_command
-from utils.ui import load_application_emojis, report_error, take_handled
+from utils.ui import load_application_emojis, mark_handled, report_error, take_handled
 
 
 # -------- LOAD ENV --------
@@ -49,6 +50,7 @@ EXTENSIONS = [
     "cogs.admin_tools",
     "cogs.admin_config",
     "cogs.staff_moderation",
+    "cogs.staff_blocky",
     "cogs.staff_events",
     "cogs.competition_leaderboard",
     "cogs.competition_seasons",
@@ -93,6 +95,7 @@ class Bot(commands.Bot):
         self.db = Database(cfg.get("database_path", "economy.db"))
         self.announcer = Announcer(self)
         self.db.notice_handler = self.announcer.handle
+        self.blocked: dict[int, dict] = {}  # players blocked from Blocky (/blocky ban), see block_of
 
     @property
     def main_guild(self) -> discord.Guild | None:
@@ -101,6 +104,9 @@ class Bot(commands.Bot):
 
     async def setup_hook(self) -> None:
         await self.db.open()
+        self.blocked = await self.db.run(restrictions.active)
+        self.tree.interaction_check = self.not_blocked  # type: ignore[method-assign]
+        self.gate_components()
 
         self.tree.on_error = self.on_app_command_error
         await load_application_emojis(self)
@@ -138,6 +144,58 @@ class Bot(commands.Bot):
                 log.info("Removed %d old global commands (they showed twice in the server)", len(old))
         except discord.HTTPException:
             log.warning("Could not remove the old global commands: some commands may show twice", exc_info=True)
+
+    # -------- players blocked from Blocky (/blocky ban) --------
+    def block_of(self, user_id: int) -> dict | None:
+        """The player's block if they are blocked right now (a finished block is forgotten)."""
+        block = self.blocked.get(user_id)
+        if block is not None and block["until"] is not None and block["until"] <= time.time():
+            self.blocked.pop(user_id, None)
+            return None
+        return block
+
+    async def tell_blocked(self, interaction: discord.Interaction, block: dict) -> None:
+        if block["until"] is None:
+            until = "until the staff lifts it"
+        else:
+            until = f"until <t:{block['until']}:f> (<t:{block['until']}:R>)"
+        text = f"⛔ You can't use Blocky {until}." + (f"\nReason: {block['reason']}" if block["reason"] else "")
+        try:
+            await interaction.response.send_message(text, ephemeral=True)
+        except discord.HTTPException:
+            pass
+
+    async def not_blocked(self, interaction: discord.Interaction) -> bool:
+        """Every slash command (and its suggestions) first checks the player isn't blocked."""
+        block = self.block_of(interaction.user.id)
+        if block is None:
+            return True
+        if interaction.type is not discord.InteractionType.autocomplete:
+            await self.tell_blocked(interaction, block)
+        return False
+
+    def gate_components(self) -> None:
+        """Buttons, menus and forms check the player isn't blocked before reaching any view."""
+        store = self._connection._view_store
+        dispatch_view, dispatch_modal = store.dispatch_view, store.dispatch_modal
+
+        def stopped(interaction: discord.Interaction) -> bool:
+            block = self.block_of(interaction.user.id)
+            if block is None:
+                return False
+            mark_handled(interaction)  # so the expired-button answer stays quiet
+            asyncio.create_task(self.tell_blocked(interaction, block))
+            return True
+
+        def view(component_type, custom_id, interaction):
+            if not stopped(interaction):
+                dispatch_view(component_type, custom_id, interaction)
+
+        def modal(custom_id, interaction, components, resolved):
+            if not stopped(interaction):
+                dispatch_modal(custom_id, interaction, components, resolved)
+
+        store.dispatch_view, store.dispatch_modal = view, modal  # type: ignore[method-assign]
 
     async def hide_staff_commands(self, guild_id: int) -> None:
         """Only members with a permission of the staff role see the staff commands (utils/staff_visibility.py)."""

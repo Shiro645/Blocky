@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS
+from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS, materials_for
 
 # Fallbacks when no custom emoji is set for a block.
 BLOCK_FALLBACK = {"cobblestone": "🪨", "gravel": "🟫", "deepslate": "⬛", "bedrock": "🟪", "obsidian": "🟣"}
@@ -24,7 +24,7 @@ EXPECTED_NAMES: tuple[str, ...] = (
     + ("potion_strength", "potion_speed", "potion_healing", "potion_harming")
     + MATERIALS
     + BLOCK_TYPES
-    + tuple(gear_key(item, material) for material in MATERIALS for item in GEAR_ITEMS)
+    + tuple(gear_key(item, material) for material in MATERIALS for item in GEAR_ITEMS if material in materials_for(item))
 )
 
 

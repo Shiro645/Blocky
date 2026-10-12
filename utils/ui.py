@@ -46,8 +46,8 @@ def mat(material: str) -> str:
 
 
 def gear_icon(item: str, material: str) -> str:
-    """Emoji of a piece of gear, or of its material when there is none."""
-    return EMOJI.get(emojis.gear_key(item, material)) or mat(material)
+    """Emoji of a piece of gear, or of its material when there is none (🛡️ for a shield)."""
+    return EMOJI.get(emojis.gear_key(item, material)) or ("🛡️" if item == "shield" else mat(material))
 
 
 def book_icon() -> str:

@@ -5,7 +5,14 @@ BLOCK_TYPES = ("cobblestone", "gravel", "deepslate", "obsidian", "bedrock")  # r
 MATERIALS = ("gold", "iron", "diamond", "netherite")
 TOOLS = ("sword", "pickaxe", "axe", "shovel", "hoe")
 ARMOR = ("helmet", "chestplate", "leggings", "boots")
-GEAR_ITEMS = TOOLS + ARMOR
+SHIELD = "shield"
+GEAR_ITEMS = TOOLS + ARMOR + (SHIELD,)
+# Items made of only some materials (the others: every material).
+ITEM_MATERIALS = {SHIELD: ("iron",)}
+
+
+def materials_for(item: str) -> tuple[str, ...]:
+    return ITEM_MATERIALS.get(item, MATERIALS)
 TALENT_BRANCHES = ("miner", "trader", "lucky", "efficiency")
 
 # item -> (ingots, sticks)
@@ -19,6 +26,7 @@ RECIPES = {
     "chestplate": (8, 0),
     "leggings": (7, 0),
     "boots": (4, 0),
+    "shield": (6, 0),  # iron only
 }
 
 TALENT_INFO = {
@@ -38,4 +46,5 @@ GEAR_EFFECTS = {
     "chestplate": "Damage reduction in duels (capped)",
     "leggings": "Damage reduction in duels (capped)",
     "boots": "Damage reduction in duels (capped)",
+    "shield": "In duels: \"Attack + block\" blocks the opponent's next attack, twice per duel",
 }

@@ -5,10 +5,10 @@ import discord
 
 # Commands that already write a detailed log entry themselves, or that change nothing.
 SELF_LOGGED = {
-    "config", "mc", "team_remove", "event tournament", "give", "take", "reset",
+    "config", "mc", "team_remove", "event tournament", "give", "take", "reset", "blocky ban", "blocky unban",
     "warn", "unwarn", "clearwarns", "mute", "unmute", "kick", "ban", "unban", "clear", "lock", "unlock", "slowmode",
 }
-READ_ONLY = {"history", "whitelist list"}
+READ_ONLY = {"history", "whitelist list", "blocky list"}
 
 
 def format_value(value: object) -> str:

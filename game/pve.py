@@ -42,11 +42,11 @@ class Kind:
 
 # Health and damage at strength 1 (the Normal difficulty).
 MONSTERS: dict[str, Kind] = {
-    "zombie": Kind("Zombie", "🧟", 3.2, (0.2, 0.65)),
-    "skeleton": Kind("Skeleton", "💀", 2.6, (0.2, 0.65), ranged=True),
-    "spider": Kind("Spider", "🕷️", 2.6, (0.15, 0.4), bites=2),
+    "zombie": Kind("Zombie", "🧟", 3.2, (0.18, 0.59)),
+    "skeleton": Kind("Skeleton", "💀", 2.6, (0.18, 0.59), ranged=True),
+    "spider": Kind("Spider", "🕷️", 2.6, (0.14, 0.36), bites=2),
     "creeper": Kind("Creeper", "🟩", 2.6, (1.3, 2.1), fuse=2),
-    "ravager": Kind("Ravager", "🐂", 8.5, (0.4, 1.05)),
+    "ravager": Kind("Ravager", "🐂", 8.5, (0.36, 0.95)),
 }
 WAVES: tuple[tuple[tuple[str, int], ...], ...] = (
     (("zombie", 3),),
@@ -156,7 +156,7 @@ def _target(monsters: list[Monster]) -> Monster | None:
 def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: str) -> dict:
     """Play one wave. Heroes are changed in place. Returns {"cleared", "log", "deaths"}."""
     d = settings.get()["duel"]
-    crit_chance, crit_mult, dodge = float(d["crit_chance"]), float(d["crit_multiplier"]), float(d["dodge_chance"])
+    crit_chance, crit_mult = float(d["crit_chance"]), float(d["crit_multiplier"])
     fighting = [h for h in heroes if h.alive]
     monsters = spawn(wave, difficulty, len(fighting))
     log: list[str] = []
@@ -186,10 +186,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
             targets = [h for h in fighting if h.alive]
             if not targets:
                 return
-            hero = rng.choice(targets)
-            if rng.random() < dodge:
-                continue
-            hurt(hero, rng.uniform(*m.dmg), m)
+            hurt(rng.choice(targets), rng.uniform(*m.dmg), m)
 
     # A Harming potion drunk before the wave hits every monster.
     for hero in fighting:

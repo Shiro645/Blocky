@@ -136,6 +136,13 @@ def _armor(s: Settings) -> str:
     )
 
 
+def _shield(s: Settings) -> str:
+    g = s["gear"]
+    return (f"Shield (iron only), duels: **Attack + block** blocks the opponent's next attack, "
+            f"**{num(g['shield_blocks_per_fight'])}** times per duel · durability **{num(g['shield_durability'])}**, "
+            f"**{num(g['shield_wear_per_block'])}** per block · at 0 it stays, unusable until /repair")
+
+
 def _mining(s: Settings) -> list[str]:
     m, e, d = s["mining"], s["enchants"], s["drops"]
     lo, hi = m["xp_per_message"]
@@ -185,6 +192,7 @@ def _gear(s: Settings) -> list[str]:
         f"Hoe: **+{pct(g['hoe_xp_bonus_per_tier'])}** XP per tier",
         _sword(s),
         _armor(s),
+        _shield(s),
         "Durability: " + listing(g["durability"]),
     ]
 
@@ -258,7 +266,9 @@ def _duel(s: Settings) -> list[str]:
         f"HP: **{num(d['hp'])}** each (**+{num(d['second_player_bonus_hp'])}** for the player who strikes second)",
         f"A hit deals **{num(d['min_damage'])}** to your sword's maximum",
         _sword(s),
-        f"Dodge: **{pct(d['dodge_chance'])}** · critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])})",
+        f"Critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])}) · no dodge: with a shield, "
+        f"**Attack + block** blocks the opponent's next attack (**{num(s['gear']['shield_blocks_per_fight'])}** "
+        "times per duel)",
         _armor(s),
         f"Potions: up to **{num(p['max_per_duel'])}** per duel, one per turn",
         f"Minimum stake: {em(d['min_stake'])} · **{duration(d['cooldown_seconds'])}** between two duels · "
@@ -513,7 +523,8 @@ PAGES: list[Page] = [
     Page(
         "market", "basics",
         "Opens the server market: choose an item in the menu, then type the quantity. "
-        "Sticks and ingots are used to craft gear with /craft.",
+        "Sticks and ingots are used to craft gear with /craft. The market is also always shown in the market "
+        "channel, if the staff set one.",
         _market,
         examples=("/market",),
         related=("craft", "craftlist", "villager"),
@@ -532,9 +543,11 @@ PAGES: list[Page] = [
         "craft", "gear",
         "Crafts a piece of gear from ingots and sticks (buy them with /market, or get them while mining, in "
         "drops or from other players). If that slot is empty, the new piece is equipped right away.\n"
-        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time.\n"
+        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time "
+        "(except the shield: at 0 it stays, unusable until repaired).\n"
+        "The **shield** is made of iron only (6 ingots).\n"
         "Everyone in the channel sees what you crafted.",
-        lambda s: ["Durability: " + listing(s["gear"]["durability"]), "Recipes and prices: /craftlist"],
+        lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s), "Recipes and prices: /craftlist"],
         examples=("/craft item:pickaxe material:iron",),
         related=("craftlist", "market", "equip_best", "repair"),
     ),
@@ -553,7 +566,8 @@ PAGES: list[Page] = [
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
         "Tools wear out when they give their bonus while mining. The sword wears out in duels and against "
-        "bosses, armor in duels. Tournament fights don't wear anything.",
+        "bosses, armor in duels, the shield each time it blocks an attack in a duel. Tournament fights don't "
+        "wear anything (and nobody blocks there).",
         _gear,
         examples=("/gear",),
         related=("equip", "equip_best", "repair", "enchant info"),
@@ -561,7 +575,7 @@ PAGES: list[Page] = [
     Page(
         "equip", "gear",
         "Equips one of your pieces in its slot (one per slot: sword, pickaxe, axe, shovel, hoe, helmet, "
-        "chestplate, leggings, boots). The piece that was there goes back to your inventory.",
+        "chestplate, leggings, boots, shield). The piece that was there goes back to your inventory.",
         examples=("/equip piece:diamond pickaxe",),
         related=("equip_best", "unequip", "gear"),
     ),
@@ -731,7 +745,8 @@ PAGES: list[Page] = [
     Page(
         "auction browse", "trading",
         "Lists what's for sale, page by page, with the listing #number, price and seller. Filter by name with `search`.\n"
-        "If the staff set a market channel, it always shows every listing, with a menu to buy.",
+        "If the staff set a market channel, it always shows the market (fixed prices) and then every listing, "
+        "each with a menu to buy.",
         examples=("/auction browse search:netherite", "/auction browse page:2"),
         related=("auction buy", "auction sell"),
     ),
@@ -786,8 +801,12 @@ PAGES: list[Page] = [
         "Challenges a player: both bet the stake and the winner takes the pot. The other player accepts with "
         "the button, then it's **turn by turn**: on your turn you can drink a potion first, then press **Attack**.\n"
         "Each hit deals a random amount between the minimum damage and your sword's maximum (potions of "
-        "Strength raise the minimum). It can be dodged or be a critical hit, and armor reduces it. "
-        "Your sword and armor wear out a little. Duel pots don't count for the seasons.",
+        "Strength raise the minimum). It can be a critical hit, and armor reduces it.\n"
+        "With a **shield**, end your turn with **Attack + block** instead of Attack: the opponent's next attack "
+        "(all its hits) is blocked. Nobody sees it coming; the duel then shows how much damage it stopped. "
+        "Twice per duel at most.\n"
+        "Your sword and armor wear out a little, the shield a little for each block. Duel pots don't count "
+        "for the seasons.",
         _duel,
         examples=("/duel member:@Steve stake:100",),
         related=("potions", "gear", "enchant info", "tournament info"),
@@ -1073,6 +1092,27 @@ PAGES: list[Page] = [
         "Removes all the warnings of a member.",
         examples=("/clearwarns member:@Steve",),
         related=("unwarn", "history"),
+    ),
+    Page(
+        "blocky ban", "staff_moderation",
+        "Blocks a player from Blocky: they can't use any of the bot's commands, buttons or menus until the end "
+        "(`30m`, `2h`, `3d`, `1w`…) or until you lift it (`perm`). They keep everything they own and still mine "
+        "by chatting. They get a DM with the reason and the end, and see it again when they try a command. "
+        "A new block replaces the previous one. Staff members can't be blocked. Logged in the staff channel.",
+        examples=("/blocky ban member:@Steve duration:3d reason:Auction scam", "/blocky ban member:@Steve duration:perm reason:Bug abuse"),
+        related=("blocky unban", "blocky list"),
+    ),
+    Page(
+        "blocky unban", "staff_moderation",
+        "Lifts a player's Blocky block before its end. They get a DM.",
+        examples=("/blocky unban member:@Steve",),
+        related=("blocky ban", "blocky list"),
+    ),
+    Page(
+        "blocky list", "staff_moderation",
+        "Shows the players blocked from Blocky, until when, by whom and why.",
+        examples=("/blocky list",),
+        related=("blocky ban",),
     ),
     Page(
         "history", "staff_moderation",

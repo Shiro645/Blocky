@@ -35,20 +35,23 @@ class QuantityModal(discord.ui.Modal, title="Enter quantity"):
         await report_error(interaction, error)
 
 
+def market_options() -> list[discord.SelectOption]:
+    """The market's items, for a menu (/market and the market channel)."""
+    options = []
+    for key, offer in shop.market_offers().items():
+        if offer["item"] == "stick":
+            desc = f"{offer['unit_size']} sticks for {offer['price']} emeralds"
+        else:
+            desc = f"{offer['price']} emeralds each"
+        icon = EMOJI.get("stick") if offer["item"] == "stick" else mat(offer["material"])
+        options.append(discord.SelectOption(label=offer["label"], value=key, description=desc, emoji=icon or None))
+    return options
+
+
 class MarketSelect(discord.ui.Select):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        options = []
-        for key, offer in shop.market_offers().items():
-            if offer["item"] == "stick":
-                desc = f"{offer['unit_size']} sticks for {offer['price']} emeralds"
-            else:
-                desc = f"{offer['price']} emeralds each"
-            icon = EMOJI["stick"] if offer["item"] == "stick" else mat(offer["material"])
-            options.append(
-                discord.SelectOption(label=offer["label"], value=key, description=desc, emoji=icon or None)
-            )
-        super().__init__(placeholder="Choose an item to buy…", options=options)
+        super().__init__(placeholder="Choose an item to buy…", options=market_options())
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(QuantityModal(self.bot, self.values[0]))

@@ -70,6 +70,17 @@ class AttackButton(discord.ui.Button):
         await self.fight_view.play(interaction, None)  # with the potion drunk this turn, if any
 
 
+class BlockButton(discord.ui.Button):
+    """Attack, then raise the shield: the opponent's next attack is blocked (nobody is told)."""
+
+    def __init__(self, fight_view: "FightView", left: int):
+        super().__init__(label=f"Attack + block ({left} left)", style=discord.ButtonStyle.primary, emoji="🛡️", row=0)
+        self.fight_view = fight_view
+
+    async def callback(self, interaction: discord.Interaction):
+        await self.fight_view.play(interaction, None, block=True)
+
+
 class PotionSelect(discord.ui.Select):
     def __init__(self, fight_view: "FightView", options: list[discord.SelectOption]):
         super().__init__(placeholder="🧪 Drink a potion first (then attack)…", options=options, row=1)
@@ -104,6 +115,8 @@ class FightView(discord.ui.View):
         self.clear_items()
         self.add_item(AttackButton(self))
         current = self.fight.current
+        if current.blocks_left > 0 and not self.fight.over:
+            self.add_item(BlockButton(self, current.blocks_left))
         if not self.fight.can_drink:
             return
         options = [
@@ -171,8 +184,9 @@ class FightView(discord.ui.View):
             self.build()
             await self.show(interaction)
 
-    async def play(self, interaction: discord.Interaction | None, potion: str | None, turn_no: int | None = None) -> None:
-        """Attack (interaction None = the player ran out of time on turn `turn_no`)."""
+    async def play(self, interaction: discord.Interaction | None, potion: str | None, turn_no: int | None = None,
+                   block: bool = False) -> None:
+        """Attack, and raise the shield with `block` (interaction None = the player ran out of time on turn `turn_no`)."""
         async with self.lock:
             # A click may have played the turn while the timer was waiting for the lock.
             if self.fight.over or (turn_no is not None and turn_no != self.turn_no):
@@ -181,7 +195,7 @@ class FightView(discord.ui.View):
                 return
             uid = self.fight.current.user_id
             self.missed[uid] = self.missed[uid] + 1 if interaction is None else 0
-            self.fight.play(self.cog.rng)
+            self.fight.play(self.cog.rng, block=block)
             if not self.fight.over and self.missed[uid] >= int(settings.get()["duel"]["afk_turns"]):
                 self.afk = uid
                 self.fight.auto_play(self.cog.rng)
@@ -310,17 +324,21 @@ class DuelCog(commands.Cog):
             if t.direct:
                 text += f" ({t.direct:g} damage)"
             bits.append(text)
+        if t.hits and all(hit.blocked for hit in t.hits):
+            crit = " (a critical hit!)" if any(hit.crit for hit in t.hits) else ""
+            bits.append(f"🛡️ **{defender}** blocked **{t.blocked:.1f}** damage{crit}")
         for i, hit in enumerate(t.hits):
+            if hit.blocked:
+                continue
             prefix = "⚡ again " if i else ""
-            if hit.dodged:
-                bits.append(prefix + "💨 dodged")
-            else:
-                bits.append(prefix + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
+            bits.append(prefix + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
         return f"**{attacker}** → {defender}: " + " · ".join(bits) + f" — {defender} {t.defender_hp:g} HP"
 
     def fighter_field(self, view: FightView, fighter: duel.Fighter) -> tuple[str, str]:
         marker = "▶️ " if not view.fight.over and fighter is view.fight.current else ""
         speed = f" · ⚡ {fighter.speed_turns} turn(s)" if fighter.speed_turns else ""
+        if fighter.blocks_left or fighter.blocks_used:
+            speed += f" · 🛡️ {fighter.blocks_left} block{'s' if fighter.blocks_left != 1 else ''} left"
         value = (
             f"`{progress_bar(int(fighter.hp), int(fighter.max_hp), 12)}` {fighter.hp:.1f}/{fighter.max_hp:g} HP\n"
             f"⚔️ {fighter.min_attack:g}–{fighter.attack:g} · 🛡️ {fighter.reduction:.0%} · 🧪 {view.fight.potions_left(fighter)} left{speed}"
@@ -373,9 +391,13 @@ class DuelCog(commands.Cog):
             embed.add_field(
                 name="⏱️ Auto", value=f"<@{view.afk}> missed their turns: the end was played automatically.", inline=False
             )
+        shields = [f"<@{f.user_id}> blocked **{f.blocked_damage:.1f}** damage ({f.blocks_used} block{'s' if f.blocks_used > 1 else ''})"
+                   for f in view.fight.fighters if f.blocks_used]
+        if shields:
+            embed.add_field(name="🛡️ Shield", value="\n".join(shields), inline=False)
         if res["broken"]:
             embed.add_field(
-                name="🔨 Broken",
+                name="🔨 Broken or worn out",
                 value="\n".join(f"<@{uid}>'s {name}" for uid, name in res["broken"]),
                 inline=False,
             )

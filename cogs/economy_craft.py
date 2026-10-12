@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import enchants, gear, settings, shop
-from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES
+from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES, materials_for
 from game.db import Ctx
 from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar
 
@@ -44,7 +44,9 @@ class EconomyCraftCog(commands.Cog):
                 cost.append(f"{ingots} ingot(s)")
             if sticks:
                 cost.append(f"{EMOJI['stick']} {sticks} stick(s)".strip())
-            lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost))
+            only = materials_for(item)
+            note = f" *({', '.join(only)} only)*" if only != MATERIALS else ""
+            lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost) + note)
 
         embed = discord.Embed(title="Crafting Recipes", description="\n".join(lines))
         embed.set_footer(text="Materials: " + ", ".join(MATERIALS))
@@ -125,7 +127,8 @@ class EconomyCraftCog(commands.Cog):
             g = equipped.get(slot)
             if g:
                 bar = progress_bar(g["durability"], g["max_durability"], width=8)
-                lines.append(f"**{slot}**: {gear_label(g, show_durability=False)} `{bar}` {g['durability']}/{g['max_durability']}")
+                worn = " — **worn out**, /repair it" if slot == "shield" and g["durability"] <= 0 else ""
+                lines.append(f"**{slot}**: {gear_label(g, show_durability=False)} `{bar}` {g['durability']}/{g['max_durability']}{worn}")
             else:
                 lines.append(f"**{slot}**: — *({GEAR_EFFECTS[slot]})*")
 
@@ -135,6 +138,9 @@ class EconomyCraftCog(commands.Cog):
             name="⚔️ Damage per hit", value=f"{d['min_damage']:g}–{gear.attack_damage(equipped):g}", inline=True
         )
         embed.add_field(name="🛡️ Damage reduction", value=f"{gear.damage_reduction(equipped):.0%}", inline=True)
+        blocks = gear.shield_blocks(equipped)
+        if blocks:
+            embed.add_field(name="🛡️ Shield", value=f"**Attack + block** in duels: {blocks}× per duel", inline=True)
         spare = [g for g in owned if not g["equipped"]]
         if spare:
             embed.add_field(name="Spare gear", value=join_lines([gear_label(g) for g in spare]), inline=False)
