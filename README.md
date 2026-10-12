@@ -33,6 +33,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### 🛠️ Crafting & equipment
 
 - `/craft <item> <material>` and `/craftlist` — Swords, tools and armor in gold, iron, diamond or netherite.
+- **Shield** — `/craft item:shield material:iron` (iron only, **6 iron ingots**). Equipped in its own slot, it **blocks 25% of the hits** received in duels and tournament matches (there is no dodge anymore). It has **100 durability** and each duel or tournament match uses **50**: after 2 fights it's at 0 and **stays in your inventory, unusable** until you `/repair` it (like any gear: 60% of its crafting value for a full repair). It doesn't work in the PVE dungeon nor against bosses, and can't take Unbreaking.
 - `/equip`, `/equip_best`, `/unequip`, `/gear` — One piece per slot. Freshly crafted gear is equipped if the slot is empty.
 - `/repair <piece>` — Repair a piece for emeralds (it keeps its enchantments): a broken-down piece costs 60% of its crafting value, a half-worn one 30%.
 - What gear does:
@@ -42,7 +43,8 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
   - **Hoe**: more XP
   - **Sword**: higher maximum damage per hit (duels, bosses, tournament)
   - **Armor**: damage reduction in duels (1.2% per armor point, 35% at most)
-- Gear loses **durability** when used and breaks at 0, so players keep crafting.
+  - **Shield** (iron only): blocks 25% of the hits in duels and tournament matches
+- Gear loses **durability** when used and breaks at 0, so players keep crafting (the shield stays at 0, unusable until repaired).
 
 ### ✨ Enchanting
 
@@ -96,7 +98,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/profile [member]` — Public profile: level, fortune and rank, team, species, equipment, achievements, stats, linked account, champion badge.
 - **Weekly seasons** (`/season`) — The score is the value you *created* during the week (Monday to Sunday): the value of the blocks you mine (counted when mined, not when sold), daily rewards, drops, bosses, challenges, the server share of the tournament pot, and the trader/villager bonus when you sell. Spending doesn't lower it; emeralds or blocks received from other players, duel pots and auction sales don't count. At the end of the week, the top 3 get emeralds and the winner gets the **champion role** until the next season ends.
 - `/duel <member> <stake>` — Both players bet the same stake and the winner takes it all. The fight is played **turn by turn** in the message: on your turn you can drink a potion (its effect shows right away), then click **Attack**, in the same turn. You have 30 s per turn, then the bot attacks for you; after 2 missed turns in a row the rest of the duel is played automatically. If the bot restarts during a duel, both stakes are refunded.
-  - **Luck matters**: each hit deals a random amount between **1** and your sword's **maximum** (no sword 6 · gold 8 · iron 10 · diamond 12 · netherite 14, +1/+2/+3 with Sharpness). 10% of hits are **dodged**, 15% are **critical** (x2). Armor reduces the damage taken by 1.2% per point, 35% at most. The player who plays second starts with **+2 HP**.
+  - **Luck matters**: each hit deals a random amount between **1** and your sword's **maximum** (no sword 6 · gold 8 · iron 10 · diamond 12 · netherite 14, +1/+2/+3 with Sharpness). No dodging: only a **shield** blocks hits (25% of them). 15% of hits are **critical** (x2). Armor reduces the damage taken by 1.2% per point, 35% at most. The player who plays second starts with **+2 HP**.
   - Better gear wins more often, not always: one tier ahead (e.g. iron vs gold) wins about 70% of the time, netherite vs iron about 80%.
 - **Potions** (`/potions`) — Duels and the PVE dungeon (not the tournament, not bosses). In a duel: one potion per turn, up to 3 per duel (at most one reinforced II potion), the effect is for that turn. Found in drops (a witch's stash: 2 potions) and on bosses (the top 3 damage dealers get one); reinforced potions (II, effect doubled) are sold by the villager. They can be traded and sold at auction.
 
@@ -290,7 +292,7 @@ Weekly challenges: `balance.challenges.per_week` and `balance.challenges.goals.<
 
 Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
 
-Duels and potions are tuned with `balance.duel` (`hp`, `min_damage`, `dodge_chance`, `crit_chance`, `crit_multiplier`, `second_player_bonus_hp`, `turn_seconds`, `afk_turns`, `min_stake`…), `balance.gear` (`sword_max_damage`, `damage_reduction_per_armor_point`, `max_damage_reduction`) and `balance.potions`: `max_per_duel`, `strength_min_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `level2_multiplier`, `boss_top` and the reference values `value` / `value_ii`.
+Duels and potions are tuned with `balance.duel` (`hp`, `min_damage`, `crit_chance`, `crit_multiplier`, `second_player_bonus_hp`, `turn_seconds`, `afk_turns`, `min_stake`…), `balance.gear` (`sword_max_damage`, `damage_reduction_per_armor_point`, `max_damage_reduction`, and the shield: `shield_block_chance`, `shield_durability`, `shield_wear_per_fight`) and `balance.potions`: `max_per_duel`, `strength_min_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `level2_multiplier`, `boss_top` and the reference values `value` / `value_ii`.
 
 Moderation is tuned with `balance.moderation`: `warn_expire_days` (0 = warnings never expire) and `warn_mutes`, e.g. `{"3": "1h", "5": "1d", "7": "7d"}` (automatic mute when a member reaches that many warnings).
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 
 from game import enchants, gear, players, potions, settings, species
-from game.catalog import MATERIALS, RECIPES
+from game.catalog import MATERIALS, RECIPES, SHIELD, materials_for
 from game.db import Ctx
 from game.errors import GameError
 
@@ -83,13 +83,15 @@ def item_value(item: str, material: str) -> float:
     return float(e["book_values"][level - 1])
 
 
-def max_durability(material: str) -> int:
+def max_durability(material: str, item: str | None = None) -> int:
+    if item == SHIELD:
+        return int(settings.get()["gear"]["shield_durability"])
     return int(settings.get()["gear"]["durability"][material])
 
 
 def create_gear(ctx: Ctx, user_id: int, item: str, material: str) -> int:
     players.ensure_user(ctx, user_id)
-    dura = max_durability(material)
+    dura = max_durability(material, item)
     cur = ctx.execute(
         """
         INSERT INTO gear(user_id, item, material, durability, max_durability, created_at)
@@ -105,6 +107,8 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str) -> dict:
         raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}.")
     if material not in MATERIALS:
         raise GameError(f"Unknown material. Allowed: {', '.join(MATERIALS)}.")
+    if material not in materials_for(item):
+        raise GameError(f"A {item} can only be made of {', '.join(materials_for(item))}.")
     ingots, sticks = RECIPES[item]
 
     missing = []

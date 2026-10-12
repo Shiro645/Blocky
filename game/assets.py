@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from game import enchants, players, potions, shop
-from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS
+from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS, materials_for
 from game.db import Ctx
 from game.errors import GameError
 
@@ -28,7 +28,7 @@ def parse(key: str) -> tuple[str, ...]:
         or (kind == "ingot" and len(parts) == 2 and parts[1] in MATERIALS)
         or (kind == "book" and len(parts) == 3)
         or (kind == "potion" and len(parts) in (2, 3))
-        or (kind == "gear" and len(parts) in (3, 4) and parts[1] in MATERIALS and parts[2] in GEAR_ITEMS)
+        or (kind == "gear" and len(parts) in (3, 4) and parts[2] in GEAR_ITEMS and parts[1] in materials_for(parts[2]))
     )
     if ok and kind == "book":
         enchants.parse_book(f"{parts[1]}:{parts[2]}")
@@ -223,7 +223,7 @@ def catalog() -> list[str]:
     keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis"]
     keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.MAX_LEVEL + 1)]
     keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
-    keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS]
+    keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS if m in materials_for(i)]
     return keys
 
 

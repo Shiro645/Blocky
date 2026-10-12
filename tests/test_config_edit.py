@@ -159,7 +159,7 @@ class RegistryTests(unittest.TestCase):
         table = ce.FIELDS_BY_KEY["drops.table"]
         self.assertEqual(ce.set_whole(BASE, table, settings.DEFAULTS["drops"]["table"]), BASE)
         self.assertEqual(ce.display(ce.FIELDS_BY_KEY["moderation.warn_mutes"], {"10": "1d", "3": "1h"}), "3 → 1h · 10 → 1d")
-        self.assertEqual(ce.display(ce.FIELDS_BY_KEY["duel.dodge_chance"], 0.125), "12.5%")
+        self.assertEqual(ce.display(ce.FIELDS_BY_KEY["duel.crit_chance"], 0.125), "12.5%")
 
 
 class PrepareChangeTests(unittest.TestCase):

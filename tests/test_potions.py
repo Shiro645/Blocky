@@ -16,8 +16,8 @@ def fighters(attack: float = 10, reduction: float = 0.0) -> tuple[duel.Fighter, 
 
 class FightEngineTests(unittest.TestCase):
     def setUp(self):
-        # Exact numbers: no crits, no dodges, no bonus HP for the second player.
-        settings.load({"duel": {"crit_chance": 0, "dodge_chance": 0, "second_player_bonus_hp": 0}})
+        # Exact numbers: no crits, no bonus HP for the second player.
+        settings.load({"duel": {"crit_chance": 0, "second_player_bonus_hp": 0}})
 
     def test_turns_alternate(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=1))
@@ -111,11 +111,16 @@ class FightEngineTests(unittest.TestCase):
             hit = fight.play(random.Random(i)).hits[0]
             self.assertTrue(1 <= hit.damage <= 10, hit.damage)
 
-    def test_dodges(self):
-        settings.load({"duel": {"dodge_chance": 1, "second_player_bonus_hp": 0}})
+    def test_no_dodge_but_shields_block(self):
         fight = duel.Fight(random.Random(1), *fighters())
+        for i in range(40):  # without a shield every hit lands
+            fight.current.hp = fight.other.hp = 1000
+            self.assertFalse(fight.play(random.Random(i)).hits[0].blocked)
+        a, b = fighters()
+        a.block_chance = b.block_chance = 1.0
+        fight = duel.Fight(random.Random(1), a, b)
         turn = fight.play(random.Random(1))
-        self.assertTrue(turn.hits[0].dodged)
+        self.assertTrue(turn.hits[0].blocked)
         self.assertEqual(fight.current.hp, 20)
 
     def test_second_player_starts_with_bonus_hp(self):

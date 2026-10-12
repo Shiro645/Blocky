@@ -10,8 +10,10 @@ EMERALD_CFG = "<:my_emerald:999999999999999999>"
 
 class EmojiTests(unittest.TestCase):
     def test_expected_names(self):
-        self.assertEqual(len(emojis.EXPECTED_NAMES), 54)
+        self.assertEqual(len(emojis.EXPECTED_NAMES), 55)
         self.assertIn("gold_sword", emojis.EXPECTED_NAMES)
+        self.assertIn("iron_shield", emojis.EXPECTED_NAMES)  # shields are iron only
+        self.assertNotIn("gold_shield", emojis.EXPECTED_NAMES)
         self.assertIn("netherite_boots", emojis.EXPECTED_NAMES)
         self.assertIn("obsidian", emojis.EXPECTED_NAMES)
         self.assertIn("enchanted_book", emojis.EXPECTED_NAMES)
@@ -35,7 +37,7 @@ class EmojiTests(unittest.TestCase):
     def test_missing(self):
         absent = emojis.missing({"emerald": EMERALD})
         self.assertNotIn("emerald", absent)
-        self.assertEqual(len(absent), 53)
+        self.assertEqual(len(absent), 54)
 
 
 if __name__ == "__main__":

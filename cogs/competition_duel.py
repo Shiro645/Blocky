@@ -312,8 +312,8 @@ class DuelCog(commands.Cog):
             bits.append(text)
         for i, hit in enumerate(t.hits):
             prefix = "⚡ again " if i else ""
-            if hit.dodged:
-                bits.append(prefix + "💨 dodged")
+            if hit.blocked:
+                bits.append(prefix + "🛡️ blocked")
             else:
                 bits.append(prefix + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
         return f"**{attacker}** → {defender}: " + " · ".join(bits) + f" — {defender} {t.defender_hp:g} HP"
@@ -321,6 +321,8 @@ class DuelCog(commands.Cog):
     def fighter_field(self, view: FightView, fighter: duel.Fighter) -> tuple[str, str]:
         marker = "▶️ " if not view.fight.over and fighter is view.fight.current else ""
         speed = f" · ⚡ {fighter.speed_turns} turn(s)" if fighter.speed_turns else ""
+        if fighter.block_chance:
+            speed += f" · shield: blocks {fighter.block_chance:.0%}"
         value = (
             f"`{progress_bar(int(fighter.hp), int(fighter.max_hp), 12)}` {fighter.hp:.1f}/{fighter.max_hp:g} HP\n"
             f"⚔️ {fighter.min_attack:g}–{fighter.attack:g} · 🛡️ {fighter.reduction:.0%} · 🧪 {view.fight.potions_left(fighter)} left{speed}"
@@ -375,7 +377,7 @@ class DuelCog(commands.Cog):
             )
         if res["broken"]:
             embed.add_field(
-                name="🔨 Broken",
+                name="🔨 Broken or worn out",
                 value="\n".join(f"<@{uid}>'s {name}" for uid, name in res["broken"]),
                 inline=False,
             )

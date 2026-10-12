@@ -136,6 +136,13 @@ def _armor(s: Settings) -> str:
     )
 
 
+def _shield(s: Settings) -> str:
+    g = s["gear"]
+    return (f"Shield (iron only): blocks **{pct(g['shield_block_chance'])}** of the hits in duels and the tournament · "
+            f"durability **{num(g['shield_durability'])}**, **{num(g['shield_wear_per_fight'])}** per fight · "
+            "at 0 it stays, unusable until /repair")
+
+
 def _mining(s: Settings) -> list[str]:
     m, e, d = s["mining"], s["enchants"], s["drops"]
     lo, hi = m["xp_per_message"]
@@ -185,6 +192,7 @@ def _gear(s: Settings) -> list[str]:
         f"Hoe: **+{pct(g['hoe_xp_bonus_per_tier'])}** XP per tier",
         _sword(s),
         _armor(s),
+        _shield(s),
         "Durability: " + listing(g["durability"]),
     ]
 
@@ -258,7 +266,8 @@ def _duel(s: Settings) -> list[str]:
         f"HP: **{num(d['hp'])}** each (**+{num(d['second_player_bonus_hp'])}** for the player who strikes second)",
         f"A hit deals **{num(d['min_damage'])}** to your sword's maximum",
         _sword(s),
-        f"Dodge: **{pct(d['dodge_chance'])}** · critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])})",
+        f"Critical hit: **{pct(d['crit_chance'])}** (×{num(d['crit_multiplier'])}) · no dodge: only a shield blocks "
+        f"(**{pct(s['gear']['shield_block_chance'])}** of the hits)",
         _armor(s),
         f"Potions: up to **{num(p['max_per_duel'])}** per duel, one per turn",
         f"Minimum stake: {em(d['min_stake'])} · **{duration(d['cooldown_seconds'])}** between two duels · "
@@ -533,9 +542,11 @@ PAGES: list[Page] = [
         "craft", "gear",
         "Crafts a piece of gear from ingots and sticks (buy them with /market, or get them while mining, in "
         "drops or from other players). If that slot is empty, the new piece is equipped right away.\n"
-        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time.\n"
+        "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time "
+        "(except the shield: at 0 it stays, unusable until repaired).\n"
+        "The **shield** is made of iron only (6 ingots).\n"
         "Everyone in the channel sees what you crafted.",
-        lambda s: ["Durability: " + listing(s["gear"]["durability"]), "Recipes and prices: /craftlist"],
+        lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s), "Recipes and prices: /craftlist"],
         examples=("/craft item:pickaxe material:iron",),
         related=("craftlist", "market", "equip_best", "repair"),
     ),
@@ -554,7 +565,8 @@ PAGES: list[Page] = [
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
         "Tools wear out when they give their bonus while mining. The sword wears out in duels and against "
-        "bosses, armor in duels. Tournament fights don't wear anything.",
+        "bosses, armor in duels. The shield uses one of its fights in each duel and tournament match; "
+        "tournament fights don't wear anything else.",
         _gear,
         examples=("/gear",),
         related=("equip", "equip_best", "repair", "enchant info"),
@@ -562,7 +574,7 @@ PAGES: list[Page] = [
     Page(
         "equip", "gear",
         "Equips one of your pieces in its slot (one per slot: sword, pickaxe, axe, shovel, hoe, helmet, "
-        "chestplate, leggings, boots). The piece that was there goes back to your inventory.",
+        "chestplate, leggings, boots, shield). The piece that was there goes back to your inventory.",
         examples=("/equip piece:diamond pickaxe",),
         related=("equip_best", "unequip", "gear"),
     ),
@@ -788,8 +800,9 @@ PAGES: list[Page] = [
         "Challenges a player: both bet the stake and the winner takes the pot. The other player accepts with "
         "the button, then it's **turn by turn**: on your turn you can drink a potion first, then press **Attack**.\n"
         "Each hit deals a random amount between the minimum damage and your sword's maximum (potions of "
-        "Strength raise the minimum). It can be dodged or be a critical hit, and armor reduces it. "
-        "Your sword and armor wear out a little. Duel pots don't count for the seasons.",
+        "Strength raise the minimum). It can be a critical hit, armor reduces it, and a **shield** can block it. "
+        "Your sword and armor wear out a little, and the shield uses one of its fights. Duel pots don't count "
+        "for the seasons.",
         _duel,
         examples=("/duel member:@Steve stake:100",),
         related=("potions", "gear", "enchant info", "tournament info"),

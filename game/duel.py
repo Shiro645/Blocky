@@ -3,7 +3,7 @@
 The fight is turn based and luck matters a lot:
 - each hit deals a random amount between a minimum (1, raised by a Strength
   potion) and a maximum (raised by a better sword and Sharpness);
-- a hit can be dodged, or be a critical hit;
+- a hit can be blocked by a shield, or be a critical hit;
 - armor reduces the damage taken, but only up to a cap.
 Better gear wins more often, not always. The player who plays second starts
 with a few extra HP to make up for not striking first. In a duel the players
@@ -16,7 +16,7 @@ import random
 from dataclasses import dataclass, field
 
 from game import gear, players, potions, settings, species
-from game.catalog import ARMOR
+from game.catalog import ARMOR, SHIELD
 from game.db import Ctx
 from game.errors import GameError
 
@@ -35,6 +35,7 @@ class Fighter:
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
     potion_boost: float = 0.0  # Witches: potion effects +X%
+    block_chance: float = 0.0  # a shield blocks this share of the hits received
     gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
@@ -45,7 +46,7 @@ class Fighter:
 class Hit:
     damage: float
     crit: bool
-    dodged: bool = False
+    blocked: bool = False  # by the defender's shield
 
 
 @dataclass
@@ -122,8 +123,8 @@ class Fight:
         d = settings.get()["duel"]
         attacker, defender = self.current, self.other
         attacker.attacks += 1
-        if rng.random() < float(d["dodge_chance"]):
-            return Hit(0.0, False, dodged=True)
+        if defender.block_chance and rng.random() < defender.block_chance:
+            return Hit(0.0, False, blocked=True)
         low = min(attacker.min_attack + min_bonus, attacker.attack)
         damage = rng.uniform(low, attacker.attack)
         crit = rng.random() < d["crit_chance"]
@@ -219,6 +220,7 @@ def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
         user_id, float(gear.attack_damage(equipped)) * strength, gear.damage_reduction(equipped), hp,
         min_attack=float(settings.get()["duel"]["min_damage"]) * strength,
         potion_boost=species.bonus(ctx, user_id, "witch"),
+        block_chance=gear.block_chance(equipped),
     )
     fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
     return fighter, equipped
@@ -284,6 +286,8 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
             piece = equipped.get(slot)
             if piece and fighter.hits_taken and gear.wear(ctx, piece, fighter.hits_taken):
                 broken.append((fighter.user_id, f"{piece['material']} {slot}"))
+        if fighter.block_chance and SHIELD in equipped and gear.wear_shield(ctx, equipped[SHIELD]):
+            broken.append((fighter.user_id, "iron shield (worn out: /repair it)"))
 
     return {
         "winner": winner.user_id,

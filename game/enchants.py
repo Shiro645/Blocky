@@ -34,7 +34,7 @@ ENCHANTS: dict[str, Enchant] = {
     for e in (
         Enchant("efficiency", "Efficiency", ("pickaxe",), "efficiency_seconds"),
         Enchant("fortune", "Fortune", ("pickaxe", "shovel", "axe", "hoe"), "fortune_bonus"),
-        Enchant("unbreaking", "Unbreaking", GEAR_ITEMS, "unbreaking_chance"),
+        Enchant("unbreaking", "Unbreaking", tuple(i for i in GEAR_ITEMS if i != "shield"), "unbreaking_chance"),
         Enchant("sharpness", "Sharpness", ("sword",), "sharpness_damage"),
         Enchant("looting", "Looting", ("sword",), "looting_boss_bonus"),
         Enchant("protection", "Protection", ARMOR, "protection_points"),

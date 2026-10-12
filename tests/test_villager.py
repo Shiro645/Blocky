@@ -109,7 +109,7 @@ class OfferTests(VillagerTestCase):
 
 class PotionLevelTests(unittest.TestCase):
     def setUp(self):
-        settings.load({"duel": {"crit_chance": 0, "dodge_chance": 0, "second_player_bonus_hp": 0}})
+        settings.load({"duel": {"crit_chance": 0, "second_player_bonus_hp": 0}})
 
     def test_reinforced_potions(self):
         self.assertEqual(potions.label("healing:2"), "Potion of Healing II")

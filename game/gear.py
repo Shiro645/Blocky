@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from game import enchants, players, settings
-from game.catalog import ARMOR, GEAR_ITEMS
+from game.catalog import ARMOR, GEAR_ITEMS, SHIELD
 from game.db import Ctx
 from game.errors import GameError
 from game.notices import GearBroken
@@ -111,6 +111,24 @@ def armor_points(equipped: dict[str, dict]) -> int | float:
         if piece:
             total += float(table[piece["material"]][slot]) + enchants.effect(piece, "protection")
     return _number(total)
+
+
+def block_chance(equipped: dict[str, dict]) -> float:
+    """Share of the hits a shield blocks (0 without one, or when it's worn out)."""
+    shield = equipped.get(SHIELD)
+    if not shield or shield["durability"] <= 0:
+        return 0.0
+    return float(settings.get()["gear"]["shield_block_chance"])
+
+
+def wear_shield(ctx: Ctx, piece: dict) -> bool:
+    """A fight used the shield. At 0 it stays (unusable until /repair). Returns True when it just wore out."""
+    if piece["durability"] <= 0:
+        return False
+    left = max(0, piece["durability"] - int(settings.get()["gear"]["shield_wear_per_fight"]))
+    ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (left, piece["gear_id"]))
+    piece["durability"] = left
+    return left == 0
 
 
 def damage_reduction(equipped: dict[str, dict]) -> float:
