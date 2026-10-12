@@ -29,7 +29,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **A private guide channel for every Blocky player** — Only members with the **Blocky player role** (`roles.blocky_player`, `/config` → Roles) get one. Give it with a question in Discord's onboarding (*Server Settings → Onboarding → Customization questions*, e.g. "Do you want to play Blocky?" with an answer giving the role): as soon as a member gets the role (when joining or later in *Channels & Roles*), the bot creates a channel only they and the staff can see, in the guide category (`channels.guide_category`, `/config` → Channels). If they lose the role, the channel is deleted (the checklist progress is kept). Without the role set, no guide channel is created. It holds a welcome message with a **checklist of first steps**, then the guide: mining and emeralds, gear, species and profile, fighting, playing with others, and how to get more info with `/help`.
 - **Checklist**: mine by chatting, `/daily`, `/sell`, pick a species, look at your `/profile`, hit the training dummy (or play a training duel). Each step is checked by itself as soon as it's done, with a line in the channel; steps done before the guide count too. Doing them all pays **200 emeralds**, **once per player ever** (a guide sent again never pays twice). The reward doesn't count for the seasons.
 - **Cleanup**: the channel is deleted 3 days after the checklist is done (or right away with the **Delete this channel now** button), after 30 days if it's never done (progress is kept), and when the member leaves. Each category holds 50 channels: when it's full the bot adds `"<name> 2"`, `"<name> 3"`… (removed once empty), and it stops a little before Discord's limit of 500 channels per server.
-- Mini-games work in guide channels too, so new players can try what the guide explains.
+- Mini-games work in guide channels too, so new players can try what the guide explains. Writing in a guide channel doesn't mine (nobody else sees it: chat mining belongs in the server's channels).
 - `/guide` — Your checklist and a link to your guide channel; if you don't have one anymore, it opens a new one. Without the Blocky player role, it tells you to answer the question in *Channels & Roles* (with a link). Without a guide category, it shows the whole guide privately and the checklist still works.
 - Staff: `/guide_resend [member]` (see Staff commands). Blocky players already in the server when this is installed get a guide channel with `/guide_resend` (everyone) or `/guide`.
 - The bot needs the **Manage Channels** and **Manage Roles** permissions (it sets the channel permissions). Tuned with `balance.guide` (`/config` → Guide).
@@ -222,6 +222,7 @@ Restricted to the staff role (or members with the *Manage Server* permission). *
 - Guide: `/guide_resend [member]` sends the guide again in a new private channel (the old one is deleted), to one member or to **every member with the Blocky player role** (after a confirmation, newest members first, in the background; the result is also posted in the staff channel). Steps already done stay checked and the reward is never paid twice. Members it can't reach because of the 500-channel limit are counted in the report.
 - Teams: `/team_remove <team>` deletes a team (offensive name…), logged in the staff channel
 - Settings: `/config` opens menus to change **every setting of the bot** from Discord, in categories: channels and roles (picked from the Discord lists), level roles, Minecraft texts, time zone and backups, mining and block values, mining odds, XP and talents, market and daily, tools, swords and armor, duels, potions, enchanting, drops, bosses, seasons and challenges, achievements, teams, tournament, villager, mini-games, robberies, loans, species, the PVE dungeon, profiles and the guide (the category menu is paged when there are more than 25). Each setting shows what it does, its current value and its default, with buttons to change it (percentages are typed as `25` or `25%`) or to reset it to the default; settings changed from the default are marked ✏️. Lists (boss names, season rewards…), automatic mutes, the drop table and the villager's goods have their own editors (add, change, delete a line). Values are checked before being saved (an invalid one is refused with the reason). Settings left in the file that the bot doesn't use (from an older version, or a typo) never block a change: they are removed from the file, and the reply lists them. Changes apply immediately, the previous `config.json` is copied to the backups folder and every change is logged in the staff channel. The RCON password, staff role and database path can't be seen or changed from Discord.
+- Update: `/bot_update` pulls Blocky from GitHub and restarts it, after showing what's new (see *Updating from Discord*)
 - Server: `/mc <command>` runs a Minecraft console command through RCON (dangerous commands such as `stop`, `op`, `whitelist off` are blocked, also when chained after `execute … run`; every use is logged in the staff channel), `/reload_config` applies `config.json` changes without restarting, `/backup_now` saves a copy of the database
 
 ---
@@ -249,7 +250,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 
 | Key | Description |
 |---|---|
-| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice) |
+| `guild_id` | ID of your Discord server (slash commands are synced instantly to it; old global commands are removed so nothing shows twice). **Blocky only plays there**: commands, buttons, menus and chat mining don't work in DMs or in another server the bot was added to |
 | `staff.role_id` | ID of the staff role allowed to use staff commands |
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
@@ -411,6 +412,41 @@ docker compose up -d --build
 
 > Upgrading from an older Blocky: the old database format can't be converted. On first start the bot renames it to `economy.db.legacy-<timestamp>` (kept as a backup) and starts a new one.
 
+### Updating from Discord (`/bot_update`)
+
+`/bot_update` (staff) shows what's new on GitHub (the titles of the new changes, and warnings such as files changed by hand), then **Update and restart** pulls the changes, rebuilds the bot and restarts it. The result (new version and what changed, or the error) is posted in the staff channel; if the pull or the build fails, the old version keeps running.
+
+The bot itself never gets access to Docker: a small **updater** container does the work. It only knows two fixed actions (check, update) that the bot asks for by dropping a file in a folder they share, and nothing in a request is ever run. When the updater's own code changes, it rebuilds itself after the bot.
+
+1. The `Blocky` folder must be a **git clone** (`git clone https://github.com/Shiro645/Blocky.git Blocky`), on the `main` branch. The repository is public: no password needed.
+2. Add the shared folder to `blocky`, and the `blocky-updater` service. The updater must see the folder of your `docker-compose.yml` **at the same path** as on the host (here `/volume1/docker/craftoria`: change it to yours):
+
+```yaml
+  blocky:
+    # ... as above ...
+    volumes:
+      - ./bot/config.json:/app/config.json
+      - ./bot/db:/app/db
+      - ./bot/update:/app/update        # shared with the updater
+
+  blocky-updater:
+    build: ./Blocky/updater
+    container_name: blocky-updater
+    restart: unless-stopped
+    working_dir: /volume1/docker/craftoria
+    environment:
+      REPO_DIR: /volume1/docker/craftoria/Blocky
+      SERVICE: blocky                   # the bot's service name
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /volume1/docker/craftoria:/volume1/docker/craftoria
+      - ./bot/update:/shared
+```
+
+3. `mkdir -p bot/update && docker compose up -d --build`, then `/bot_update` in Discord. `docker logs blocky-updater` shows what the updater does.
+
+> ⚠️ The updater has the Docker socket, which gives full control of Docker on the machine: that's why it's a separate container that only accepts these two fixed actions. Don't give the socket to the bot's container.
+
 ---
 
 # 💻 Running locally
@@ -484,7 +520,9 @@ game/                        # game rules, no Discord code
 cogs/                        # slash commands, one file per feature
 utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages), wiki (the wiki channel),
                              # updates.py (what's new: the announcements of the updates channel),
+                             # selfupdate.py (talks to the updater for /bot_update),
                              # profile_card.py (draws the profile cards and banners with Pillow)
+updater/                     # the updater container: git pull + rebuild of the bot, asked by /bot_update
 tests/                       # unit tests
 ```
 

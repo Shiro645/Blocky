@@ -49,6 +49,7 @@ EXTENSIONS = [
     "cogs.player_guide",
     "cogs.info_wiki",
     "cogs.info_updates",
+    "cogs.admin_update",
     "cogs.economy_auction",
     "cogs.staff_economy",
     "cogs.admin_tools",
@@ -91,6 +92,10 @@ class Bot(commands.Bot):
             intents=build_intents(),
             # Safe default: never ping @everyone/@here or roles unless a message asks for it explicitly.
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
+            # Commands only in servers (never in DMs), and only when the bot is added to a server
+            # (not to a user's account): see also in_main_guild, Blocky only plays in its own server.
+            allowed_contexts=app_commands.AppCommandContext(guild=True, dm_channel=False, private_channel=False),
+            allowed_installs=app_commands.AppInstallationType(guild=True, user=False),
         )
         cfg = load_config()
         valid, problems = settings.clean(balance_overrides(cfg))
@@ -170,8 +175,26 @@ class Bot(commands.Bot):
         except discord.HTTPException:
             pass
 
+    def in_main_guild(self, guild_id: int | None) -> bool:
+        """Blocky only plays in its own server: not in DMs, not in another server it was added to."""
+        guild = self.main_guild
+        return guild is not None and guild_id == guild.id
+
+    async def tell_elsewhere(self, interaction: discord.Interaction) -> None:
+        guild = self.main_guild
+        where = f" on **{guild.name}**" if guild is not None else " on its own server"
+        try:
+            await interaction.response.send_message(f"🧱 Blocky only works{where}.", ephemeral=True)
+        except discord.HTTPException:
+            pass
+
     async def not_blocked(self, interaction: discord.Interaction) -> bool:
-        """Every slash command (and its suggestions) first checks the player isn't blocked."""
+        """Every slash command (and its suggestions) first checks it's used in Blocky's server, by a player
+        who isn't blocked."""
+        if not self.in_main_guild(interaction.guild_id):
+            if interaction.type is not discord.InteractionType.autocomplete:
+                await self.tell_elsewhere(interaction)
+            return False
         block = self.block_of(interaction.user.id)
         if block is None:
             return True
@@ -180,11 +203,16 @@ class Bot(commands.Bot):
         return False
 
     def gate_components(self) -> None:
-        """Buttons, menus and forms check the player isn't blocked before reaching any view."""
+        """Buttons, menus and forms check they're used in Blocky's server, by a player who isn't blocked,
+        before reaching any view."""
         store = self._connection._view_store
         dispatch_view, dispatch_modal = store.dispatch_view, store.dispatch_modal
 
         def stopped(interaction: discord.Interaction) -> bool:
+            if not self.in_main_guild(interaction.guild_id):
+                mark_handled(interaction)
+                asyncio.create_task(self.tell_elsewhere(interaction))
+                return True
             block = self.block_of(interaction.user.id)
             if block is None:
                 return False

@@ -519,7 +519,8 @@ PAGES: list[Page] = [
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "
         "**drop** appear: the first player to click it gets the reward.\n\n"
         "In **spam channels** you don't mine blocks: each reward is a tiny amount of emeralds instead, saved "
-        "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons).",
+        "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons). Messages in your private "
+        "guide channel, in DMs or in another server don't mine at all.",
         _mining,
         related=("inventory", "sell", "gear", "talents"),
         title="⛏️ Mining (chat)",
@@ -1475,6 +1476,18 @@ PAGES: list[Page] = [
         "that the bot doesn't use (left by an older version, or a typo) never block a change: they are removed.\n"
         "The RCON password, the staff role and the database path can't be seen or changed from Discord.",
         examples=("/config",),
+        related=("reload_config", "backup_now"),
+    ),
+    Page(
+        "bot_update", "staff_server",
+        "Updates Blocky from GitHub. First it shows the **new changes** (their titles) and warnings, if any (files "
+        "changed by hand in the Blocky folder, another branch…), with an **Update and restart** button. Then the "
+        "**updater** (a small container next to the bot) pulls the changes, rebuilds the bot and restarts it: a "
+        "few minutes. The result (the version and what changed, or the error) is posted in the staff channel. If "
+        "the pull or the rebuild fails, the bot keeps running the old version.\n"
+        "Needs the updater container: see the README, *Updating from Discord*. New features are then announced in "
+        "the updates channel.",
+        examples=("/bot_update",),
         related=("reload_config", "backup_now"),
     ),
     Page(

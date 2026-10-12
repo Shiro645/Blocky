@@ -56,7 +56,8 @@ SECTIONS: tuple[Section, ...] = (
     ),
     Section(
         "mining", "⛏️ Mining, selling and the daily reward",
-        "**Chat to mine.** When you write a message, you get a **mining reward**: a pile of **1 to 6 blocks**. Big "
+        "**Chat to mine.** When you write a message in the server (not in your private guide channel), you get a "
+        "**mining reward**: a pile of **1 to 6 blocks**. Big "
         "piles are cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come in "
         "smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
         "messages in between give nothing, so spamming doesn't help. Each reward also gives **XP**, sometimes "
