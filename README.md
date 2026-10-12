@@ -12,6 +12,11 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/help` — A menu by category, and a page for every command: what it does, its options, its **current numbers** (read from the settings, so they follow `/config`), examples and related commands. `/help command:<name>` opens a page directly (`/help command:mining` explains chat mining). Staff commands are only shown to staff, and the answer is only visible to the player who asked.
 
+### 🆕 Updates channel
+
+- **Each new feature is announced once** in the updates channel (`channels.updates`, `/config` → Channels), pinging the role `roles.updates_ping` if it's set (one ping, even when several announcements are posted together). The announcements are written in [`utils/updates.py`](utils/updates.py): the bot posts the ones it hasn't posted yet when it starts (so right after each update of the bot), when the channel is set and after `/reload_config`. Until a channel is set, they wait. The first one is a recap of everything new.
+- **Adding a feature?** Add an entry at the end of `utils/updates.py` with a new key (never change the key of an entry already posted: it would be posted again).
+
 ### 📚 Wiki
 
 - **A wiki channel kept by the bot** (`channels.wiki`, `/config` → Channels): every feature for players explained in detail, more than `/help` (which has one page per command). A contents message at the top links to each part, then one message per topic (start here, mining and the daily reward, XP and talents, crafting and gear, enchanting, species, trading/auctions/loans, duels/potions/dummy, the dungeon, bosses/drops/villager, seasons/challenges/achievements/leaderboards, the tournament, teams, profile, mini-games, the Minecraft server), and the contents again at the bottom.
@@ -251,12 +256,14 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
+| `channels.updates` | Updates channel: each new Blocky feature is announced there once, after the bot is updated (0 = the announcements wait) |
 | `channels.wiki` | Wiki channel: the bot keeps every feature explained there, with the current numbers (0 = no wiki) |
 | `channels.guide_category` | Category of the guide channels: every new member gets a private channel there with the guide and a checklist (0 = no guide channels; `/guide` still shows the guide) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |
+| `roles.updates_ping` | Role pinged when a new feature is announced (0 = no ping) |
 | `roles.blocky_player` | Blocky player role: only its members get a guide channel (give it with an onboarding question in *Channels & Roles*; 0 = no guide channels) |
 | `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
 | `roles.species_villager` … `species_miner` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`) |
@@ -476,6 +483,7 @@ game/                        # game rules, no Discord code
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature
 utils/                       # config, checks, announcer, RCON, Mojang, UI helpers, manual (/help pages), wiki (the wiki channel),
+                             # updates.py (what's new: the announcements of the updates channel),
                              # profile_card.py (draws the profile cards and banners with Pillow)
 tests/                       # unit tests
 ```
