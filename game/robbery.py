@@ -69,6 +69,14 @@ def start(ctx: Ctx, thief_id: int, victim_id: int, mode: str) -> dict:
     return get(ctx, cur.lastrowid)
 
 
+def cancel(ctx: Ctx, rob_id: int) -> None:
+    """The robbery couldn't be shown to the victim: it never happened (no cooldown used)."""
+    row = get(ctx, rob_id)
+    if row is not None and row["status"] == "active":
+        ctx.execute("DELETE FROM robberies WHERE rob_id=?;", (rob_id,))
+        players.bump_stat(ctx, row["thief_id"], "robs_started", -1)
+
+
 def set_message(ctx: Ctx, rob_id: int, channel_id: int, message_id: int) -> None:
     ctx.execute("UPDATE robberies SET channel_id=?, message_id=? WHERE rob_id=?;", (channel_id, message_id, rob_id))
 
