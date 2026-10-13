@@ -52,8 +52,9 @@ def trade(ctx: Ctx, a_id: int, b_id: int, a_key: str, a_amount: int, b_key: str 
     assets.transfer(ctx, a_id, b_id, a_key, a_amount)
     if b_key:
         assets.transfer(ctx, b_id, a_id, b_key, b_amount)
-    players.bump_stat(ctx, a_id, "trades_completed")
-    players.bump_stat(ctx, b_id, "trades_completed")
+        # Only real exchanges count (achievements, challenges): a gift passed back and forth would be free.
+        players.bump_stat(ctx, a_id, "trades_completed")
+        players.bump_stat(ctx, b_id, "trades_completed")
 
 
 # ---------------- auction house ----------------
@@ -103,6 +104,7 @@ def buy(ctx: Ctx, buyer_id: int, auction_id: int) -> dict:
     listing = get_listing(ctx, auction_id)
     if listing["seller_id"] == buyer_id:
         raise GameError("That's your own listing. Use `/auction cancel` to take it back.")
+    loans.check_not_late(ctx, buyer_id, "auction purchases")
     players.spend_emeralds(ctx, buyer_id, listing["price"])
     tax = tax_for(listing["price"])
     players.give_emeralds(ctx, listing["seller_id"], listing["price"] - tax)

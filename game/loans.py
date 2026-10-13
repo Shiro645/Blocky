@@ -214,7 +214,10 @@ def garnish(ctx: Ctx, user_id: int, amount: int) -> int:
     if row is None:
         return 0
     loan = dict(row)
-    share = min(left(loan), amount, int(amount * float(_cfg()["garnish"])))
+    exact = amount * float(_cfg()["garnish"])
+    # The fraction is rounded at random (0.5 → 1 half of the time): many small gains can't slip through.
+    share = int(exact) + (1 if ctx.rng.random() < exact - int(exact) else 0)
+    share = min(left(loan), amount, share)
     if share <= 0:
         return 0
     players.ensure_user(ctx, loan["lender_id"])

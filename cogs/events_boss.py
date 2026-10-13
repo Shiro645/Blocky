@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 from game import events, settings
 from game.errors import GameError
 from utils.config import role_id
-from utils.ui import em, progress_bar, report_error
+from utils.ui import em, potion_icon, progress_bar, report_error
 
 log = logging.getLogger("boss")
 
@@ -171,6 +171,8 @@ class BossCog(commands.Cog):
                 line += f" (Looting +{r['looting']:,})"
             if r.get("book"):
                 line += f" + 📕 **{r['book']}** book"
+            if r.get("potion"):
+                line += f" + {potion_icon(r['potion_key'])} **{r['potion']}**"
             lines.append(line)
         embed = discord.Embed(
             title=f"💀 {res['name']} has been defeated!",

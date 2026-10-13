@@ -46,10 +46,10 @@ def _sell_offer(ctx: Ctx) -> dict:
     good = ctx.rng.choice(_cfg()["goods"])
     asset, amount = good["asset"], int(good["amount"])
     if asset == "book":
-        name, level = enchants.random_book(ctx.rng, [70, 30])
+        name, level = enchants.random_book(ctx.rng, _cfg()["book_weights"])
         asset = f"book:{name}:{level}"
     elif asset == "potion":
-        asset = f"potion:{ctx.rng.choice(sorted(potions.POTIONS))}"
+        asset = f"potion:{potions.random_kind(ctx.rng)}"
     value = int(round(assets.unit_value(asset) * amount))
     price = max(1, int(round(value * (1 - float(_cfg()["sell_discount"])))))
     return {"kind": "sell", "asset": asset, "amount": amount, "price": price, "value": value}
@@ -64,10 +64,10 @@ def _buy_offer(ctx: Ctx) -> dict:
 
 def _exclusive_offer(ctx: Ctx) -> dict:
     c = _cfg()
-    if ctx.rng.random() < 0.5:
+    if ctx.rng.random() < float(c["exclusive_book_chance"]):
         asset, price = f"book:{ctx.rng.choice(sorted(enchants.ENCHANTS))}:3", int(c["book_iii_price"])
     else:
-        asset, price = f"potion:{ctx.rng.choice(sorted(potions.POTIONS))}:2", int(c["potion_ii_price"])
+        asset, price = f"potion:{potions.random_kind(ctx.rng)}:2", int(c["potion_ii_price"])
     return {"kind": "exclusive", "asset": asset, "amount": 1, "price": price, "value": int(assets.unit_value(asset))}
 
 

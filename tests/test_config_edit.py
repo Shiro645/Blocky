@@ -124,8 +124,13 @@ class RegistryTests(unittest.TestCase):
                 if field.kind == "choice":
                     self.assertIn(ce.default_value(field), [v for _, v in field.choices])
         self.assertEqual(len(ce.CATEGORIES), len(set(ce.CATEGORIES.values())))
-        # More than 25 categories are paged in /config (cogs/admin_config.category_pages).
-        self.assertTrue(all(len(label) <= 100 and not key.startswith("page:") for key, label in ce.CATEGORIES.items()))
+        self.assertTrue(all(len(label) <= 100 and key != "back" for key, label in ce.CATEGORIES.items()))
+        # Every category is in exactly one section, and each section fits in one menu (with "All sections").
+        listed = [c for _, categories in ce.SECTIONS.values() for c in categories]
+        self.assertEqual(sorted(listed), sorted(ce.CATEGORIES))
+        self.assertTrue(all(len(categories) <= 24 for _, categories in ce.SECTIONS.values()))
+        emojis = [label.split(" ", 1)[0] for label in ce.CATEGORIES.values()]
+        self.assertEqual(len(emojis), len(set(emojis)))  # no two categories with the same emoji
 
     def test_a_value_inside_a_list(self):
         cost = ce.FIELDS_BY_KEY["enchants.apply_cost.1"]
@@ -146,6 +151,15 @@ class RegistryTests(unittest.TestCase):
     def test_setting_the_default_value_removes_the_override(self):
         price = ce.FIELDS_BY_KEY["market.ingots.diamond"]
         self.assertEqual(ce.set_field(BASE, price, 60), BASE)
+
+    def test_the_old_mining_cooldown_key_never_comes_back(self):
+        cooldown = ce.FIELDS_BY_KEY["mining.cooldown_seconds"]
+        old = {**BASE, "economy": {"cooldown_seconds": 45}}
+        self.assertEqual(ce.current_value(old, cooldown), 45)
+        back_to_default = ce.set_field(old, cooldown, None)
+        self.assertNotIn("economy", back_to_default)
+        self.assertEqual(ce.current_value(back_to_default, cooldown), 30)
+        self.assertEqual(ce.current_value(ce.set_field(old, cooldown, 40), cooldown), 40)
 
     def test_editors(self):
         for kind, _ in ce.DROP_REWARDS:
@@ -194,3 +208,36 @@ class PrepareChangeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RolesTheBotGivesTests(unittest.TestCase):
+    def test_no_staff_or_admin_powers(self):
+        from types import SimpleNamespace as P
+        self.assertTrue(ce.safe_to_give(P(send_messages=True, administrator=False)))
+        self.assertFalse(ce.safe_to_give(P(administrator=True)))
+        self.assertFalse(ce.safe_to_give(P(moderate_members=True)))
+        self.assertFalse(ce.safe_to_give(P(manage_roles=True)))
+
+    def test_roles_already_used_elsewhere(self):
+        cfg = {"roles": {"team_leader": 5, "species_miner": 6, "event_ping": 7, "level_roles": {"10": 8, "25": 9}}}
+        self.assertEqual(ce.roles_in_use(cfg, ("roles", "team_leader")), {6, 7, 8, 9})
+        self.assertEqual(ce.roles_in_use(cfg, ("roles", "level_roles")), {5, 6, 7})
+
+
+class SafetyChecksTests(unittest.TestCase):
+    def test_weights_all_at_zero_are_refused(self):
+        from game import settings
+        _, problems = settings.clean({"enchants": {"book_weights": [0, 0, 0], "boss_book_weights": [0, 0, 0]},
+                                      "games": {"lucky_block": {k: {"weight": 0} for k in (
+                                          "creeper", "cobblestone", "iron", "gold", "diamond", "emerald", "netherite")}}})
+        text = " ".join(problems)
+        for key in ("book_weights", "boss_book_weights", "lucky_block"):
+            self.assertIn(key, text)
+
+    def test_mc_commands_that_get_around_the_blocked_list(self):
+        from utils import mc_commands as mc
+        for command in ("execute as @e run kill @s", "bukkit:reload", "spigot:restart", "rl",
+                        'setblock 0 64 0 command_block{auto:1b,Command:"op Steve"}'):
+            self.assertIsNotNone(mc.blocked_by(command, mc.DEFAULT_BLOCKED), command)
+        for command in ("say hello", "give Steve diamond 1", "kill Steve", "execute as Steve run say hi"):
+            self.assertIsNone(mc.blocked_by(command, mc.DEFAULT_BLOCKED), command)

@@ -34,7 +34,7 @@ def claim(ctx: Ctx, user_id: int) -> dict:
     streak = user["daily_streak"] + 1 if user["last_daily"] == yesterday else 1
     emeralds = reward_for_streak(streak)
     bonus_item = None
-    if streak % 7 == 0 and d.get("weekly_bonus_item"):
+    if streak % max(1, int(d["bonus_every_days"])) == 0 and d.get("weekly_bonus_item"):
         bonus_item = d["weekly_bonus_item"]
         players.add_item(ctx, user_id, "ingot", bonus_item, 1)
 

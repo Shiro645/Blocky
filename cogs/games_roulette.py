@@ -40,8 +40,13 @@ class RouletteCog(commands.Cog):
             raise GameError(f"The wheel is still turning: spin again in **{int(ready - now) + 1}s**.")
         if bet == "number" and number is None:
             raise GameError("Add the `number` option: 0, 00 or 1 to 36.")
-        res = await self.bot.db.run(roulette.spin, interaction.user.id, bet, amount, number)
+        # Reserved before the await: a second command sent at the same time waits for the cooldown.
         self._next[interaction.user.id] = now + int(settings.get()["games"]["cooldown_seconds"])
+        try:
+            res = await self.bot.db.run(roulette.spin, interaction.user.id, bet, amount, number)
+        except BaseException:
+            self._next[interaction.user.id] = ready  # nothing was played: no cooldown
+            raise
 
         label = roulette.BETS[bet][0] + (f" {res['number']}" if bet == "number" else "")
         lines = [f"The ball lands on {COLORS[res['color']]} **{res['slot']}**.", f"Your bet: **{label}** · {em(amount)}"]

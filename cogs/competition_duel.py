@@ -102,7 +102,8 @@ class DummyMember:
 def free_potions() -> dict[str, int]:
     """Training: every potion, as many as a duel allows (nothing is taken from the inventory)."""
     out = {kind: potions.max_per_duel() for kind in potions.POTIONS}
-    out.update({potions.key_of(kind, 2): 1 for kind in potions.POTIONS})
+    if potions.strong_per_fight() > 0:
+        out.update({potions.key_of(kind, 2): potions.strong_per_fight() for kind in potions.POTIONS})
     return out
 
 
@@ -146,7 +147,8 @@ class FightView(discord.ui.View):
                 label=f"{potions.label(key)} ×{amount}", value=key,
                 description=potions.effect_text(key)[:100], emoji=potion_icon(key) or None,
             )
-            for key, amount in sorted(self.owned[current.user_id].items()) if amount > 0
+            for key, amount in sorted(self.owned[current.user_id].items())
+            if amount > 0 and not (potions.parse(key)[0] == "healing" and current.hp >= current.max_hp)
         ]
         if options:
             self.add_item(PotionSelect(self, options[:25]))
@@ -191,12 +193,16 @@ class FightView(discord.ui.View):
             if self.fight.over:
                 await interaction.response.defer()
                 return
+            if interaction.user.id != self.fight.current.user_id:
+                # The turn timer played this turn while the click was waiting: it's the opponent's turn now.
+                await interaction.response.send_message("⏳ Too late: your turn was played for you.", ephemeral=True)
+                return
             uid = self.fight.current.user_id
             self.fight.check_potion(potion)
             if self.owned[uid].get(potion, 0) <= 0:
                 raise GameError(f"You don't have a **{potions.label(potion)}** anymore.")
             if not self.training:
-                await self.cog.bot.db.run(potions.drink, uid, potion)
+                await self.cog.bot.db.run(duel.drink, self.duel_id, uid, potion)
             self.owned[uid][potion] -= 1
             self.missed[uid] = 0
             self.fight.drink(potion)
@@ -217,6 +223,10 @@ class FightView(discord.ui.View):
             if self.fight.over or (turn_no is not None and turn_no != self.turn_no):
                 if interaction is not None:
                     await interaction.response.defer()
+                return
+            if interaction is not None and interaction.user.id != self.fight.current.user_id:
+                # The turn timer played this turn while the click was waiting: it's the opponent's turn now.
+                await interaction.response.send_message("⏳ Too late: your turn was played for you.", ephemeral=True)
                 return
             uid = self.fight.current.user_id
             self.missed[uid] = self.missed[uid] + 1 if interaction is None else 0
@@ -267,11 +277,26 @@ class DuelCog(commands.Cog):
         self.cooldown_until: dict[int, float] = {}
         self.pending: set[int] = set()  # challengers with an open request
         self.busy: set[int] = set()  # players in a fight
+        self.interrupted: list[dict] = []  # duels a restart cut, whose message still has to say so
 
     async def cog_load(self) -> None:
-        refunded = await self.bot.db.run(duel.refund_interrupted)
-        if refunded:
-            log.info("Refunded %d duel(s) interrupted by a restart", len(refunded))
+        self.interrupted = await self.bot.db.run(duel.refund_interrupted)
+        if self.interrupted:
+            log.info("Refunded %d duel(s) interrupted by a restart", len(self.interrupted))
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        interrupted, self.interrupted = self.interrupted, []
+        for row in interrupted:
+            channel = self.bot.get_channel(row["channel_id"]) if row["channel_id"] else None
+            if not isinstance(channel, discord.abc.Messageable) or not row["message_id"]:
+                continue
+            text = (f"⚠️ This duel between <@{row['challenger_id']}> and <@{row['opponent_id']}> was cut by a "
+                    "restart of the bot: nobody won, the stakes and the potions drunk were given back.")
+            try:
+                await channel.get_partial_message(row["message_id"]).edit(content=text, embed=None, view=None)
+            except discord.HTTPException as exc:
+                log.warning("Could not update the interrupted duel %s: %s", row["duel_id"], exc)
 
     def finish(self, *user_ids: int) -> None:
         cooldown = settings.get()["duel"]["cooldown_seconds"]
@@ -292,9 +317,13 @@ class DuelCog(commands.Cog):
         member = interaction.user
         if member.id in self.busy:
             raise GameError("You are already in a duel.")
-        fight = await self.bot.db.run(dummy.training_fight, member.id, gear_key, self.rng)
+        self.busy.add(member.id)  # reserved before the await: a second click can't start a second fight
+        try:
+            fight = await self.bot.db.run(dummy.training_fight, member.id, gear_key, self.rng)
+        except BaseException:
+            self.busy.discard(member.id)
+            raise
         setup = {"duel_id": 0, "fight": fight, "potions": {member.id: free_potions(), dummy.DUMMY_ID: {}}}
-        self.busy.add(member.id)
         view = FightView(self, member, DummyMember(gear_key), 0, setup, training=gear_key)  # type: ignore[arg-type]
         view.dummy_turn()  # the dummy may strike first
         view.build()
@@ -305,9 +334,18 @@ class DuelCog(commands.Cog):
     async def start_fight(self, interaction: discord.Interaction, request: DuelView) -> None:
         self.check_cooldown(request.challenger)
         self.check_cooldown(request.opponent)
-        setup = await self.bot.db.run(duel.start, request.challenger.id, request.opponent.id, request.stake)
+        fighters = {request.challenger.id, request.opponent.id}
+        self.busy.update(fighters)  # reserved before the await: nobody can join another fight meanwhile
+        try:
+            message = interaction.message
+            setup = await self.bot.db.run(
+                duel.start, request.challenger.id, request.opponent.id, request.stake, None,
+                message.channel.id if message else None, message.id if message else None,
+            )
+        except BaseException:
+            self.busy.difference_update(fighters)
+            raise
         self.pending.discard(request.challenger.id)
-        self.busy.update({request.challenger.id, request.opponent.id})
         view = FightView(self, request.challenger, request.opponent, request.stake, setup)
         view.message = interaction.message
         view.start_timer()

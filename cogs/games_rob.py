@@ -63,6 +63,13 @@ def rob_view(rob: dict) -> discord.ui.View:
     return view
 
 
+def can_see(channel: discord.abc.GuildChannel | discord.Thread, member: discord.Member) -> bool:
+    try:
+        return channel.permissions_for(member).view_channel
+    except (AttributeError, TypeError):
+        return True  # not a server channel: nothing to check
+
+
 class RobCog(commands.Cog):
     """/rob: steal emeralds from a player, who has some time to stop you."""
 
@@ -83,6 +90,18 @@ class RobCog(commands.Cog):
         check_game_channel(interaction)
         if member.bot:
             raise GameError("Bots have nothing worth stealing.")
+        if interaction.channel_id in getattr(self.bot, "guide_channels", {}):
+            raise GameError("Not from a guide channel: the victim must be able to see the robbery.")
+        # Where it's posted: the robberies channel, else here; always where the victim can see the button.
+        places = []
+        found = self.bot.get_channel(channel_id("robberies") or 0)
+        if isinstance(found, (discord.TextChannel, discord.Thread)) and found.id != interaction.channel_id:
+            places.append(found)
+        if interaction.channel is not None:
+            places.append(interaction.channel)
+        places = [c for c in places if can_see(c, member)]
+        if not places:
+            raise GameError(f"{member.mention} can't see this channel: rob them where they can try to stop you.")
         rob = await self.bot.db.run(robbery.start, interaction.user.id, member.id, mode)
         risky = mode == "risky"
         post = dict(
@@ -91,19 +110,22 @@ class RobCog(commands.Cog):
             # Risky pings the victim; discreet pings nobody.
             allowed_mentions=discord.AllowedMentions(users=[member]) if risky else discord.AllowedMentions.none(),
         )
-        # Posted in the robberies channel when there is one (game channels are busy), else right here.
         message = None
-        channel = self.bot.get_channel(channel_id("robberies") or 0)
-        if isinstance(channel, discord.abc.Messageable) and channel.id != interaction.channel_id:
+        for place in places:
             try:
-                message = await channel.send(**post)
+                if place.id == interaction.channel_id:
+                    await interaction.response.send_message(**post)
+                    message = await interaction.original_response()
+                else:
+                    message = await place.send(**post)
+                break
             except discord.HTTPException:
-                log.warning("Could not post the robbery in the robberies channel: posted where /rob was used")
-        if message is not None:
+                log.warning("Could not post a robbery in %s", place.id)
+        if message is None:  # nowhere the victim could stop it: it doesn't happen
+            await self.bot.db.run(robbery.cancel, rob["rob_id"])
+            raise GameError("I couldn't post the robbery where the victim can see it: it's called off.")
+        if message.channel.id != interaction.channel_id:
             await interaction.response.send_message(f"🦹 Your robbery is on: {message.jump_url}", ephemeral=True)
-        else:
-            await interaction.response.send_message(**post)
-            message = await interaction.original_response()
         await self.bot.db.run(robbery.set_message, rob["rob_id"], message.channel.id, message.id)
 
     # ---------- background ----------

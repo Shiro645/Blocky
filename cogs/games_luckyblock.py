@@ -51,8 +51,13 @@ class LuckyBlockCog(commands.Cog):
         ready = self._next.get(interaction.user.id, 0.0)
         if now < ready:
             raise GameError(f"Your pickaxe needs a break: try again in **{int(ready - now) + 1}s**.")
-        res = await self.bot.db.run(luckyblock.open_block, interaction.user.id, amount)
+        # Reserved before the await: a second command sent at the same time waits for the cooldown.
         self._next[interaction.user.id] = now + int(settings.get()["games"]["cooldown_seconds"])
+        try:
+            res = await self.bot.db.run(luckyblock.open_block, interaction.user.id, amount)
+        except BaseException:
+            self._next[interaction.user.id] = ready  # nothing was played: no cooldown
+            raise
         suspense = discord.Embed(title="🟨❓ Lucky Block", description=f"*Breaking the block…* (bet {em(amount)})",
                                  color=discord.Color.yellow())
         suspense.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)

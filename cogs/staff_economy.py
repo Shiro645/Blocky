@@ -281,6 +281,10 @@ class StaffEconomyCog(commands.Cog):
         if "levels" in parts:
             # Level roles follow the level: everyone is level 1 again.
             asyncio.create_task(self.sync_roles_of(user_ids))
+        seasons_cog = self.bot.get_cog("SeasonsCog")
+        if "progress" in parts and member is None and seasons_cog is not None:
+            # The past seasons are gone: nobody is champion anymore.
+            await seasons_cog.move_champion_role(None)  # type: ignore[attr-defined]
         log_embed = summary()
         log_embed.add_field(name="By", value=f"{interaction.user.mention} (`{interaction.user}`)", inline=False)
         await self.bot.announcer.send(embed=log_embed, channel="staff_log")

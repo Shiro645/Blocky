@@ -18,7 +18,21 @@ DEFAULT_BLOCKED = (
     "save-off",
     "kill @e",
     "kill @a",
+    "rl",  # Bukkit/Spigot's short reload
 )
+
+
+
+def blocked_list() -> list[str]:
+    """What /mc refuses: config.json minecraft.blocked_commands, or the default list."""
+    from utils.config import load_config  # here: the rules themselves don't need config.json
+
+    try:
+        custom = load_config().get("minecraft", {}).get("blocked_commands")
+    except (OSError, ValueError):  # no or broken config.json (tests, the manual outside the bot)
+        custom = None
+    return [str(c) for c in custom] if isinstance(custom, list) else list(DEFAULT_BLOCKED)
+
 
 _COLOR_CODES = re.compile(r"§[0-9a-fk-orA-FK-OR]")
 
@@ -29,8 +43,8 @@ def normalize(command: str) -> str:
     if not words:
         return ""
     first = words[0].lower()
-    if first.startswith("minecraft:"):
-        first = first[len("minecraft:"):]
+    if ":" in first:  # "minecraft:op", "bukkit:reload", "spigot:restart"…
+        first = first.split(":", 1)[1]
     return " ".join([first] + [w.lower() for w in words[1:]])
 
 
@@ -42,7 +56,17 @@ def parts(command: str) -> list[str]:
 
 def blocked_by(command: str, blocked: list[str] | tuple[str, ...]) -> str | None:
     """The blocked entry matching this command (or a command it runs), or None if it is allowed."""
-    for cmd in parts(command):
+    whole = normalize(command)
+    # A command block (or a block/entity carrying one) would run any command, the blocked ones included.
+    if "command_block" in whole or "command:" in whole:
+        return "command blocks"
+    chain = parts(command)
+    for i, cmd in enumerate(chain):
+        # "execute as @e run kill @s" kills everything as surely as "kill @e".
+        if (cmd == "kill" or cmd.startswith("kill ")) and any(t in " ".join(chain[:i + 1]) for t in ("@e", "@a")):
+            if any(normalize(e) in ("kill @e", "kill @a") for e in blocked):
+                return "kill @e"
+    for cmd in chain:
         for entry in blocked:
             rule = normalize(entry)
             # "kill @e" also blocks "kill @e[type=...]"

@@ -14,7 +14,7 @@ from game import backups, settings
 from game.errors import GameError
 from utils import config_edit as ce
 from utils.checks import staff_only
-from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config
+from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config, staff_role_id
 from utils.ui import BaseView, report_error
 
 log = logging.getLogger("admin_config")
@@ -56,22 +56,26 @@ class Screen:
     field: str | None = None  # a key of ce.FIELDS_BY_KEY
     mode: str | None = None  # "add": picking what a new table line gives
     role_page: int = 0  # page of the role list (level roles, role settings)
-    category_page: int = 0  # page of the category menu (more than 25 categories)
+    section: str | None = None  # a key of ce.SECTIONS: its categories are in the first menu
 
 
-def role_list(guild: discord.Guild | None, assignable: bool) -> list[discord.Role]:
+def role_list(guild: discord.Guild | None, assignable: bool, exclude: set[int] = frozenset()) -> list[discord.Role]:
     """The server's roles for a menu, the highest first.
 
     Discord's own role menu only shows some of the roles, so the bot lists them itself.
-    Bot and integration roles are left out, and for roles the bot gives (level and champion
-    roles) the ones above the bot's own role too: it couldn't give them.
+    Bot and integration roles are left out. For roles the bot gives and takes back (level, champion, team
+    leader and species roles) also: the ones above the bot's own role (it couldn't give them), the staff role,
+    roles with staff or admin powers (the bot would hand them to players, and take them from everyone else),
+    and roles already used by another setting (`exclude`).
     """
     if guild is None:
         return []
     roles = [r for r in reversed(guild.roles) if not r.is_default() and not r.managed]
     top = guild.me.top_role if guild.me is not None else None
-    if assignable and top is not None:
-        roles = [r for r in roles if r < top]
+    if assignable:
+        staff = staff_role_id()
+        roles = [r for r in roles if (top is None or r < top) and r.id != staff and ce.safe_to_give(r.permissions)
+                 and r.id not in exclude]
     return roles
 
 
@@ -128,20 +132,46 @@ class ConfigCog(commands.Cog):
 
     async def save_whole(self, user: discord.abc.User, field: ce.Field, value: Any, what: str) -> str:
         """Replace a list, the automatic mutes or a table (`what` says what changed)."""
-        before = show(field, ce.current_value(load_config(), field))
-        return await self.apply(user, field.label, before, what, lambda cfg: ce.set_whole(cfg, field, value))
+        old = ce.current_value(load_config(), field)
+        text = await self.apply(user, field.label, show(field, old), what, lambda cfg: ce.set_whole(cfg, field, value))
+        self.bot.dispatch("blocky_config_changed", field.key, old)
+        return text
+
+    async def save_level_roles(self, user: discord.abc.User, label: str, before: str, after: str, change) -> str:
+        """Add, move or remove a level role."""
+        old = ce.level_roles(load_config())
+        text = await self.apply(user, label, before, after, change)
+        self.bot.dispatch("blocky_config_changed", "level_roles", old)
+        return text
 
     # ---------- embeds ----------
     def home_embed(self) -> discord.Embed:
-        return discord.Embed(
+        embed = discord.Embed(
             title="⚙️ Bot configuration",
             description=(
-                "Choose a category, then a setting: you'll see what it does, its value and its default.\n"
-                "Changes apply immediately, the previous config.json is saved in the backups folder and "
+                "Choose a section, then a category, then a setting: you'll see what it does, its value and its "
+                "default.\nChanges apply immediately, the previous config.json is saved in the backups folder and "
                 "every change is logged in the staff channel."
             ),
             color=COLOR,
         )
+        for label, categories in ce.SECTIONS.values():
+            embed.add_field(name=label, value=" · ".join(ce.CATEGORIES[c] for c in categories)[:1024], inline=False)
+        return embed
+
+    def section_embed(self, section: str) -> discord.Embed:
+        label, categories = ce.SECTIONS[section]
+        cfg = load_config()
+        used = ce.used_settings(cfg)
+        lines = []
+        for c in categories:
+            fields = ce.fields_in(c)
+            changed = sum(ce.is_modified(cfg, f, used) for f in fields)
+            count = f"{len(fields)} setting{'s' if len(fields) != 1 else ''}" if fields else "its own menu"
+            lines.append(f"**{ce.CATEGORIES[c]}** — {count}" + (f" · ✏️ {changed} changed" if changed else ""))
+        embed = discord.Embed(title=label, description="\n".join(lines), color=COLOR)
+        embed.set_footer(text="Choose a category in the menu.")
+        return embed
 
     def category_embed(self, category: str, page: int = 0) -> discord.Embed:
         cfg = load_config()
@@ -226,7 +256,8 @@ class ConfigView(BaseView):
     def __init__(self, cog: ConfigCog, user_id: int, screen: Screen, guild: discord.Guild | None = None):
         super().__init__(allowed_ids={user_id}, timeout=600)
         self.cog, self.user_id, self.screen, self.guild = cog, user_id, screen, guild
-        self.add_item(CategorySelect(screen.category, screen.category_page))
+        section = screen.section or (ce.SECTION_OF.get(screen.category) if screen.category else None)
+        self.add_item(CategorySelect(section, screen.category) if section else SectionSelect())
         field = ce.FIELDS_BY_KEY.get(screen.field) if screen.field else None
         if field is not None:
             self.field_controls(field)
@@ -275,7 +306,8 @@ class ConfigView(BaseView):
 
     def role_controls(self, assignable: bool) -> None:
         """A page of the server's roles (row 1) and the page buttons (row 2)."""
-        roles = role_list(self.guild, assignable)
+        keep = self.field.path if self.screen.field else ("roles", "level_roles")
+        roles = role_list(self.guild, assignable, ce.roles_in_use(load_config(), keep) if assignable else frozenset())
         pages = max(1, -(-len(roles) // PAGE_SIZE))
         page = min(self.screen.role_page, pages - 1)
         if roles:
@@ -311,6 +343,8 @@ class ConfigView(BaseView):
             embed = self.cog.category_embed(screen.category, screen.page)
             if note:
                 embed.description = f"{note}\n\n{embed.description or ''}"[:4096]
+        elif screen.section:
+            embed = self.cog.section_embed(screen.section)
         else:
             embed = self.cog.home_embed()
         await interaction.response.edit_message(embed=embed, view=view)
@@ -321,39 +355,41 @@ class ConfigView(BaseView):
 
 
 # ---------- navigation ----------
-def category_pages() -> list[list[str]]:
-    """The categories, cut in pages when a single menu (25 options) can't hold them all."""
-    keys = list(ce.CATEGORIES)
-    if len(keys) <= 25:
-        return [keys]
-    per_page = 23  # + "Previous" and "More" options
-    return [keys[i:i + per_page] for i in range(0, len(keys), per_page)]
+class SectionSelect(discord.ui.Select):
+    """The first menu: a section (Server, Economy…)."""
+
+    view: ConfigView
+
+    def __init__(self):
+        options = [
+            discord.SelectOption(label=label, value=key, description=", ".join(
+                ce.CATEGORIES[c].split(" ", 1)[1] for c in categories)[:100])
+            for key, (label, categories) in ce.SECTIONS.items()
+        ]
+        super().__init__(placeholder="Choose a section…", options=options, row=0)
+
+    async def callback(self, interaction: discord.Interaction):
+        await self.view.show(interaction, Screen(section=self.values[0]))
 
 
 class CategorySelect(discord.ui.Select):
+    """The categories of the current section, and a way back to the sections."""
+
     view: ConfigView
 
-    def __init__(self, current: str | None, page: int = 0):
-        pages = category_pages()
-        if current is not None:
-            page = next((i for i, keys in enumerate(pages) if current in keys), 0)
-        page = max(0, min(page, len(pages) - 1))
-        options = [
-            discord.SelectOption(label=ce.CATEGORIES[key], value=key, default=key == current) for key in pages[page]
-        ]
-        if page > 0:
-            options.insert(0, discord.SelectOption(label="Previous categories…", value=f"page:{page - 1}", emoji="⬅️"))
-        if page + 1 < len(pages):
-            options.append(discord.SelectOption(label="More categories…", value=f"page:{page + 1}", emoji="➡️"))
-        where = f" ({page + 1}/{len(pages)})" if len(pages) > 1 else ""
-        super().__init__(placeholder=f"Choose a category…{where}", options=options, row=0)
+    def __init__(self, section: str, current: str | None):
+        label, categories = ce.SECTIONS[section]
+        options = [discord.SelectOption(label="All sections", value="back", emoji="⬅️")]
+        options += [discord.SelectOption(label=ce.CATEGORIES[key], value=key, default=key == current)
+                    for key in categories]
+        super().__init__(placeholder=f"{label}: choose a category…", options=options, row=0)
 
     async def callback(self, interaction: discord.Interaction):
         value = self.values[0]
-        if value.startswith("page:"):
-            await self.view.show(interaction, Screen(category_page=int(value.split(":", 1)[1])))
+        if value == "back":
+            await self.view.show(interaction, Screen())
         else:
-            await self.view.show(interaction, Screen(category=value))
+            await self.view.show(interaction, Screen(section=ce.SECTION_OF[value], category=value))
 
 
 class FieldSelect(discord.ui.Select):
@@ -802,7 +838,7 @@ class LevelModal(discord.ui.Modal, title="Level role"):
                     cfg = ce.set_level_role(cfg, lvl, None)
             return ce.set_level_role(cfg, level, role_id)
 
-        note = await self.menu.cog.apply(
+        note = await self.menu.cog.save_level_roles(
             interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", f"<@&{role_id}>", change,
         )
         note += "\nRun `/player sync_roles` to update the members who already passed this level."
@@ -825,7 +861,7 @@ class RemoveLevelRoleSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         level = int(self.values[0])
         before = ce.level_roles(load_config()).get(level)
-        note = await self.view.cog.apply(
+        note = await self.view.cog.save_level_roles(
             interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", "*removed*",
             lambda cfg: ce.set_level_role(cfg, level, None),
         )

@@ -1,6 +1,8 @@
 """Static game data: what exists in the game (values live in settings)."""
 from __future__ import annotations
 
+from game import settings
+
 BLOCK_TYPES = ("cobblestone", "gravel", "deepslate", "obsidian", "bedrock")  # rarest last
 MATERIALS = ("gold", "iron", "diamond", "netherite")
 TOOLS = ("sword", "pickaxe", "axe", "shovel", "hoe")
@@ -41,10 +43,16 @@ GEAR_EFFECTS = {
     "shovel": "Extra gravel when you mine gravel",
     "axe": "Chance to collect sticks while mining",
     "hoe": "More XP per message",
-    "sword": "Higher maximum damage (duels, bosses, tournament)",
-    "helmet": "Damage reduction in duels (capped)",
-    "chestplate": "Damage reduction in duels (capped)",
-    "leggings": "Damage reduction in duels (capped)",
-    "boots": "Damage reduction in duels (capped)",
-    "shield": "In duels: \"Attack + block\" blocks the opponent's next attack, twice per duel",
+    "sword": "Higher maximum damage (duels, tournament, bosses, the dungeon)",
+    "helmet": "Damage reduction in duels, the tournament and the dungeon (capped)",
+    "chestplate": "Damage reduction in duels, the tournament and the dungeon (capped)",
+    "leggings": "Damage reduction in duels, the tournament and the dungeon (capped)",
+    "boots": "Damage reduction in duels, the tournament and the dungeon (capped)",
+    "shield": "In duels: \"Attack + block\" blocks the opponent's next attack, {blocks} per duel",
 }
+
+
+def gear_effect(item: str) -> str:
+    """What a piece of gear does, with the current numbers."""
+    blocks = int(settings.get()["gear"]["shield_blocks_per_fight"])
+    return GEAR_EFFECTS[item].format(blocks="once" if blocks == 1 else "twice" if blocks == 2 else f"{blocks} times")

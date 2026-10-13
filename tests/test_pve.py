@@ -52,6 +52,23 @@ class FightTests(GameTestCase):
         self.assertEqual(heroes[1].attacks, 0)  # Alice's potion killed everything
         self.assertEqual(heroes[0].harming, 0.0)  # a potion lasts one wave
 
+    def test_monsters_follow_the_settings(self):
+        settings.load({"pve": {"group_monsters": 0.5, "monsters": {"zombie": {"hp": 10.0}}}})
+        self.assertEqual(pve.group_count(3, 1), 3)
+        self.assertEqual(pve.group_count(3, 2), 5)  # +1.5 rounded
+        self.assertEqual(pve.wave_text(1, 3), "6 🧟 Zombie")
+        zombies = pve.spawn(1, "normal", 1)
+        self.assertEqual([m.hp for m in zombies], [10.0] * 3)
+
+    def test_two_harming_potions_count_each_kill_once(self):
+        heroes = [pve.Hero(uid, 12, 1, 0.2, 20, 20) for uid in (ALICE, BOB)]
+        heroes[0].harming = heroes[1].harming = 100.0
+        res = pve.fight_wave(random.Random(1), heroes, 1, "easy")
+        self.assertEqual(res["monsters"], 6)
+        kills = "\n".join(res["log"] + res.get("summary", []))
+        self.assertIn(f"<@{ALICE}>: 6 kills", kills)
+        self.assertNotIn(f"<@{BOB}>: ", kills)  # Bob's potion hit nothing alive
+
 
 class RunTests(GameTestCase):
     overrides = {"pve": {"difficulties": {"easy": {"strength": 0.3}}}}  # can't lose
@@ -131,6 +148,8 @@ class RunTests(GameTestCase):
         res = await self.run_game(pve.drink, run["run_id"], ALICE, "strength")
         hero = res["run"]["in"][0]["hero"]
         self.assertEqual(hero.strength, potions.effect("strength", "strength_min_bonus"))
+        with self.assertRaisesRegex(GameError, "already drank a Strength potion"):  # it would be wasted
+            await self.run_game(pve.drink, run["run_id"], ALICE, "strength")
         settings.load({"pve": {"max_potions": 1, "difficulties": {"easy": {"strength": 0.3}}}})
         with self.assertRaisesRegex(GameError, "already drank 1"):
             await self.run_game(pve.drink, run["run_id"], ALICE, "strength")

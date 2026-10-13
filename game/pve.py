@@ -31,23 +31,32 @@ MAX_ROUNDS = 60
 
 @dataclass(frozen=True)
 class Kind:
+    key: str
     name: str
     emoji: str
-    hp: float
-    dmg: tuple[float, float]
     ranged: bool = False  # attacks once before the heroes' first turn
     bites: int = 1  # attacks per turn
     fuse: int = 0  # explodes on this turn (then it's gone), 0 = never
 
+    @property
+    def hp(self) -> float:
+        """Health at strength 1 (settings pve.monsters)."""
+        return float(_cfg()["monsters"][self.key]["hp"])
 
-# Health and damage at strength 1 (the Normal difficulty).
-MONSTERS: dict[str, Kind] = {
-    "zombie": Kind("Zombie", "🧟", 3.2, (0.18, 0.59)),
-    "skeleton": Kind("Skeleton", "💀", 2.6, (0.18, 0.59), ranged=True),
-    "spider": Kind("Spider", "🕷️", 2.6, (0.14, 0.36), bites=2),
-    "creeper": Kind("Creeper", "🟩", 2.6, (1.3, 2.1), fuse=2),
-    "ravager": Kind("Ravager", "🐂", 8.5, (0.36, 0.95)),
-}
+    @property
+    def dmg(self) -> tuple[float, float]:
+        m = _cfg()["monsters"][self.key]
+        return float(m["min_damage"]), float(m["max_damage"])
+
+
+# Their health and damage are settings (pve.monsters).
+MONSTERS: dict[str, Kind] = {k.key: k for k in (
+    Kind("zombie", "Zombie", "🧟"),
+    Kind("skeleton", "Skeleton", "💀", ranged=True),
+    Kind("spider", "Spider", "🕷️", bites=2),
+    Kind("creeper", "Creeper", "🟩", fuse=2),
+    Kind("ravager", "Ravager", "🐂"),
+)}
 WAVES: tuple[tuple[tuple[str, int], ...], ...] = (
     (("zombie", 3),),
     (("skeleton", 3),),
@@ -75,7 +84,13 @@ def label(difficulty: str) -> str:
 
 def wave_text(wave: int, players_count: int = 1) -> str:
     """'3 🧟 Zombie, 2 💀 Skeleton' for wave 1..5."""
-    return ", ".join(f"{n * players_count} {MONSTERS[k].emoji} {MONSTERS[k].name}" for k, n in WAVES[wave - 1])
+    return ", ".join(f"{group_count(n, players_count)} {MONSTERS[k].emoji} {MONSTERS[k].name}"
+                     for k, n in WAVES[wave - 1])
+
+
+def group_count(count: int, heroes: int) -> int:
+    """How many of a wave's monsters a group of `heroes` faces (pve.group_monsters per extra player)."""
+    return count + round(count * float(_cfg()["group_monsters"]) * (max(1, heroes) - 1))
 
 
 def strength(difficulty: str, wave: int) -> float:
@@ -140,7 +155,7 @@ def spawn(wave: int, difficulty: str, heroes: int) -> list[Monster]:
     out = []
     for kind, count in WAVES[wave - 1]:
         k = MONSTERS[kind]
-        for _ in range(count * max(1, heroes)):
+        for _ in range(group_count(count, heroes)):
             out.append(Monster(kind, k.hp * mult, (k.dmg[0] * mult, k.dmg[1] * mult), k.fuse))
     return out
 
@@ -164,7 +179,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     kills: dict[int, int] = {h.user_id: 0 for h in fighting}
 
     def hurt(hero: Hero, damage: float, by: Monster, exploded: bool = False) -> None:
-        damage = max(0.1, damage * (1 - hero.reduction))
+        damage = max(float(_cfg()["min_hit_after_armor"]), damage * (1 - hero.reduction))
         hero.hp = max(0.0, hero.hp - damage)
         hero.hits_taken += 1
         if exploded:
@@ -191,12 +206,11 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     # A Harming potion drunk before the wave hits every monster.
     for hero in fighting:
         if hero.harming:
-            for m in monsters:
+            alive = [m for m in monsters if m.alive]
+            for m in alive:
                 m.hp -= hero.harming
             log.append(f"☠️ <@{hero.user_id}> throws a Harming potion: -{hero.harming:g} HP to every monster")
-            killed = sum(1 for m in monsters if not m.alive)
-            if killed:
-                kills[hero.user_id] += killed
+            kills[hero.user_id] += sum(1 for m in alive if not m.alive)  # only the ones this potion killed
     # Skeletons shoot first.
     for m in monsters:
         if m.alive and MONSTERS[m.kind].ranged:
@@ -483,12 +497,14 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
     kind, level = potions.parse(key)
     if member["potions"] >= int(_cfg()["max_potions"]):
         raise GameError(f"You already drank {_cfg()['max_potions']} potions in this run.")
-    if level >= 2 and member["strong_potion"]:
-        raise GameError("Only one reinforced (II) potion per run.")
+    if level >= 2 and member["strong_potion"] >= potions.strong_per_fight():
+        raise GameError(potions.strong_limit_text("run"))
     hero = member["hero"]
     boost = 1.0 + hero.potion_boost
     if kind == "healing" and hero.hp >= hero.max_hp:
         raise GameError("You are already at full health.")
+    if kind != "healing" and getattr(hero, kind):
+        raise GameError(f"You already drank a {potions.POTIONS[kind].name} potion for the next wave.")
     potions.drink(ctx, user_id, key)
     effect = ""
     if kind == "healing":
@@ -506,7 +522,7 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
         effect = f"next wave: -{hero.harming:g} HP to every monster at the start"
     _save_hero(ctx, run_id, hero)
     ctx.execute(
-        "UPDATE pve_members SET potions = potions + 1, strong_potion = MAX(strong_potion, ?) WHERE run_id=? AND user_id=?;",
+        "UPDATE pve_members SET potions = potions + 1, strong_potion = strong_potion + ? WHERE run_id=? AND user_id=?;",
         (1 if level >= 2 else 0, run_id, user_id),
     )
     return {"run": get(ctx, run_id), "effect": effect, "potion": key}

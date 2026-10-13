@@ -42,6 +42,25 @@ def max_per_duel() -> int:
     return int(_cfg()["max_per_duel"])
 
 
+def strong_per_fight() -> int:
+    """Reinforced (II) potions a player may drink per duel or dungeon run."""
+    return int(_cfg()["strong_per_fight"])
+
+
+def strong_limit_text(where: str) -> str:
+    n = strong_per_fight()
+    if n <= 0:
+        return f"Reinforced (II) potions can't be drunk in a {where} right now."
+    return f"Only {'one' if n == 1 else n} reinforced (II) potion{'s' if n > 1 else ''} per {where}."
+
+
+def random_kind(rng) -> str:
+    """A random potion kind, with the weights of settings potions.random_weights."""
+    weights = _cfg()["random_weights"]
+    kinds = sorted(POTIONS)
+    return rng.choices(kinds, weights=[float(weights[k]) for k in kinds])[0]
+
+
 # ---------------- keys ----------------
 def parse(key: str) -> tuple[str, int]:
     """'strength' -> ('strength', 1), 'strength:2' -> ('strength', 2)"""
@@ -110,7 +129,7 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int = 1) -> None:
 
 
 def give_random(ctx: Ctx, user_id: int, amount: int = 1, level: int = 1) -> list[str]:
-    found = [key_of(ctx.rng.choice(sorted(POTIONS)), level) for _ in range(amount)]
+    found = [key_of(random_kind(ctx.rng), level) for _ in range(amount)]
     for key in found:
         give(ctx, user_id, key)
     return found

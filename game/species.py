@@ -2,8 +2,9 @@
 
 - 🧑‍🌾 Villager: better prices. /sell gives more, the market and the wandering
   villager's goods cost less, and he pays more for blocks.
-- 🪓 Dwarf: more damage in duels, tournaments and against bosses.
-- 🧪 Witch: stronger potions in duels.
+- 🪓 Dwarf: more damage in every fight (duels, tournaments, bosses, the dungeon
+  and the training dummy).
+- 🧪 Witch: stronger potions in duels and in the dungeon.
 - 🔮 Mage: stronger enchantments.
 - ⚒️ Miner: a shorter mining cooldown.
 
@@ -33,8 +34,8 @@ class Species:
 SPECIES: dict[str, Species] = {
     "villager": Species("villager", "Villager", "🧑‍🌾", "villager_trade",
                         "{} better prices: /sell, the market and the wandering villager"),
-    "dwarf": Species("dwarf", "Dwarf", "🪓", "dwarf_damage", "+{} damage in duels, tournaments and against bosses"),
-    "witch": Species("witch", "Witch", "🧪", "witch_potions", "+{} potion effects in duels"),
+    "dwarf": Species("dwarf", "Dwarf", "🪓", "dwarf_damage", "+{} damage in every fight: duels, tournaments, bosses, the dungeon"),
+    "witch": Species("witch", "Witch", "🧪", "witch_potions", "+{} potion effects in duels and the dungeon"),
     "mage": Species("mage", "Mage", "🔮", "mage_enchants", "+{} enchantment effects"),
     "miner": Species("miner", "Miner", "⚒️", "miner_speed", "{} shorter mining cooldown"),
 }

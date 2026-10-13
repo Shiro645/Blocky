@@ -211,9 +211,9 @@ class TeamSeasonTests(TeamTestCase):
         podium = closed[0]["podium"]
         self.assertEqual([(p["tag"], p["score"], p["reward"]) for p in podium], [("DIG", 369, 600), ("RED", 50, 300)])
         self.assertEqual(podium[0]["payout"], [(ALICE, 450), (BOB, 150)])
-        # Alice and Bob also unlock "Squad Goals" (+150).
+        # Alice, still in the team, also wins it: "Squad Goals" (+150). Bob left: his share only.
         self.assertEqual(await self.run_game(players.get_emeralds, ALICE), before[ALICE] + 450 + 150)
-        self.assertEqual(await self.run_game(players.get_emeralds, BOB), before[BOB] + 150 + 150)
+        self.assertEqual(await self.run_game(players.get_emeralds, BOB), before[BOB] + 150)
         self.assertEqual(await self.run_game(players.get_emeralds, CAROL), before[CAROL] + 300)
         self.assertEqual(await self.run_game(teams.close_finished), [])  # not paid twice
 
@@ -314,3 +314,23 @@ class TagTests(TeamTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TeamRotationTests(GameTestCase):
+    overrides = {"teams": {"create_cost": 0, "max_members": 2}}
+
+    async def test_kicking_and_inviting_doesnt_grow_the_team(self):
+        team = await self.run_game(teams.create, 1, "Diamond Diggers", "DIG")
+        await self.run_game(players.earn_emeralds, 1, 100)
+        for uid in range(2, 8):  # six players, one after the other
+            await self.run_game(teams.invite, 1, uid)
+            await self.run_game(teams.accept, uid, team["team_id"])
+            await self.run_game(players.earn_emeralds, uid, 50 + uid)
+            await self.run_game(teams.kick, 1, uid)
+        [row] = await self.run_game(teams.standings, (await self.run_game(lambda ctx: ctx.week_id)))
+        self.assertEqual((row["members"], row["earned"]), (2, 157))  # Alice and the best kicked player only
+        self.advance(7 * DAY)
+        [closed] = await self.run_game(teams.close_finished)
+        self.assertEqual([uid for uid, _ in closed["podium"][0]["payout"]], [1, 7])
+        stats = await self.run_game(players.get_stats, 7)
+        self.assertNotIn("team_seasons_won", stats)  # kicked: a share of the reward, not the win

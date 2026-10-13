@@ -40,8 +40,8 @@ class StaffBlockyCog(commands.Cog):
     async def ban(self, interaction: discord.Interaction, member: discord.Member, duration: str, reason: Reason):
         if member.bot or member.id == interaction.user.id:
             raise GameError("Pick another player.")
-        if is_staff(member):
-            raise GameError("You can't block a staff member.")
+        if is_staff(member) or member.id == getattr(interaction.guild, "owner_id", None):
+            raise GameError("You can't block a staff member or the server owner.")
         seconds = moderation.parse_duration(duration)
         block = await self.bot.db.run(restrictions.ban, member.id, seconds, reason, interaction.user.id)
         self.bot.blocked[member.id] = block  # type: ignore[attr-defined]

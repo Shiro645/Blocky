@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 import time
@@ -20,7 +21,11 @@ class QuizView(BaseView):
     """A question: the first player to click the right answer wins. One try per player."""
 
     def __init__(self, cog: "QuizCog", index: int, options: list[str], right: int):
-        super().__init__(timeout=int(settings.get()["games"]["quiz_seconds"]))
+        seconds = int(settings.get()["games"]["quiz_seconds"])
+        # A view's own timeout starts again at every click: the question ends at a fixed time instead.
+        super().__init__(timeout=None)
+        self.seconds = seconds
+        self.deadline = time.monotonic() + seconds
         self.cog, self.index, self.options, self.right = cog, index, options, right
         self.tried: set[int] = set()
         self.winner: discord.abc.User | None = None
@@ -39,6 +44,15 @@ class QuizView(BaseView):
                 item.disabled = True
                 if item.index == self.right:
                     item.style = discord.ButtonStyle.success
+
+    def start_clock(self) -> None:
+        asyncio.create_task(self._ring())
+
+    async def _ring(self) -> None:
+        await asyncio.sleep(self.seconds)
+        if self.winner is None and not self.is_finished():
+            self.stop()
+            await self.on_timeout()
 
     async def on_timeout(self) -> None:
         if self.winner is not None:
@@ -63,6 +77,9 @@ class AnswerButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         view = self.view
+        if view.winner is None and time.monotonic() >= view.deadline:
+            await interaction.response.send_message("⌛ Time's up for this question!", ephemeral=True)
+            return
         if view.winner is not None:
             await interaction.response.send_message(f"Too late, {view.winner.mention} already won this one.", ephemeral=True)
             return
@@ -93,7 +110,7 @@ class QuizCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.rng = random.Random()
-        self.recent: deque[int] = deque(maxlen=40)  # questions asked lately, not asked again soon
+        self.recent: deque[int] = deque()  # questions asked lately, not asked again soon (games.quiz_no_repeat)
         self.next_at = 0.0
 
     async def cog_load(self) -> None:
@@ -103,15 +120,20 @@ class QuizCog(commands.Cog):
         self.quiz_loop.cancel()
 
     async def post(self, channel: discord.abc.Messageable) -> None:
-        index = quiz.pick(self.rng, list(self.recent))
+        keep = int(settings.get()["games"]["quiz_no_repeat"])
+        index = quiz.pick(self.rng, list(self.recent)[-keep:] if keep > 0 else [])
         self.recent.append(index)
+        while len(self.recent) > max(keep, 0):
+            self.recent.popleft()
         options, right = quiz.answers(self.rng, index)
         view = QuizView(self, index, options, right)
         view.message = await channel.send(embed=view.embed(), view=view)
+        view.start_clock()
 
     def schedule(self) -> None:
-        minutes = float(settings.get()["games"]["quiz_every_minutes"])
-        self.next_at = time.monotonic() + minutes * 60 * self.rng.uniform(0.75, 1.25) if minutes > 0 else 0.0
+        g = settings.get()["games"]
+        minutes, jitter = float(g["quiz_every_minutes"]), float(g["quiz_every_jitter"])
+        self.next_at = time.monotonic() + minutes * 60 * self.rng.uniform(1 - jitter, 1 + jitter) if minutes > 0 else 0.0
 
     @tasks.loop(minutes=1)
     async def quiz_loop(self):

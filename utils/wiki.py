@@ -73,7 +73,7 @@ SECTIONS: tuple[Section, ...] = (
         "**The market**: `/market` sells sticks and ingots, what you need to craft, at fixed prices. The market "
         "channel shows them too, above the auctions.\n"
         "**Daily reward**: `/daily` once a day. Coming back every day grows your **streak**: a bigger reward each "
-        "day up to the cap, and an ingot every 7th day in a row. Miss a day and the streak starts over.",
+        "day up to the cap, and a bonus ingot every few days in a row. Miss a day and the streak starts over.",
         ("mining", "sell", "market", "daily"),
     ),
     Section(
@@ -109,7 +109,7 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "enchanting", "✨ Enchanting",
         "**Lapis lazuli** is found while mining and in drops. **Enchanted books** (levels I to III) come from "
-        "drops, bosses (the top damage dealer gets a strong one), completing every weekly challenge, the wandering "
+        "drops, bosses (the top damage dealers get a strong one), completing every weekly challenge, the wandering "
         "villager (level III) and other players.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
@@ -141,7 +141,7 @@ SECTIONS: tuple[Section, ...] = (
         "choose; `/loan ask` asks a player for a loan. The other player accepts with a button and the emeralds move "
         "at once. `/loan repay` pays back (all or part), `/loan list` shows what you owe and what you're owed, and "
         "`/loan forgive` cancels a debt. A **late** borrower pays a penalty, part of everything they earn goes to "
-        "the lender until it's paid, and until then they can't pay, trade, sell at the auction or take new loans.\n"
+        "the lender until it's paid, and until then they can't pay, trade, buy or sell at the auction or take new loans.\n"
         "The **Top senders** leaderboard ranks who sends and lends the most.",
         ("pay", "auction sell", "loan offer"),
     ),
@@ -155,7 +155,7 @@ SECTIONS: tuple[Section, ...] = (
         "sometimes a **critical hit** (double damage). Armor lowers the damage you take, and the player who strikes "
         "second gets a few extra HP. Better gear wins more often, but not always: luck matters.\n\n"
         "**Potions** (`/potions`): at most one per turn and a few per duel. Found in drops and on bosses; "
-        "**reinforced** potions (II) are twice as strong (only one per duel) and sold by the wandering villager. "
+        "**reinforced** potions (II) are stronger (only a few per duel) and sold by the wandering villager. "
         "Witches make potions stronger.\n\n"
         "**Training dummy**: `/dummy hit` hits a dummy with your gear and shows every hit, your total and your "
         "records, with a leaderboard (`/dummy top`). `/dummy duel [gear]` is a whole training duel against a dummy "
@@ -182,7 +182,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
         "**Bosses**: a boss with shared health. Everyone can attack (`/attack` or the button) once in a while; when "
-        "it's defeated, the rewards are shared by damage dealt and the top damage dealer gets a bonus and a book. "
+        "it's defeated, the rewards are shared by damage dealt and the top damage dealers get a bonus, a book and potions. "
         "If nobody defeats it in time, it escapes. `/boss` shows the current one.\n\n"
         "**The wandering villager** comes every day at the same hours in the events channel, with 3 offers: a sale "
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "

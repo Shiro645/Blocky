@@ -385,23 +385,27 @@ def standings(ctx: Ctx, season_id: str) -> list[dict]:
         team = found.setdefault(r["team_id"], {"team_id": r["team_id"], "name": r["name"], "tag": r["tag"], "shares": []})
         team["shares"].append(r["score"])
     need = int(_cfg()["min_members_ranked"])
-    out = [
-        {"team_id": t["team_id"], "name": t["name"], "tag": t["tag"], "score": team_score(t["shares"]),
-         "earned": sum(t["shares"]), "members": len(t["shares"])}
-        for t in found.values() if len(t["shares"]) >= need
-    ]
+    out = []
+    for t in found.values():
+        # Only the best `max_members` shares count: inviting players one after the other (and kicking them)
+        # can't make a team bigger than the limit.
+        shares = sorted(t["shares"], reverse=True)[: max_members()]
+        if len(shares) >= need:
+            out.append({"team_id": t["team_id"], "name": t["name"], "tag": t["tag"], "score": team_score(shares),
+                        "earned": sum(shares), "members": len(shares)})
     out.sort(key=lambda t: (-t["score"], t["team_id"]))
     return out
 
 
 def contributions(ctx: Ctx, season_id: str, team_id: int) -> list[tuple[int, int]]:
-    """[(user_id, emeralds earned for the team)], best first. Includes players who left since."""
+    """[(user_id, emeralds earned for the team)], best first: the `max_members` best ones, like the score.
+    Includes players who left since."""
     rows = ctx.all(
         """
         SELECT user_id, score FROM team_season_scores
-        WHERE season_id=? AND team_id=? AND score > 0 ORDER BY score DESC, user_id;
+        WHERE season_id=? AND team_id=? AND score > 0 ORDER BY score DESC, user_id LIMIT ?;
         """,
-        (season_id, team_id),
+        (season_id, team_id, max_members()),
     )
     return [(r["user_id"], r["score"]) for r in rows]
 
@@ -445,8 +449,12 @@ def close_finished(ctx: Ctx) -> list[dict]:
                 # Not "earned": the reward must not count for the new season.
                 players.give_emeralds(ctx, uid, amount)
             if rank == 1:
+                # The win (achievement, title) goes to the members still in the team; those who left keep
+                # their share of the reward only.
+                still = {m["user_id"] for m in members(ctx, team["team_id"])}
                 for uid, _ in shares:
-                    players.bump_stat(ctx, uid, "team_seasons_won")
+                    if uid in still:
+                        players.bump_stat(ctx, uid, "team_seasons_won")
             ctx.execute(
                 """
                 INSERT INTO team_season_results(season_id, rank, team_id, name, tag, score, reward)

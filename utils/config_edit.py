@@ -26,37 +26,53 @@ PROTECTED = (
     ("database_path",),
 )
 
+# /config: a section, then one of its categories.
+SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
+    "economy": ("💰 Economy", ("mining", "mining_odds", "market", "trading", "loans", "villager")),
+    "progress": ("⭐ Progress", ("xp", "seasons", "achievements", "species", "profiles", "titles", "guide", "teams")),
+    "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
+                             "pve_monsters", "bosses", "tournament")),
+    "games": ("🎉 Games & events", ("chance", "minigames", "rob", "drops")),
+}
+
 CATEGORIES = {
     "channels": "📢 Channels",
     "roles": "🎭 Roles",
     "level_roles": "🎖️ Level roles",
     "minecraft": "🌍 Minecraft texts",
-    "server": "🕒 Time zone, backups & moderation",
+    "server": "🕒 Time zone & backups",
+    "moderation": "🔨 Moderation",
     "mining": "⛏️ Mining & block values",
-    "mining_odds": "🎲 Mining odds",
-    "xp": "📈 XP & talents",
-    "economy": "🛒 Market, daily & trading",
-    "tools": "🛠️ Tools & durability",
-    "combat_gear": "🗡️ Swords & armor",
-    "duels": "⚔️ Duels",
-    "potions": "🧪 Potions",
-    "enchant_books": "📕 Enchanting: books & lapis",
-    "enchant_effects": "✨ Enchanting: effects",
-    "drops": "🎁 Drops",
-    "bosses": "🐉 Bosses",
+    "mining_odds": "📊 Mining odds",
+    "market": "🛒 Market, daily & repair",
+    "trading": "🤝 Trading & auction",
+    "loans": "💳 Loans",
+    "villager": "🧑‍🌾 Villager",
+    "xp": "📈 XP, levels & talents",
     "seasons": "🏆 Seasons & challenges",
     "achievements": "🏅 Achievements",
-    "teams": "🛡️ Teams",
-    "tournament": "🏟️ Tournament",
-    "villager": "🧑‍🌾 Villager",
-    "games": "🎲 Mini-games",
-    "rob": "🦹 Robberies",
-    "loans": "💳 Loans",
     "species": "🧬 Species",
-    "pve": "⚔️ PVE dungeon",
     "profiles": "🎨 Profiles",
+    "titles": "🏷️ Titles & earned frames",
     "guide": "📘 Guide",
+    "teams": "🛡️ Teams",
+    "duels": "🤺 Duels & dummy",
+    "potions": "🧪 Potions",
+    "tools": "🛠️ Tools & durability",
+    "combat_gear": "🗡️ Swords, armor & shield",
+    "enchant_books": "📕 Enchanting: books & lapis",
+    "enchant_effects": "✨ Enchanting: effects",
+    "pve": "🏰 Dungeon",
+    "pve_monsters": "🧟 Dungeon monsters",
+    "bosses": "🐉 Bosses",
+    "tournament": "🏟️ Tournament",
+    "chance": "🟨 Lucky Block & roulette",
+    "minigames": "🧩 Blockdle & quiz",
+    "rob": "🦹 Robberies",
+    "drops": "🎁 Drops",
 }
+SECTION_OF = {category: section for section, (_, categories) in SECTIONS.items() for category in categories}
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 ROMAN = ("I", "II", "III")
@@ -104,6 +120,21 @@ def _per_level(dotted: str, category: str, label: str, help: str = "", kind: str
 
 def _pct(dotted: str, category: str, label: str, help: str = "", max: float = 1.0) -> Field:
     return _b(dotted, category, label, help, "percent", 0, max)
+
+
+def _profile_frames():
+    from game import profiles  # here: profiles imports a lot of the game
+    return profiles.FRAMES.items()
+
+
+def _profile_titles():
+    from game import profiles
+    return profiles.TITLES.items()
+
+
+def _with_n(text) -> str:
+    """'Mine N blocks': what an earned title or frame asks, with N for the setting."""
+    return text(0).replace(" 0 ", " N ").replace(" 0", " N")
 
 
 WEIGHT_HELP = "Chances = this weight ÷ the total of the weights of the pile. 0 = never."
@@ -157,8 +188,8 @@ FIELDS: list[Field] = [
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
-          help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
-               "but no automatic quiz)."),
+          help="/luckyblock, /roulette, /blockdle, /rob, /pve start and /dummy hit only work there (and in the guide "
+               "channels), and the quiz is posted there (not set = they work anywhere, but no automatic quiz)."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
           help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
                "risky one). Best as a channel where members can't write. Not set = where /rob is used."),
@@ -176,8 +207,9 @@ FIELDS: list[Field] = [
                "category (only them and the staff see it), with a checklist of first steps. When it's full "
                "(50 channels) the bot adds \"<name> 2\", \"<name> 3\"… Not set = no guide channels (/guide still "
                "shows the guide).", item="category"),
-    Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
-          help="Mentioned when a boss appears. Nobody else is pinged."),
+    Field("role_event_ping", "roles", "Role pinged for events", ("roles", "event_ping"), "role",
+          help="Mentioned when a boss appears, when the wandering villager arrives and when a tournament opens. "
+               "Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
@@ -202,9 +234,9 @@ FIELDS: list[Field] = [
        "E.g. Europe/Paris.", "timezone", None),
     _b("backups.hour", "server", "Nightly backup: hour", "Hour (0-23) of the daily copy of the database.", max=23),
     _b("backups.keep", "server", "Nightly backups kept", "How many nightly copies are kept.", min=1, max=365),
-    _b("moderation.warn_expire_days", "server", "Warnings count for (days)",
+    _b("moderation.warn_expire_days", "moderation", "Warnings count for (days)",
        "After this many days a warning stops counting for automatic mutes (0 = forever).", max=3650),
-    _b("moderation.warn_mutes", "server", "Automatic mutes", "How many active warnings mute a member, and for how long.",
+    _b("moderation.warn_mutes", "moderation", "Automatic mutes", "How many active warnings mute a member, and for how long.",
        "map", None, max_items=10),
     # ---- mining ----
     _b("mining.cooldown_seconds", "mining", "Mining cooldown (seconds)", "Time between two mining rewards (0 = none).", max=3600),
@@ -234,27 +266,33 @@ FIELDS: list[Field] = [
     _b("talents.miner_gravel_2_3_max", "xp", "Miner: max gravel bonus (2-3)"),
     _b("talents.miner_deepslate_2_3", "xp", "Miner: deepslate weight/point (2-3)", "Added to deepslate on piles of 2-3 blocks."),
     _b("talents.miner_deepslate_2_3_max", "xp", "Miner: max deepslate bonus (2-3)"),
-    _pct("talents.miner_bonus_block_chance", "xp", "Miner: bonus block chance/point", "One more block on piles of 4+."),
+    _pct("talents.miner_bonus_block_chance", "xp", "Miner: bonus block chance/point", "One more block on big piles."),
     _pct("talents.miner_bonus_block_max", "xp", "Miner: max bonus block chance"),
+    _b("talents.miner_bonus_min_pile", "xp", "Miner: bonus block from piles of", "The bonus block only comes on "
+       "piles of at least this many blocks.", min=1, max=6),
     _b("talents.lucky_rare_weight", "xp", "Lucky: rare block weight/point",
        "Added to obsidian and to bedrock on 1-block piles."),
     # ---- economy ----
-    _b("market.stick_pack.price", "economy", "Sticks: price of a pack", min=1),
-    _b("market.stick_pack.amount", "economy", "Sticks: sticks per pack", min=1),
-    *[_b(f"market.ingots.{m}", "economy", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
+    _b("market.stick_pack.price", "market", "Sticks: price of a pack", min=1),
+    _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
+    *[_b(f"market.ingots.{m}", "market", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
          "for /repair costs, fortunes and fair prices.", min=1) for m in MATERIALS],
-    _b("repair.cost_percent", "economy", "/repair: cost (% of crafting value)",
+    _b("repair.cost_percent", "market", "/repair: cost (% of crafting value)",
        "For a piece with no durability left; less when it's only partly worn.", max=1000),
-    _b("pay.min_amount", "economy", "/pay: minimum amount", min=1),
-    _b("auction.tax_percent", "economy", "Auction tax (%)", "Taken from the seller's price.", max=100),
-    _b("auction.max_listings", "economy", "Auction: listings per player", min=1, max=100),
-    _b("auction.duration_days", "economy", "Auction: days before a listing ends", min=1, max=60),
-    _b("daily.base_reward", "economy", "Daily: reward on day 1"),
-    _b("daily.streak_bonus_per_day", "economy", "Daily: bonus per day in a row"),
-    _b("daily.streak_cap_days", "economy", "Daily: days the streak grows", "The reward stops growing after this.", min=1, max=365),
-    _b("daily.weekly_bonus_item", "economy", "Daily: ingot every 7th day", kind="choice", min=None,
-       choices=tuple((m, m) for m in MATERIALS)),
-    _b("daily.xp", "economy", "Daily: XP"),
+    _b("pay.min_amount", "trading", "/pay: minimum amount", min=1),
+    _b("auction.tax_percent", "trading", "Auction tax (%)", "Taken from the seller's price.", max=100),
+    _b("auction.max_listings", "trading", "Auction: listings per player", min=1, max=100),
+    _b("auction.duration_days", "trading", "Auction: days before a listing ends", min=1, max=60),
+    _b("daily.base_reward", "market", "Daily: reward on day 1"),
+    _b("daily.streak_bonus_per_day", "market", "Daily: bonus per day in a row"),
+    _b("daily.streak_cap_days", "market", "Daily: days the streak grows", "The reward stops growing after this.", min=1, max=365),
+    _b("daily.weekly_bonus_item", "market", "Daily: bonus ingot", "Given every few days in a row (see below).",
+       kind="choice", min=None, choices=tuple((m, m) for m in MATERIALS)),
+    _b("daily.bonus_every_days", "market", "Daily: bonus ingot every … days",
+       "7 = on day 7, 14, 21… of a streak.", min=1, max=365),
+    _b("trade.offer_minutes", "trading", "/trade: minutes to answer", "A proposal ends after this.", kind="float",
+       min=1, max=14),
+    _b("daily.xp", "market", "Daily: XP"),
     # ---- tools ----
     *[_b(f"gear.tier.{m}", "tools", f"{m.capitalize()} tier", "Tool bonuses are multiplied by the tier.", min=1, max=20)
       for m in MATERIALS],
@@ -283,6 +321,8 @@ FIELDS: list[Field] = [
     _b("duel.min_stake", "duels", "Minimum stake", min=1),
     _b("duel.hp", "duels", "HP of each player", min=1, max=10_000),
     _b("duel.min_damage", "duels", "Minimum damage of a hit", "Strength potions raise it for a turn.", "float", 0, 1000),
+    _b("duel.min_hit_after_armor", "duels", "Smallest hit after armor", "Armor never lowers a hit below this "
+       "(duels, tournament, dummy).", kind="float", max=100),
     _pct("duel.crit_chance", "duels", "Critical hit chance"),
     _b("duel.crit_multiplier", "duels", "Critical hit multiplier", kind="float", min=1, max=10),
     _b("duel.second_player_bonus_hp", "duels", "Extra HP for the second player", "Makes up for not striking first.", max=1000),
@@ -303,7 +343,13 @@ FIELDS: list[Field] = [
     _b("potions.healing_hp", "potions", "Healing: HP healed", kind="float", max=100),
     _b("potions.harming_damage", "potions", "Harming: direct damage", "Reduced by armor.", "float", max=100),
     _b("potions.level2_multiplier", "potions", "Reinforced potions: effect ×", kind="float", min=1, max=10),
-    _b("potions.boss_top", "potions", "Bosses: top N fighters get a potion", max=50),
+    _b("potions.boss_top", "potions", "Bosses: top N fighters get potions", max=50),
+    _b("potions.boss_potions", "potions", "Bosses: potions each of them gets", max=20),
+    _b("potions.strong_per_fight", "potions", "Reinforced (II) potions per fight", "Per duel and per dungeon run.",
+       max=20),
+    *[_b(f"potions.random_weights.{k}", "potions", f"Random potions: {name} weight",
+         "How often it comes in drops, bosses and the villager's goods (0 = never).", kind="float", max=1000)
+      for k, name in (("strength", "Strength"), ("speed", "Speed"), ("healing", "Healing"), ("harming", "Harming"))],
     _b("potions.value", "potions", "Potion value (emeralds)", "Used for fortunes and fair prices."),
     _b("potions.value_ii", "potions", "Reinforced potion value (emeralds)", "Used for fortunes and fair prices."),
     # ---- enchanting ----
@@ -314,7 +360,8 @@ FIELDS: list[Field] = [
     *_per_level("enchants.book_weights", "enchant_books", "Book level weight", "Chances of each level for books "
                 "from drops and challenges (weight ÷ total).", max=10_000),
     *_per_level("enchants.boss_book_weights", "enchant_books", "Boss book level weight", "Chances of each level for "
-                "the book of a boss's top damage dealer.", max=10_000),
+                "the book of a boss's top damage dealers.", max=10_000),
+    _b("enchants.boss_book_top", "enchant_books", "Bosses: top N fighters get a book", max=50),
     _b("enchants.challenges_book", "enchant_books", "Book for all weekly challenges", kind="bool", min=None,
        help="A random book for completing every challenge of the week."),
     _b("enchants.lapis_value", "enchant_books", "Lapis value (emeralds)", "Used for fortunes and fair prices."),
@@ -395,34 +442,45 @@ FIELDS: list[Field] = [
     _pct("villager.buy_bonus", "villager", "Bonus when he buys blocks", "50% = he pays 50% more than /sell.", max=5),
     _b("villager.book_iii_price", "villager", "Price of a level III book", min=1),
     _b("villager.potion_ii_price", "villager", "Price of a reinforced potion", min=1),
+    _pct("villager.exclusive_book_chance", "villager", "Exclusive offer: chance of a book",
+         "The exclusive offer is a level III book this often, else a reinforced potion."),
+    *[_b(f"villager.book_weights.{i}", "villager", f"Book in his goods: weight of level {ROMAN[i]}",
+         "Chances = this weight ÷ the total of both weights. 0 = never.", kind="float") for i in range(2)],
     *[_b(f"villager.buys.{b}", "villager", f"He buys {b} by (0 = never)", "How many blocks he buys at once.", max=100_000)
       for b in BLOCK_TYPES],
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
-    _b("games.daily_win_cap", "games", "Daily limit at games of chance", "Once a player won this much today at the "
+    _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
        "Lucky Block and the roulette (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
-    _b("games.roulette_enabled", "games", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
+    _b("games.roulette_enabled", "chance", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
        "replaces it).", kind="bool"),
     *[f for key, name in (('creeper', 'Creeper'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
-        _b(f"games.lucky_block.{key}.weight", "games", f"Lucky Block: {name} weight",
+        _b(f"games.lucky_block.{key}.weight", "chance", f"Lucky Block: {name} weight",
            "How often it falls out, compared with the others (0 = never).", max=100_000),
-        _b(f"games.lucky_block.{key}.payout", "games", f"Lucky Block: {name} pays (×bet)",
+        _b(f"games.lucky_block.{key}.payout", "chance", f"Lucky Block: {name} pays (×bet)",
            "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
     )],
-    _b("games.min_bet", "games", "Roulette: minimum bet", min=1),
-    _b("games.max_bet", "games", "Roulette: maximum bet", min=1),
-    _b("games.cooldown_seconds", "games", "Roulette: seconds between two spins", max=3600),
-    _b("games.roulette_zeros", "games", "Roulette: green slots", "The green slots make the bank win a little "
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and roulette.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and roulette.", min=1),
+    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
+       "Lucky Block and roulette.", max=3600),
+    _b("games.roulette_zeros", "chance", "Roulette: green slots", "The green slots make the bank win a little "
        "on average.", kind="choice", min=None, choices=(("0 only (the bank keeps 2.7%)", 1), ("0 and 00 (the bank keeps 5.3%)", 2))),
-    *[_b(f"games.blockdle_rewards.{i}", "games", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
+    *[_b(f"games.blockdle_rewards.{i}", "minigames", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
          "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
-    _b("games.blockdle_xp", "games", "Blockdle: XP for finding the block"),
-    _b("games.quiz_every_minutes", "games", "Quiz: a question every X minutes",
+    _b("games.blockdle_xp", "minigames", "Blockdle: XP for finding the block"),
+    _b("games.blockdle_no_repeat_days", "minigames", "Blockdle: days before a block comes back",
+       "A block of the day isn't picked again for this many days (when there are enough blocks).", max=180),
+    _b("games.quiz_every_minutes", "minigames", "Quiz: a question every X minutes",
        "Posted in a game channel. 0 = only with /event quiz.", max=10_080),
-    _b("games.quiz_seconds", "games", "Quiz: seconds to answer", min=10, max=600),
-    _b("games.quiz_reward", "games", "Quiz: emeralds for the right answer"),
-    _b("games.quiz_xp", "games", "Quiz: XP for the right answer"),
+    _pct("games.quiz_every_jitter", "minigames", "Quiz: give or take (%)",
+         "25% = a question every 45 to 75 minutes when it's every 60.", max=0.9),
+    _b("games.quiz_no_repeat", "minigames", "Quiz: questions not asked again soon",
+       "The last N questions asked aren't picked again (when there are enough).", max=100),
+    _b("games.quiz_seconds", "minigames", "Quiz: seconds to answer", min=10, max=600),
+    _b("games.quiz_reward", "minigames", "Quiz: emeralds for the right answer"),
+    _b("games.quiz_xp", "minigames", "Quiz: XP for the right answer"),
     # ---- robberies ----
     _b("rob.risky_min", "rob", "Risky robbery: minimum loot", "The victim is pinged. Never more than they have."),
     _b("rob.risky_max", "rob", "Risky robbery: maximum loot"),
@@ -442,6 +500,12 @@ FIELDS: list[Field] = [
     *[_b(f"profiles.frame_prices.{key}", "profiles", f"Frame price: {name}", "The rarer frames are earned, not sold.")
       for key, name in (("stone", "Stone"), ("gold", "Gold"), ("redstone", "Redstone"), ("lapis", "Lapis"),
                         ("diamond", "Diamond"), ("emerald", "Emerald"))],
+    *[_b(f"profiles.frame_goals.{key}", "titles", f"Frame to earn: {frame.name}"[:45],
+         f"Earned when: {_with_n(frame.text)}.", min=1, max=10_000_000)
+      for key, frame in _profile_frames() if frame.what],
+    *[_b(f"profiles.title_goals.{key}", "titles", f"Title: {title.name}"[:45],
+         f"Earned when: {_with_n(title.text)}.", min=1, max=10_000_000)
+      for key, title in _profile_titles()],
     # ---- guide ----
     _b("guide.reward", "guide", "Checklist reward", "Emeralds for doing every step of the guide, paid once per player."),
     _b("guide.delete_after_days", "guide", "Days before a finished guide is deleted",
@@ -456,7 +520,20 @@ FIELDS: list[Field] = [
     _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
     _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
        "Then everyone still in leaves with their loot.", min=1, max=60),
-    _b("pve.max_potions", "pve", "Potions per player and run", "One reinforced (II) at most.", max=20),
+    _b("pve.max_potions", "pve", "Potions per player and run", "Reinforced (II) ones: see Potions.", max=20),
+    _pct("pve.group_monsters", "pve", "Monsters added per extra player",
+         "100% = each player in the group adds a whole wave of monsters.", max=5),
+    _b("pve.min_hit_after_armor", "pve", "Smallest monster hit after armor", "Armor never lowers a hit below "
+       "this.", kind="float", max=10),
+    *[f for key, name in (("zombie", "Zombie"), ("skeleton", "Skeleton"), ("spider", "Spider"),
+                          ("creeper", "Creeper"), ("ravager", "Ravager")) for f in (
+        _b(f"pve.monsters.{key}.hp", "pve_monsters", f"{name}: health", "At Normal difficulty, wave 1.", kind="float",
+           min=0.1, max=1000),
+        _b(f"pve.monsters.{key}.min_damage", "pve_monsters", f"{name}: smallest hit", "At Normal difficulty, wave 1, "
+           "before armor.", kind="float", max=100),
+        _b(f"pve.monsters.{key}.max_damage", "pve_monsters", f"{name}: biggest hit", "At Normal difficulty, wave 1, "
+           "before armor.", kind="float", max=100),
+    )],
     _pct("pve.wave_growth", "pve", "Monsters stronger each wave", "Health and damage.", max=2),
     _pct("pve.clear_bonus", "pve", "Bonus for clearing wave 5", "Added to the loot.", max=10),
     _b("pve.xp_per_wave", "pve", "XP per wave cleared", max=10_000),
@@ -477,8 +554,8 @@ FIELDS: list[Field] = [
     _b("species.change_days", "species", "Days between two changes", kind="float", max=365),
     _pct("species.villager_trade", "species", "Villager: better prices",
          "/sell gives more, the market and the wandering villager's goods cost less, he pays more for blocks."),
-    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Duels, tournaments and bosses."),
-    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels."),
+    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Every fight: duels, tournaments, bosses, the dungeon, the dummy."),
+    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels and the dungeon."),
     _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
     _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
     # ---- loans ----
@@ -519,6 +596,9 @@ def fields_in(category: str) -> list[Field]:
 
 
 # ---------------- reading ----------------
+LEGACY_COOLDOWN = ("economy", "cooldown_seconds")  # old place of balance.mining.cooldown_seconds
+
+
 def _check_path(path: tuple) -> None:
     if any(path[: len(p)] == p for p in PROTECTED):
         raise PermissionError("This setting can't be changed from Discord.")
@@ -682,6 +762,9 @@ def set_field(cfg: dict, field: Field, value: Any) -> dict:
     """
     if not field.is_balance:
         return set_value(cfg, field.path, value)
+    if field.path == ("balance", "mining", "cooldown_seconds") and _get(cfg, LEGACY_COOLDOWN) is not None:
+        # The old economy.cooldown_seconds would come back as soon as the new key is the default again.
+        cfg = set_value(cfg, LEGACY_COOLDOWN, None)
     rel = field.path[1:]
     used = settings.merged(balance_overrides(cfg))
     if isinstance(rel[-1], int):
@@ -834,3 +917,30 @@ def write_config(path: Path, cfg: dict, backup_folder: Path, keep: int = 20) -> 
             p.unlink()
     path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return copy_path
+
+
+# ---------------- roles the bot gives out ----------------
+# A role with one of these is never given out by the bot (staff and admin powers).
+POWERS = ("administrator", "manage_guild", "manage_roles", "manage_channels", "manage_webhooks", "manage_messages",
+          "manage_nicknames", "manage_threads", "manage_events", "ban_members", "kick_members", "moderate_members",
+          "mention_everyone", "view_audit_log", "move_members", "mute_members", "deafen_members")
+
+
+def safe_to_give(permissions: Any) -> bool:
+    """A role the bot may give out automatically: no staff or admin power (`permissions`: discord.Permissions)."""
+    return not any(getattr(permissions, p, False) for p in POWERS)
+
+
+def roles_in_use(cfg: dict, keep: tuple = ()) -> set[int]:
+    """Roles already set in another role setting (`keep`: the path of the setting being changed)."""
+    roles = cfg.get("roles", {}) or {}
+    used: set[int] = set()
+    for key, value in roles.items():
+        if ("roles", key) == tuple(keep):
+            continue
+        if key == "level_roles" and isinstance(value, dict):
+            if tuple(keep[:2]) != ("roles", "level_roles"):
+                used |= {int(v) for v in value.values() if int(v or 0)}
+        elif isinstance(value, int) and value:
+            used.add(value)
+    return used

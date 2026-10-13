@@ -88,4 +88,20 @@ UPDATES: tuple[Update, ...] = (
              "closed for now. `/help command:luckyblock` shows the chances."),
         ),
     ),
+    Update(
+        "2026-10-help-and-fixes", "2026-10-13", "A clearer /help, and fixes",
+        "`/help` is easier to find your way in, and a few things now work the way they should.",
+        (
+            ("📖 The new /help",
+             "Commands are sorted by what you do: Start here, Mining & market, Crafting & gear, Progress, Profile & "
+             "species, Combat, Events, Games, Trading & loans, Teams and the Minecraft server."),
+            ("⚔️ Duels and the dungeon",
+             "Healing can't be drunk at full health (it isn't offered then). In the dungeon, a Strength, Speed or "
+             "Harming potion already working for the next wave can't be drunk again. If the bot restarts during a "
+             "duel, the stakes **and the potions drunk** are given back, and the duel message says so."),
+            ("🤝 Trades",
+             "A gift (a `/trade` with nothing asked back) no longer counts as a trade for achievements and "
+             "challenges. Bosses now show the potion each top fighter won."),
+        ),
+    ),
 )

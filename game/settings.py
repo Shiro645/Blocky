@@ -39,11 +39,12 @@ DEFAULTS: dict[str, Any] = {
         "trader_bonus_per_point": 0.02,
         "efficiency_seconds_per_point": 2,
         # Miner: weight added to gravel / deepslate per point (up to the max), and a chance of one
-        # bonus block on piles of 4 blocks or more.
+        # bonus block on big piles (miner_bonus_min_pile blocks or more).
         "miner_gravel_4_5": 5, "miner_gravel_4_5_max": 40,
         "miner_gravel_2_3": 3, "miner_gravel_2_3_max": 30,
         "miner_deepslate_2_3": 2, "miner_deepslate_2_3_max": 30,
         "miner_bonus_block_chance": 0.05, "miner_bonus_block_max": 0.25,
+        "miner_bonus_min_pile": 4,  # the bonus block only comes on piles of at least this many blocks (1-6)
         # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
         "lucky_rare_weight": 1,
     },
@@ -85,16 +86,19 @@ DEFAULTS: dict[str, Any] = {
         "base_reward": 30,
         "streak_bonus_per_day": 10,
         "streak_cap_days": 7,
-        "weekly_bonus_item": "diamond",  # ingot given every 7th consecutive day
+        "weekly_bonus_item": "diamond",  # ingot given every bonus_every_days consecutive days
+        "bonus_every_days": 7,
         "xp": 25,
     },
     "pay": {"min_amount": 1},
+    "trade": {"offer_minutes": 5},  # a /trade proposal waits this long for an answer
     "auction": {"tax_percent": 5, "max_listings": 10, "duration_days": 7},
     "duel": {
         "min_stake": 10,
         "hp": 20,
         # A hit deals between min_damage and the sword's maximum (gear.sword_max_damage).
         "min_damage": 1,
+        "min_hit_after_armor": 0.5,  # armor never lowers a hit below this
         "crit_chance": 0.15,
         "crit_multiplier": 2.0,
         "second_player_bonus_hp": 2,  # makes up for not striking first
@@ -114,8 +118,12 @@ DEFAULTS: dict[str, Any] = {
         "speed_turns": 3,  # ...during this turn and the next 2 turns of the player
         "healing_hp": 3,
         "harming_damage": 3,  # direct damage, reduced by armor
-        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get a random potion
-        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2, one per duel
+        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get boss_potions random potions
+        "boss_potions": 1,
+        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2...
+        "strong_per_fight": 1,  # ...and only this many per duel or dungeon run
+        # Random potions (drops, bosses, the villager's goods): how often each kind comes (0 = never).
+        "random_weights": {"strength": 1, "speed": 1, "healing": 1, "harming": 1},
         "value": 40,  # reference values in emeralds (fortune, fair prices)
         "value_ii": 120,
     },
@@ -172,7 +180,8 @@ DEFAULTS: dict[str, Any] = {
         "lapis_amount": [1, 2],
         "apply_cost": [2, 4, 8],  # lapis to apply a book of level I / II / III
         "book_weights": [60, 30, 10],  # chances of level I / II / III (drops, challenges)
-        "boss_book_weights": [0, 70, 30],  # book of the top damage dealer
+        "boss_book_weights": [0, 70, 30],  # book of the top damage dealers (boss_book_top)
+        "boss_book_top": 1,
         "challenges_book": True,  # a random book for completing every weekly challenge
         # Effects for level I / II / III.
         "efficiency_seconds": [2, 4, 6],  # pickaxe: shorter mining cooldown
@@ -204,9 +213,12 @@ DEFAULTS: dict[str, Any] = {
         ],
         # Blocks he can buy, and how many at once.
         "buys": {"gravel": 64, "deepslate": 48, "obsidian": 24, "bedrock": 16},
-        # Exclusive offer: a level III book or a reinforced potion (II).
+        # Exclusive offer: a level III book (exclusive_book_chance) or else a reinforced potion (II).
         "book_iii_price": 450,
         "potion_ii_price": 120,
+        "exclusive_book_chance": 0.5,
+        # A "book" in his goods: weights of a level I and a level II book.
+        "book_weights": [70, 30],
     },
     "tournament": {
         "entry_fee": 50,
@@ -248,8 +260,19 @@ DEFAULTS: dict[str, Any] = {
         "cooldown_minutes": 60,
         "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
         "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
-        "max_potions": 3,  # per player and per run (one reinforced II at most)
+        "max_potions": 3,  # per player and per run (reinforced II ones: potions.strong_per_fight)
         "wave_growth": 0.10,
+        # Each extra player in the group adds this share of every wave's monsters (1 = a whole wave more).
+        "group_monsters": 1.0,
+        "min_hit_after_armor": 0.1,  # armor never lowers a monster's hit below this
+        # Health and damage of each monster at strength 1 (Normal); difficulty and wave_growth multiply them.
+        "monsters": {
+            "zombie": {"hp": 3.2, "min_damage": 0.18, "max_damage": 0.59},
+            "skeleton": {"hp": 2.6, "min_damage": 0.18, "max_damage": 0.59},
+            "spider": {"hp": 2.6, "min_damage": 0.14, "max_damage": 0.36},
+            "creeper": {"hp": 2.6, "min_damage": 1.3, "max_damage": 2.1},
+            "ravager": {"hp": 8.5, "min_damage": 0.36, "max_damage": 0.95},
+        },
         "clear_bonus": 0.5,
         "xp_per_wave": 15,
         "wave_rewards": [5, 8, 12, 18, 27],
@@ -271,6 +294,14 @@ DEFAULTS: dict[str, Any] = {
         "banner_cost": 200,  # each change of a team banner (paid by the leader)
         # Frames sold for emeralds (the others are earned, see game/profiles.py).
         "frame_prices": {"stone": 200, "gold": 500, "redstone": 800, "lapis": 1000, "diamond": 2000, "emerald": 3000},
+        # What it takes to earn the other frames and the titles (game/profiles.py says what is counted).
+        "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1},
+        "title_goals": {
+            "miner": 1000, "quarry_master": 50000, "bedrock_hunter": 100, "blacksmith": 50, "duelist": 25,
+            "gladiator": 100, "boss_slayer": 10, "season_champion": 1, "arena_champion": 1, "team_champion": 1,
+            "dungeon_crawler": 1, "nightmare_survivor": 1, "tycoon": 100000, "banker": 10000, "merchant": 50,
+            "heavy_hitter": 150, "veteran": 50, "legend": 100,
+        },
     },
     # The guide: a private channel for every new player (in channels.guide_category) with
     # a checklist of first steps. The reward is paid once per player, ever.
@@ -290,8 +321,8 @@ DEFAULTS: dict[str, Any] = {
         "change_cost": 1000,
         "change_days": 7,
         "villager_trade": 0.05,  # /sell +5%, market and villager goods -5%, villager pays +5% for blocks
-        "dwarf_damage": 0.05,  # damage in duels, tournaments and against bosses
-        "witch_potions": 0.10,  # potion effects in duels
+        "dwarf_damage": 0.05,  # damage in every fight (duels, tournaments, bosses, dungeon, dummy)
+        "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
     },
@@ -335,7 +366,10 @@ DEFAULTS: dict[str, Any] = {
         # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).
         "blockdle_rewards": [300, 250, 200, 160, 130, 100, 80, 60, 50, 40],
         "blockdle_xp": 50,
+        "blockdle_no_repeat_days": 60,  # a block isn't the block of the day again before this many days
         "quiz_every_minutes": 60,  # a question in a games channel every X minutes (0 = only /event quiz)
+        "quiz_every_jitter": 0.25,  # ...give or take 25%, so it isn't predictable
+        "quiz_no_repeat": 40,  # the last 40 questions aren't asked again
         "quiz_seconds": 30,  # time to answer
         "quiz_reward": 50,
         "quiz_xp": 20,
@@ -594,6 +628,24 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if lo > hi:
         out.append(("`balance.enchants.lapis_amount`: the first value is the minimum, the second the maximum.", [("enchants", "lapis_amount")]))
 
+    # Weights picked at random: all at 0 would make the draw fail (a challenge reward, a boss, a block…).
+    ench = merged["enchants"]
+    for key in ("book_weights", "boss_book_weights"):
+        if sum(float(w) for w in ench[key]) <= 0:
+            out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    if sum(float(w) for w in merged["potions"]["random_weights"].values()) <= 0:
+        out.append(("`balance.potions.random_weights`: at least one potion needs a weight above 0.",
+                    [("potions", "random_weights", k) for k in merged["potions"]["random_weights"]]))
+    for kind, monster in merged["pve"]["monsters"].items():
+        if float(monster["min_damage"]) > float(monster["max_damage"]):
+            out.append((f"`balance.pve.monsters.{kind}`: the smallest hit can't be above the biggest.",
+                        [("pve", "monsters", kind, "min_damage"), ("pve", "monsters", kind, "max_damage")]))
+    if sum(float(w) for w in merged["villager"]["book_weights"]) <= 0:
+        out.append(("`balance.villager.book_weights`: at least one level needs a weight above 0.",
+                    [("villager", "book_weights")]))
+    if sum(float(o["weight"]) for o in g["lucky_block"].values()) <= 0:
+        out.append(("`balance.games.lucky_block`: at least one outcome needs a weight above 0.",
+                    [("games", "lucky_block", k, "weight") for k in g["lucky_block"]]))
     if sum(float(e["weight"]) for e in merged["drops"]["table"]) <= 0:
         out.append(("`balance.drops.table` needs at least one drop with a weight above 0.", [("drops", "table")]))
     for i, e in enumerate(merged["drops"]["table"]):

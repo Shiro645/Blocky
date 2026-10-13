@@ -108,11 +108,13 @@ class Bot(commands.Bot):
         self.db.notice_handler = self.announcer.handle
         self.blocked: dict[int, dict] = {}  # players blocked from Blocky (/blocky ban), see block_of
         self.staff_visibility_problem: str | None = None  # told in the staff channel once connected
+        # Read once: the commands are synced to this server at startup, so a /reload can't move the bot
+        # (it would refuse every command where they are) until the next restart.
+        self.guild_id = int(cfg.get("guild_id", 0) or 0)
 
     @property
     def main_guild(self) -> discord.Guild | None:
-        guild_id = int(load_config().get("guild_id", 0) or 0)
-        return self.get_guild(guild_id) if guild_id else (self.guilds[0] if self.guilds else None)
+        return self.get_guild(self.guild_id) if self.guild_id else (self.guilds[0] if self.guilds else None)
 
     async def setup_hook(self) -> None:
         await self.db.open()
@@ -132,7 +134,7 @@ class Bot(commands.Bot):
                 log.exception("Failed to load extension: %s", ext)
 
         # Sync slash commands
-        guild_id = int(load_config().get("guild_id", 0) or 0)
+        guild_id = self.guild_id
         if guild_id:
             await self.hide_staff_commands(guild_id)
             guild = discord.Object(id=guild_id)

@@ -16,25 +16,27 @@ from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
 from game.pve import DIFFICULTIES as DUNGEON
 from game.species import SPECIES
-from utils.mc_commands import DEFAULT_BLOCKED
+from utils.mc_commands import DEFAULT_BLOCKED, blocked_list
 
 Settings = dict[str, Any]
 
 # key -> (label, staff only)
 CATEGORIES: dict[str, tuple[str, bool]] = {
-    "basics": ("⛏️ Basics & economy", False),
+    "start": ("🚀 Start here", False),
+    "mining": ("⛏️ Mining & market", False),
     "gear": ("🛠️ Crafting & gear", False),
-    "xp": ("⭐ XP & talents", False),
-    "trading": ("🤝 Trading", False),
-    "competition": ("🏆 Competition", False),
-    "events": ("🎉 Events", False),
-    "games": ("🎲 Mini-games", False),
+    "progress": ("⭐ Progress", False),
+    "profile": ("🎨 Profile & species", False),
+    "combat": ("⚔️ Combat", False),
+    "events": ("🐉 Events", False),
+    "games": ("🎲 Games", False),
+    "trading": ("💰 Trading & loans", False),
     "teams": ("🛡️ Teams", False),
-    "minecraft": ("🌍 Minecraft", False),
+    "minecraft": ("🌍 Minecraft server", False),
     "staff_moderation": ("🔨 Staff · moderation", True),
-    "staff_economy": ("💰 Staff · economy & players", True),
-    "staff_events": ("🎪 Staff · events & teams", True),
-    "staff_server": ("⚙️ Staff · server & Minecraft", True),
+    "staff_players": ("👤 Staff · players & economy", True),
+    "staff_events": ("🎪 Staff · events", True),
+    "staff_server": ("⚙️ Staff · bot & Minecraft", True),
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -197,7 +199,8 @@ def _daily(s: Settings) -> list[str]:
         f"XP: **{num(d['xp'])}**",
     ]
     if d.get("weekly_bonus_item"):
-        lines.append(f"Every 7th day in a row: **1 {d['weekly_bonus_item']} ingot**")
+        every = int(d["bonus_every_days"])
+        lines.append(f"Every {'day' if every <= 1 else f'{every}th day'} in a row: **1 {d['weekly_bonus_item']} ingot**")
     lines.append(f"The day changes at midnight ({s['timezone']})")
     return lines
 
@@ -304,9 +307,11 @@ def _potions(s: Settings) -> list[str]:
     p = s["potions"]
     lines = [f"**{potion.name}**: {potions.effect_text(key)}" for key, potion in potions.POTIONS.items()]
     lines += [
-        f"Reinforced (II): effect **×{num(p['level2_multiplier'])}**, only one per duel",
+        f"Reinforced (II): effect **×{num(p['level2_multiplier'])}**, **{num(p['strong_per_fight'])}** per duel or "
+        "dungeon run at most",
         f"Up to **{num(p['max_per_duel'])}** potions per duel, one per turn",
-        f"Bosses: the top **{num(p['boss_top'])}** damage dealers get a random potion",
+        f"Bosses: the top **{num(p['boss_top'])}** damage dealers get **{num(p['boss_potions'])}** random "
+        f"potion{'s' if int(p['boss_potions']) != 1 else ''}",
     ]
     return lines
 
@@ -335,9 +340,10 @@ def _boss(s: Settings) -> list[str]:
     return [
         spawn,
         f"HP: **{num(b['hp'])}** · stays **{num(b['duration_hours'])} h**, then escapes (nobody is paid)",
-        f"Reward pool: {em(b['reward_pool'])} shared by damage · top damage dealer: **+{num(b['top_damage_bonus'])}** "
-        f"and a book",
-        f"Top **{num(s['potions']['boss_top'])}**: a random potion · XP for everyone: **{num(b['xp_reward'])}**",
+        f"Reward pool: {em(b['reward_pool'])} shared by damage · top damage dealer: **+{num(b['top_damage_bonus'])}**",
+        f"Top **{num(s['enchants']['boss_book_top'])}**: a book · top **{num(s['potions']['boss_top'])}**: "
+        f"**{num(s['potions']['boss_potions'])}** random potion{'s' if int(s['potions']['boss_potions']) != 1 else ''} "
+        f"· XP for everyone: **{num(b['xp_reward'])}**",
         "Looting: " + per_level(s["enchants"]["looting_boss_bonus"], pct) + " more reward",
     ]
 
@@ -479,7 +485,7 @@ def _loans(s: Settings) -> list[str]:
         f"an offer lasts **{duration(float(lo['offer_minutes']) * 60)}**",
         f"Late: **+{pct(lo['late_penalty'])}** of what's left, the bot takes what it can from the borrower's "
         f"emeralds, then **{pct(lo['garnish'])}** of every emerald they receive goes to the lender until it's "
-        "paid (and no /pay, /trade, auction listing or loan until then)",
+        "paid (and no /pay, /trade, auction purchase or listing, or loan until then)",
         "Loans, repayments and interest don't count for the seasons",
     ]
 
@@ -494,7 +500,8 @@ def _pve(s: Settings) -> list[str]:
                      f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
     lines += [
         f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
-        f"Up to **{num(p['max_players'])}** players (as many monsters per player) · a run every "
+        f"Up to **{num(p['max_players'])}** players (each extra player: **+{pct(p['group_monsters'])}** monsters) · "
+        "a run every "
         f"**{duration(float(p['cooldown_minutes']) * 60)}**",
         f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
         f"**{duration(float(p['decision_minutes']) * 60)}** to decide between waves",
@@ -522,14 +529,14 @@ DURATIONS = "Durations: `30m`, `2h`, `3d`, `1w`, `1d12h`… (1 minute to 1 year)
 PAGES: list[Page] = [
     # ---- basics ----
     Page(
-        "help", "basics",
+        "help", "start",
         "Opens this manual. Pick a category in the menu, then a command to read its page: what it does, "
         "its options, its current numbers (they follow the server settings), examples and related commands.\n"
         "You can also open a page directly with the `command` option.",
         examples=("/help", "/help command:duel", "/help command:mining"),
     ),
     Page(
-        "mining", "basics",
+        "mining", "mining",
         "There is no command to mine: **every message you send mines blocks**, at most once per cooldown. "
         "It's silent: check what you got with /inventory.\n"
         "Your equipped tools add bonuses (/gear), your talents improve the odds (/talents), and teammates who "
@@ -543,7 +550,7 @@ PAGES: list[Page] = [
         title="⛏️ Mining (chat)",
     ),
     Page(
-        "inventory", "basics",
+        "inventory", "start",
         "Shows everything you own: emeralds, blocks, sticks, ingots, lapis lazuli, enchanted books, potions "
         "and your gear with its durability.",
         lambda s: [_block_values(s)],
@@ -551,7 +558,7 @@ PAGES: list[Page] = [
         related=("sell", "gear", "enchant info", "potions"),
     ),
     Page(
-        "sell", "basics",
+        "sell", "mining",
         "Sells **all** your blocks at once for emeralds. The Trader talent adds a bonus on top.\n"
         "Blocks already counted for the season when you mined them, so selling only adds the Trader bonus to "
         "your season score. Ingots, gear, books and potions aren't sold here: use /auction or /trade. "
@@ -566,7 +573,7 @@ PAGES: list[Page] = [
         related=("inventory", "talents", "villager", "auction sell"),
     ),
     Page(
-        "market", "basics",
+        "market", "mining",
         "Opens the server market: choose an item in the menu, then type the quantity. "
         "Sticks and ingots are used to craft gear with /craft. The market is also always shown in the market "
         "channel, if the staff set one.",
@@ -575,16 +582,16 @@ PAGES: list[Page] = [
         related=("craft", "craftlist", "villager"),
     ),
     Page(
-        "daily", "basics",
+        "daily", "start",
         "Claims your daily reward, once per day. Claiming on consecutive days grows your **streak**: a bigger "
-        "reward each day up to the cap, and an ingot every 7th day in a row. Missing a day resets the streak.\n"
+        "reward each day up to the cap, and a bonus ingot every few days in a row. Missing a day resets the streak.\n"
         "Everyone in the channel sees your reward.",
         _daily,
         examples=("/daily",),
         related=("challenges", "profile"),
     ),
     Page(
-        "guide", "basics",
+        "guide", "start",
         "Every Blocky player (the members with the Blocky player role, given by a question in Channels & Roles) "
         "gets a **private guide channel** (only them and the staff see it): how the game works, "
         "step by step, and a **checklist of first steps**: mine by chatting, `/daily`, `/sell`, pick a species, "
@@ -693,7 +700,7 @@ PAGES: list[Page] = [
     ),
     # ---- xp ----
     Page(
-        "xp", "xp",
+        "xp", "progress",
         "Shows your level, your XP, what you need for the next level and your talent points. "
         "Every few levels you get a talent point to spend with /talent_buy, and some levels give a role.",
         _xp,
@@ -701,14 +708,14 @@ PAGES: list[Page] = [
         related=("talents", "talent_buy", "profile"),
     ),
     Page(
-        "talents", "xp",
+        "talents", "progress",
         "Shows the 4 talent branches, what they do, your points in each and their maximum.",
         _talents,
         examples=("/talents",),
         related=("talent_buy", "xp"),
     ),
     Page(
-        "talent_buy", "xp",
+        "talent_buy", "progress",
         "Spends talent points in a branch. Points are permanent (only staff can reset talents), "
         "and a branch can't go above its maximum.",
         _talents,
@@ -716,7 +723,7 @@ PAGES: list[Page] = [
         related=("talents", "xp"),
     ),
     Page(
-        "species choose", "xp",
+        "species choose", "profile",
         "Picks your species, for a small bonus. Your first choice is free; changing later costs emeralds and "
         "can only be done once in a while (you confirm first). Your species is shown in /profile and as an "
         "emoji before your name in /leaderboard, /season and /team info, and the server can give a role per "
@@ -726,7 +733,7 @@ PAGES: list[Page] = [
         related=("species list", "profile"),
     ),
     Page(
-        "species list", "xp",
+        "species list", "profile",
         "Shows every species, its bonus and how many players chose it, plus yours and when you can change. "
         "Only you see it.",
         _species,
@@ -785,9 +792,10 @@ PAGES: list[Page] = [
         "trade", "trading",
         "Proposes a trade: what you give and, optionally, what you want in return. The other player accepts "
         "or declines with the buttons; nothing moves until they accept, and both sides are checked again then. "
-        "Leave `get` empty to make a **gift**.\n"
+        "Leave `get` empty to make a **gift** (a gift doesn't count as a trade for achievements and challenges).\n"
         "You can trade emeralds, blocks, sticks, ingots, lapis, books, potions and gear (one piece at a time, "
-        "it keeps its enchantments and durability). The proposal expires after 5 minutes.",
+        "it keeps its enchantments and durability).",
+        lambda s: [f"A proposal waits **{duration(float(s['trade']['offer_minutes']) * 60)}** for an answer"],
         examples=(
             "/trade member:@Steve give:diamond ingot give_amount:3 get:emeralds get_amount:200",
             "/trade member:@Alex give:emeralds give_amount:50 → a gift",
@@ -832,7 +840,7 @@ PAGES: list[Page] = [
     ),
     # ---- competition ----
     Page(
-        "leaderboard", "competition",
+        "leaderboard", "progress",
         "Shows a server ranking: emeralds, level, total fortune (everything you own, valued in emeralds), "
         "this week's season, top senders (emeralds sent with /pay and lent with /loan), or a stat (blocks mined, "
         "bedrock found, duels won, boss damage, achievements…).",
@@ -840,14 +848,14 @@ PAGES: list[Page] = [
         related=("profile", "season"),
     ),
     Page(
-        "profile", "competition",
+        "profile", "start",
         "Shows a player's profile card: their frame and color, avatar, name and team tag, title, level and XP, "
         "emeralds, fortune rank, species, bio, 3 showcased achievements and their team's banner; then their "
         "equipment, talents, achievements and stats. Yours by default. Customize yours with /customize.",
         examples=("/profile", "/profile member:@Steve"),
         related=("customize list", "leaderboard", "achievements")    ),
     Page(
-        "season", "competition",
+        "season", "progress",
         "Shows this week's season standings. A season runs from Monday 00:00 to Sunday 23:59. Your score is "
         "the value you **created** during the week: blocks when you mine them, rewards (daily, drops, bosses, "
         "challenges, the server bonus of the tournament) and the Trader / villager bonus on sales. Spending never "
@@ -858,7 +866,7 @@ PAGES: list[Page] = [
         related=("leaderboard", "team top"),
     ),
     Page(
-        "duel", "competition",
+        "duel", "combat",
         "Challenges a player: both bet the stake and the winner takes the pot. The other player accepts with "
         "the button, then it's **turn by turn**: on your turn you can drink a potion first, then press **Attack**.\n"
         "Each hit deals a random amount between the minimum damage and your sword's maximum (potions of "
@@ -873,14 +881,14 @@ PAGES: list[Page] = [
         related=("potions", "gear", "enchant info", "tournament info"),
     ),
     Page(
-        "customize bio", "competition",
+        "customize bio", "profile",
         "Writes the bio of your profile card (leave it empty to remove it). Free.",
         lambda s: [f"**{num(s['profiles']['bio_max'])}** characters at most · emoji show in text, not on the card"],
         examples=("/customize bio text:Je mine donc je suis",),
         related=("profile", "customize list"),
     ),
     Page(
-        "customize color", "competition",
+        "customize color", "profile",
         "Changes the color of your profile card (and of the profile message). The 16 Minecraft dye colors are "
         "bought once each, then yours for good; the default color is free. You see a preview before buying.",
         _profiles,
@@ -888,14 +896,14 @@ PAGES: list[Page] = [
         related=("customize hex", "customize list"),
     ),
     Page(
-        "customize hex", "competition",
+        "customize hex", "profile",
         "Uses any color by its code, like `#ff8800`. Paying once unlocks every code for good.",
         _profiles,
         examples=("/customize hex code:#ff8800",),
         related=("customize color",),
     ),
     Page(
-        "customize frame", "competition",
+        "customize frame", "profile",
         "Puts a patterned frame around your profile card. Some frames are bought (you see a preview first), the "
         "rarest are earned by playing: the suggestions show the price, or how to earn them.",
         _profiles,
@@ -903,20 +911,20 @@ PAGES: list[Page] = [
         related=("customize list", "profile"),
     ),
     Page(
-        "customize title", "competition",
+        "customize title", "profile",
         "Shows a title under your name: earned by playing (bosses, duels, dungeon, tournament, seasons, level…), "
         "or given by the staff. The suggestions list yours; /customize list shows how to earn the others.",
         examples=("/customize title title:Boss Slayer",),
         related=("customize list",),
     ),
     Page(
-        "customize showcase", "competition",
+        "customize showcase", "profile",
         "Picks up to 3 of your achievements to show on your card. Leave them empty to show your latest ones.",
         examples=("/customize showcase badge1:Boss Slayer badge2:Squad Goals",),
         related=("achievements", "profile"),
     ),
     Page(
-        "customize list", "competition",
+        "customize list", "profile",
         "Shows your colors, frames and titles, the prices of the others and how to earn the rare ones. "
         "Only you see it.",
         _profiles,
@@ -924,7 +932,7 @@ PAGES: list[Page] = [
         related=("customize color", "customize frame", "customize title"),
     ),
     Page(
-        "dummy hit", "competition",
+        "dummy hit", "combat",
         "Hits the training dummy a series of times with your current gear and species (rolled like duel hits, "
         "critical hits included). Shows every hit, the total, the average, the min and max. The dummy has no "
         "armor and doesn't hit back; nothing wears out and nothing is won. Your best series goes on the "
@@ -935,13 +943,13 @@ PAGES: list[Page] = [
         related=("dummy top", "dummy duel", "gear"),
     ),
     Page(
-        "dummy top", "competition",
+        "dummy top", "combat",
         "The training dummy leaderboard: everyone's best series (total damage), with their best hit.",
         examples=("/dummy top",),
         related=("dummy hit",),
     ),
     Page(
-        "dummy duel", "competition",
+        "dummy duel", "combat",
         "Trains for duels against a dummy that hits back like a player wearing the gear you pick (sword and "
         "armor). Same buttons as a real duel: Attack, Attack + block with a shield, and **every potion for free** "
         "to try them. The dummy plays its turn right away. Nothing is used up (no wear, no potions taken), "
@@ -950,7 +958,7 @@ PAGES: list[Page] = [
         related=("duel", "dummy hit", "potions"),
     ),
     Page(
-        "potions", "competition",
+        "potions", "combat",
         "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
         "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
         "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
@@ -960,7 +968,7 @@ PAGES: list[Page] = [
         related=("duel", "pve start", "villager"),
     ),
     Page(
-        "challenges", "competition",
+        "challenges", "progress",
         "Shows this week's challenges (the same for everyone) and your progress. Each completed challenge pays "
         "emeralds. New challenges every Monday.",
         _challenges,
@@ -968,7 +976,7 @@ PAGES: list[Page] = [
         related=("achievements", "season"),
     ),
     Page(
-        "achievements", "competition",
+        "achievements", "progress",
         "Shows the achievements unlocked and the ones left: permanent milestones that pay emeralds once.",
         examples=("/achievements", "/achievements member:@Steve"),
         related=("challenges", "profile"),
@@ -1043,7 +1051,7 @@ PAGES: list[Page] = [
         "roulette", "games",
         "Spins the roulette for you alone. Bet on red or black, even or odd, 1-18 or 19-36, a dozen, or a number "
         "(add the `number` option). The wheel has the numbers 1 to 36 and green slots (0, and 00): the bank wins a "
-        "little on average. The staff can close it (`/config` → Mini-games).",
+        "little on average. The staff can close it (`/config` → Games & events → Lucky Block & roulette).",
         _roulette,
         examples=("/roulette bet:Red amount:50", "/roulette bet:A number amount:10 number:17"),
         related=("luckyblock", "blockdle guess"),
@@ -1077,7 +1085,7 @@ PAGES: list[Page] = [
         related=("blockdle guess",),
     ),
     Page(
-        "pve start", "games",
+        "pve start", "combat",
         "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
         "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
         "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
@@ -1090,7 +1098,7 @@ PAGES: list[Page] = [
         related=("pve info", "potions", "species choose"),
     ),
     Page(
-        "pve info", "games",
+        "pve info", "combat",
         "Shows the difficulties (entry, monster strength, loot), the waves and when you can play again. "
         "Only you see it.",
         _pve,
@@ -1109,7 +1117,7 @@ PAGES: list[Page] = [
         related=("roulette", "pay"),
     ),
     Page(
-        "quiz", "games",
+        "quiz", "events",
         "Now and then a Minecraft question appears in a game channel with 4 answers. The first player to click the "
         "right one wins emeralds and XP. One try per player: a wrong answer leaves the others a chance.",
         _quiz,
@@ -1374,7 +1382,7 @@ PAGES: list[Page] = [
     ),
     # ---- staff: economy ----
     Page(
-        "give", "staff_economy",
+        "give", "staff_players",
         "Gives anything to a member: emeralds, blocks, sticks, ingots, lapis, books, potions or gear. Pick it in the "
         "suggestions; for an enchanted piece, type its full key, e.g. `gear:diamond:sword:sharpness3,unbreaking2`.\n"
         "The member gets a DM (with the reason, if any) and it's written in the staff log. What staff gives doesn't "
@@ -1388,7 +1396,7 @@ PAGES: list[Page] = [
         related=("take", "player xp_add"),
     ),
     Page(
-        "take", "staff_economy",
+        "take", "staff_players",
         "Removes something a member owns: the suggestions list what they really have. You confirm with a button "
         "first, and it never removes more than they have (spare gear goes before equipped gear).\n"
         "The member gets a DM (with the reason, if any) and it's written in the staff log.",
@@ -1396,7 +1404,7 @@ PAGES: list[Page] = [
         related=("give",),
     ),
     Page(
-        "guide_resend", "staff_economy",
+        "guide_resend", "staff_players",
         "Sends the guide again in a **new private channel** (the old one is deleted): to one `member`, or to "
         "**every member with the Blocky player role** when it's empty (you confirm first; the newest members first). "
         "Steps already done stay "
@@ -1411,7 +1419,7 @@ PAGES: list[Page] = [
         related=("guide", "config"),
     ),
     Page(
-        "reset", "staff_economy",
+        "reset", "staff_players",
         "A fresh start, for one player (`member`) or for **everyone** (leave `member` empty). Pick what to reset: "
         "emeralds, blocks and items (with auction listings, robberies in progress and loans), gear and enchantments, "
         "levels, XP and talents (level roles are removed), stats, achievements and seasons (with challenges, "
@@ -1422,39 +1430,39 @@ PAGES: list[Page] = [
         related=("take", "player level", "backup_now"),
     ),
     Page(
-        "player xp_add", "staff_economy",
+        "player xp_add", "staff_players",
         "Gives XP to a member: levels and talent points follow, like normal XP. The member gets a DM.",
         examples=("/player xp_add member:@Steve amount:1000",),
         related=("player xp_set", "player level"),
     ),
     Page(
-        "player xp_set", "staff_economy",
+        "player xp_set", "staff_players",
         "Sets a member's XP inside their current level. The member gets a DM.",
         examples=("/player xp_set member:@Steve xp:50",),
         related=("player xp_add", "player level"),
     ),
     Page(
-        "player level", "staff_economy",
+        "player level", "staff_players",
         "Sets a member's level: their unspent talent points are recomputed and their level role updated. "
         "The member gets a DM.",
         examples=("/player level member:@Steve level:25",),
         related=("player xp_add", "player talents_reset", "player sync_roles"),
     ),
     Page(
-        "player talents_add", "staff_economy",
+        "player talents_add", "staff_players",
         "Adds talent points to a member (a negative number removes some). The member gets a DM.",
         examples=("/player talents_add member:@Steve points:2", "/player talents_add member:@Steve points:-1"),
         related=("player talents_reset",),
     ),
     Page(
-        "player talents_reset", "staff_economy",
+        "player talents_reset", "staff_players",
         "Resets a member's talents: every spent point is refunded, to spend again with /talent_buy. "
         "The member gets a DM.",
         examples=("/player talents_reset member:@Steve",),
         related=("player talents_add",),
     ),
     Page(
-        "player species", "staff_economy",
+        "player species", "staff_players",
         "Sets a member's species (or none), for free and without the waiting time. Their species role "
         "follows. The member gets a DM.",
         _species,
@@ -1462,21 +1470,21 @@ PAGES: list[Page] = [
         related=("species choose",),
     ),
     Page(
-        "player title", "staff_economy",
+        "player title", "staff_players",
         "Gives a member a custom title (40 characters at most) and puts it on their profile card. They keep it "
         "in their titles. The member gets a DM.",
         examples=("/player title member:@Steve title:The Architect",),
         related=("player profile_reset", "customize title"),
     ),
     Page(
-        "player profile_reset", "staff_economy",
+        "player profile_reset", "staff_players",
         "Removes a member's bio, their title (and the custom titles the staff gave them), or both. The member "
         "gets a DM with the reason.",
         examples=("/player profile_reset member:@Steve part:Bio reason:Insult",),
         related=("player title",),
     ),
     Page(
-        "player sync_roles", "staff_economy",
+        "player sync_roles", "staff_players",
         "Gives every member the level role matching their level (after changing the level roles in /config).",
         examples=("/player sync_roles",),
         related=("config", "player level"),
@@ -1526,9 +1534,9 @@ PAGES: list[Page] = [
     # ---- staff: server ----
     Page(
         "config", "staff_server",
-        "Opens the settings panel: **every setting of the bot**, in categories (channels, roles, mining and its "
-        "odds, XP and talents, market, gear, duels, potions, enchanting, drops, bosses, seasons, challenges, "
-        "achievements, teams, tournament, villager…). Each setting shows what it does, its value and its default, "
+        "Opens the settings panel: **almost every setting of the bot** (not the server and Minecraft connection, "
+        "the staff role or the database: only config.json changes those). Pick a section (Server, Economy, Progress, "
+        "Combat, Games & events), then a category. Each setting shows what it does, its value and its default, "
         "with buttons to change it or to reset it. Lists, automatic mutes, the drop table and the villager's goods "
         "have their own editors.\n"
         "Changes are saved in config.json (a copy of the old file is kept) and apply at once. Settings in the file "
@@ -1569,7 +1577,8 @@ PAGES: list[Page] = [
         "mc", "staff_server",
         "Runs a command on the Minecraft server console (RCON) and shows the answer. Dangerous commands are "
         "refused, also when hidden after `execute … run`.",
-        lambda s: ["Blocked: " + ", ".join(f"`{c}`" for c in DEFAULT_BLOCKED)],
+        lambda s: ["Blocked: " + (", ".join(f"`{c}`" for c in blocked_list()) or "nothing")
+                   + ("" if tuple(blocked_list()) == DEFAULT_BLOCKED else " (the list set in config.json)")],
         examples=("/mc command:say Hello everyone", "/mc command:give Steve diamond 3"),
         related=("whitelist list", "server_status"),
     ),
