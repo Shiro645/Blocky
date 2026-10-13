@@ -39,10 +39,32 @@ class AchievementTests(GameTestCase):
         self.assertEqual(len(data["locked"]), len(progress.ACHIEVEMENT_CODES) - 1)
 
 
+class NewAchievementTests(GameTestCase):
+    async def test_a_number_won_at_the_wheel(self):
+        await self.run_game(players.bump_stat, ALICE, "roulette_numbers_won")
+        self.assertIn("bullseye", await self.run_game(progress.unlocked_codes, ALICE))
+
+    async def test_playing_during_a_gambling_frenzy(self):
+        from game import live_events, luckyblock
+
+        await self.run_game(players.give_emeralds, ALICE, 100)
+        await self.run_game(luckyblock.open_block, ALICE, 10)
+        self.assertNotIn("high_roller", await self.run_game(progress.unlocked_codes, ALICE))
+        await self.run_game(live_events.start, "gambling_frenzy")
+        await self.run_game(luckyblock.open_block, ALICE, 10)
+        self.assertIn("high_roller", await self.run_game(progress.unlocked_codes, ALICE))
+
+    async def test_challenges_count(self):
+        await self.run_game(players.bump_stat, ALICE, "challenges_completed", 10)
+        codes = await self.run_game(progress.unlocked_codes, ALICE)
+        self.assertIn("challenger_10", codes)
+        self.assertNotIn("challenger_50", codes)
+
+
 class ChallengeTests(GameTestCase):
     def test_same_challenges_for_the_whole_week(self):
-        a = progress.challenges_of_week("2026-W41")
-        self.assertEqual(a, progress.challenges_of_week("2026-W41"))
+        a = progress.pick("week", "2026-W41")
+        self.assertEqual(a, progress.pick("week", "2026-W41"))
         self.assertEqual(len(a), 3)
         self.assertEqual(len({c.code for c in a}), 3)
 
@@ -52,19 +74,28 @@ class ChallengeTests(GameTestCase):
         weeks = [f"2026-W{w:02d}" for w in range(1, 53)]
         settings.load()  # bosses only from /boss_spawn
         for week in weeks:
-            picks = progress.challenges_of_week(week)
+            picks = progress.pick("week", week)
             self.assertEqual(len(picks), 3)
             self.assertNotIn("boss_damage", [c.code for c in picks])
         settings.load({"boss": {"auto_spawn_hours": 24}})
-        self.assertTrue(any("boss_damage" in [c.code for c in progress.challenges_of_week(w)] for w in weeks))
+        self.assertTrue(any("boss_damage" in [c.code for c in progress.pick("week", w)] for w in weeks))
+
+    def test_no_challenge_for_a_game_that_is_off(self):
+        from game import settings
+
+        settings.load({"games": {"quiz_every_minutes": 0, "roulette_enabled": False}})
+        for day in range(1, 29):
+            codes = [c.code for c in progress.pick("day", f"2026-02-{day:02d}")]
+            self.assertEqual(len(codes), 3)
+            self.assertFalse({"quiz", "wheel_spins"} & set(codes))
 
     async def test_challenge_completes_once(self):
-        challenge = progress.challenges_of_week(self.week())[0]
+        challenge = (await self.run_game(progress.current_challenges, "week"))[0]
         await self.run_game(players.bump_stat, ALICE, challenge.stat, challenge.target - 1)
-        self.assertFalse(any(isinstance(n, ChallengeCompleted) for n in self.notices))
+        self.assertFalse(any(isinstance(n, ChallengeCompleted) and not n.daily for n in self.notices))
         await self.run_game(players.bump_stat, ALICE, challenge.stat, 5)
         await self.run_game(players.bump_stat, ALICE, challenge.stat, 5)
-        done = [n for n in self.notices if isinstance(n, ChallengeCompleted)]
+        done = [n for n in self.notices if isinstance(n, ChallengeCompleted) and not n.daily]
         self.assertEqual(len(done), 1)
         week = await self.run_game(progress.weekly_challenges, ALICE)
         entry = next(c for c in week if c["text"] == challenge.text)
@@ -74,11 +105,47 @@ class ChallengeTests(GameTestCase):
         self.assertGreaterEqual(await self.run_game(players.get_stat, ALICE, "emeralds_earned"), challenge.reward)
 
     async def test_progress_resets_next_week(self):
-        challenge = progress.challenges_of_week(self.week())[0]
+        challenge = (await self.run_game(progress.current_challenges, "week"))[0]
         await self.run_game(players.bump_stat, ALICE, challenge.stat, 1)
         self.advance(7 * DAY)
         week = await self.run_game(progress.weekly_challenges, ALICE)
         self.assertTrue(all(c["progress"] == 0 for c in week))
+
+    async def test_daily_challenges(self):
+        day = await self.run_game(progress.current_challenges, "day")
+        self.assertEqual(len(day), 3)
+        self.assertEqual(day, await self.run_game(progress.current_challenges, "day"))  # kept for the day
+        c = day[0]
+        await self.run_game(players.bump_stat, ALICE, c.stat, c.target)
+        done = [n for n in self.notices if isinstance(n, ChallengeCompleted) and n.daily]
+        self.assertEqual([(n.text, n.reward) for n in done], [(c.text, c.reward)])
+        entry = next(e for e in await self.run_game(progress.daily_challenges, ALICE) if e["code"] == c.code)
+        self.assertTrue(entry["completed"])
+        self.advance(DAY)
+        tomorrow = await self.run_game(progress.daily_challenges, ALICE)
+        self.assertTrue(all(e["progress"] == 0 for e in tomorrow))
+
+    async def test_never_the_same_as_the_day_or_week_before(self):
+        before: dict[str, set] = {"day": set(), "week": set()}
+        for n in range(35):
+            for kind in ("day", "week"):
+                codes = {c.code for c in await self.run_game(progress.current_challenges, kind)}
+                if kind == "day" or n % 7 == 0:
+                    self.assertFalse(codes & before[kind], (kind, n, codes, before[kind]))
+                    before[kind] = codes
+            self.advance(DAY)
+
+    async def test_the_running_week_keeps_its_challenges(self):
+        # The first week picked after the update is the one the old rules gave (old pool, same draw).
+        import random
+
+        week = self.week()
+        old_pool = [c for c in progress.challenge_pool("week") if c.code in progress.LEGACY_WEEK_CODES]
+        rng = random.Random(f"blocky-challenges-{week}")
+        ok = [c for c in old_pool if progress.available(c)]
+        picked = [c for c in rng.sample(old_pool, min(3, len(ok))) if progress.available(c)]
+        spare = [c for c in rng.sample(old_pool, len(old_pool)) if progress.available(c) and c not in picked]
+        self.assertEqual(await self.run_game(progress.current_challenges, "week"), (picked + spare)[:3])
 
     def week(self) -> str:
         from datetime import datetime

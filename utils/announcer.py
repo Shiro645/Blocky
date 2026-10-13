@@ -69,7 +69,8 @@ class Announcer:
 
     async def on_ChallengeCompleted(self, notice: n.ChallengeCompleted) -> None:
         await self.send(
-            f"🎯 <@{notice.user_id}> completed a weekly challenge: **{notice.text}** (+{notice.reward} emeralds)"
+            f"🎯 <@{notice.user_id}> completed a {'daily' if notice.daily else 'weekly'} challenge: **{notice.text}** "
+            f"(+{notice.reward} emeralds)"
         )
 
     async def on_AllChallengesCompleted(self, notice: n.AllChallengesCompleted) -> None:

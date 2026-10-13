@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -12,24 +14,33 @@ class ProgressCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="challenges", description="Show this week's challenges and your progress.")
+    @app_commands.command(name="challenges", description="Show today's and this week's challenges and your progress.")
     async def challenges(self, interaction: discord.Interaction):
         def load(ctx, user_id):
-            return progress.weekly_challenges(ctx, user_id), seasons.season_end(ctx)
+            day_ends = int(datetime.combine(ctx.today + timedelta(days=1), datetime.min.time(),
+                                            tzinfo=ctx.local_now.tzinfo).timestamp())
+            return (progress.daily_challenges(ctx, user_id), day_ends,
+                    progress.weekly_challenges(ctx, user_id), seasons.season_end(ctx))
 
-        week, ends_at = await self.bot.db.run(load, interaction.user.id)
-        lines = []
-        for c in week:
-            mark = "✅" if c["completed"] else "🎯"
-            lines.append(
-                f"{mark} **{c['text']}** — reward {em(c['reward'])}\n"
-                f"`{progress_bar(c['progress'], c['target'], 12)}` {c['progress']:,}/{c['target']:,}"
-            )
-        embed = discord.Embed(
-            title="🎯 Weekly challenges",
-            description="\n\n".join(lines) + f"\n\nNew challenges <t:{ends_at}:R>.",
-            color=discord.Color.purple(),
-        )
+        day, day_ends, week, week_ends = await self.bot.db.run(load, interaction.user.id)
+
+        def lines(entries: list[dict]) -> str:
+            out = []
+            for c in entries:
+                mark = "✅" if c["completed"] else "🎯"
+                out.append(
+                    f"{mark} **{c['text']}** — reward {em(c['reward'])}\n"
+                    f"`{progress_bar(c['progress'], c['target'], 12)}` {c['progress']:,}/{c['target']:,}"
+                )
+            return "\n\n".join(out)
+
+        embed = discord.Embed(title="🎯 Challenges", color=discord.Color.purple())
+        if day:
+            embed.add_field(name="📅 Today", value=f"{lines(day)}\n\nNew ones <t:{day_ends}:R>.", inline=False)
+        if week:
+            embed.add_field(name="🗓️ This week", value=f"{lines(week)}\n\nNew ones <t:{week_ends}:R>.", inline=False)
+        if not day and not week:
+            embed.description = "No challenges right now."
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="achievements", description="Show unlocked and remaining achievements.")
@@ -45,9 +56,32 @@ class ProgressCog(commands.Cog):
             title=f"🏅 {target.display_name}'s achievements ({len(unlocked)}/{total})",
             color=discord.Color.purple(),
         )
-        embed.add_field(name="Unlocked", value=join_lines(unlocked, empty="None yet."), inline=False)
+        room = [5500]  # an embed holds 6,000 characters in all
+
+        def add(name: str, lines: list[str], empty: str) -> None:
+            """As many fields as needed (1,024 characters each), while the embed has room."""
+            if not lines:
+                embed.add_field(name=name, value=empty, inline=False)
+                return
+            chunks, chunk, size = [], [], 0
+            for line in lines:
+                if chunk and size + len(line) + 1 > 1024:
+                    chunks.append(chunk)
+                    chunk, size = [], 0
+                chunk.append(line)
+                size += len(line) + 1
+            chunks.append(chunk)
+            for i, chunk in enumerate(chunks):
+                value = "\n".join(chunk)
+                if len(value) > room[0] or len(embed.fields) >= 24:
+                    embed.add_field(name="\u200b", value=f"…and {sum(len(c) for c in chunks[i:])} more", inline=False)
+                    return
+                embed.add_field(name=name if i == 0 else "\u200b", value=value, inline=False)
+                room[0] -= len(value)
+
+        add("Unlocked", unlocked, "None yet.")
         if target.id == interaction.user.id:
-            embed.add_field(name="Still to unlock", value=join_lines(locked, empty="All done! 🎉"), inline=False)
+            add("Still to unlock", locked, "All done! 🎉")
         await interaction.response.send_message(embed=embed, ephemeral=target.id == interaction.user.id)
 
 

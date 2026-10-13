@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from game import live_events
 from game.errors import GameError
 from utils.checks import staff_only
 
@@ -13,7 +14,7 @@ from utils.checks import staff_only
 class StaffEventsCog(commands.Cog):
     """/event: start the server events now. The work is done by each event's own cog."""
 
-    event = app_commands.Group(name="event", description="STAFF: Start an event now: boss, drop, quiz, tournament, villager.")
+    event = app_commands.Group(name="event", description="STAFF: Start an event now: timed event, boss, drop, quiz, tournament, villager.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -23,6 +24,20 @@ class StaffEventsCog(commands.Cog):
         if cog is None:
             raise GameError("This feature isn't loaded right now (see the bot logs).")
         return cog
+
+    @event.command(name="start", description="STAFF: Start a timed event now (Gambling Frenzy, Mining Rush…).")
+    @app_commands.describe(kind="Which event", minutes="How long (default from /config → Timed events)")
+    @app_commands.rename(kind="event")
+    @app_commands.choices(kind=[app_commands.Choice(name=k.label, value=key) for key, k in live_events.KINDS.items()])
+    @staff_only()
+    async def start(self, interaction: discord.Interaction, kind: str,
+                    minutes: app_commands.Range[int, 1, 1440] | None = None):
+        await self.cog("LiveEventsCog").staff_start(interaction, kind, minutes)
+
+    @event.command(name="stop", description="STAFF: End the timed event that is on now.")
+    @staff_only()
+    async def stop(self, interaction: discord.Interaction):
+        await self.cog("LiveEventsCog").staff_stop(interaction)
 
     @event.command(name="boss", description="STAFF: Summon a boss now (one at a time).")
     @app_commands.describe(name="Boss name (random if empty)", hp="Health points (default from the settings)")

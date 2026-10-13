@@ -67,4 +67,5 @@ def open_block(ctx: Ctx, user_id: int, amount: int) -> dict:
     players.bump_stat(ctx, user_id, "lucky_bet", amount)
     players.bump_stat(ctx, user_id, "lucky_paid", won)
     return {"outcome": outcome, "payout": payout, "amount": amount, "won": won,
-            "balance": players.get_emeralds(ctx, user_id), "net_today": gambling.net_today(ctx, user_id)}
+            "balance": players.get_emeralds(ctx, user_id), "net_today": gambling.net_today(ctx, user_id),
+            "cap": gambling.daily_cap(ctx)}

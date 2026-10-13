@@ -42,6 +42,7 @@ class ChallengeCompleted:
     user_id: int
     text: str
     reward: int
+    daily: bool = False
 
 
 @dataclass(frozen=True)

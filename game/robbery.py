@@ -7,12 +7,15 @@
   a fine (a % of the loot he aimed at, never more than he has).
 - A thief robs once every `cooldown_hours`; a robbed player is protected for
   `victim_protection_hours`; players below `min_victim_level` can't be robbed.
+- No robbery starts at night (`night_start_hour` to `night_end_hour`, local
+  time): players can't be robbed in their sleep.
 - Stolen emeralds and fines move between players: they don't count for the
   seasons (like trades).
 """
 from __future__ import annotations
 
 import math
+from datetime import datetime, time, timedelta
 
 from game import cooldowns, players, settings
 from game.db import Ctx
@@ -32,6 +35,20 @@ def _wait(seconds: float) -> str:
     return f"{hours}h {minutes:02d}m" if hours else f"{minutes} min"
 
 
+def closed_until(ctx: Ctx) -> int | None:
+    """At night: when robbing opens again (a timestamp). None in the day."""
+    c = _cfg()
+    start, end = int(c["night_start_hour"]) % 24, int(c["night_end_hour"]) % 24
+    if start == end:
+        return None
+    local = ctx.local_now
+    night = start <= local.hour < end if start < end else (local.hour >= start or local.hour < end)
+    if not night:
+        return None
+    day = local.date() if local.hour < end else local.date() + timedelta(days=1)
+    return int(datetime.combine(day, time(hour=end), tzinfo=local.tzinfo).timestamp())
+
+
 def get(ctx: Ctx, rob_id: int) -> dict | None:
     row = ctx.one("SELECT * FROM robberies WHERE rob_id=?;", (rob_id,))
     return dict(row) if row else None
@@ -43,6 +60,10 @@ def start(ctx: Ctx, thief_id: int, victim_id: int, mode: str) -> dict:
         raise GameError("Pick a risky or a discreet robbery.")
     if thief_id == victim_id:
         raise GameError("You can't rob yourself.")
+    opens = closed_until(ctx)
+    if opens is not None:
+        raise GameError(f"Everyone is asleep: no robberies from **{int(c['night_start_hour']):02d}:00** to "
+                        f"**{int(c['night_end_hour']):02d}:00**. Try again <t:{opens}:R>.")
     victim = players.get_user(ctx, victim_id)
     if victim["level"] < int(c["min_victim_level"]):
         raise GameError(f"<@{victim_id}> is protected: players below level **{c['min_victim_level']}** can't be robbed.")

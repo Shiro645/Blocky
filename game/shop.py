@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from game import anvil, enchants, gear, players, potions, settings, species
+from game import anvil, enchants, gear, live_events, players, potions, settings, species
 from game.catalog import MATERIALS, RECIPES, SHIELD, materials_for
 from game.db import Ctx
 from game.errors import GameError
@@ -40,7 +40,9 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
         raise GameError("Quantity must be greater than 0.")
     offer = offers[key]
     full_price = units * offer["price"]
-    total_price = max(1, round(full_price * (1 - species.bonus(ctx, user_id, "villager"))))
+    sale = live_events.market_discount(ctx)  # a Market Sale
+    villager = species.bonus(ctx, user_id, "villager")
+    total_price = max(1, round(full_price * (1 - sale) * (1 - villager)))
     players.spend_emeralds(ctx, user_id, total_price)
     amount = units * offer["unit_size"]
     players.add_item(ctx, user_id, offer["item"], offer["material"], amount)
@@ -49,8 +51,15 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
         "amount": amount,
         "price": total_price,
         "saved": full_price - total_price,
+        "sale": sale,
+        "villager": villager > 0,
         "balance": players.get_emeralds(ctx, user_id),
     }
+
+
+def sale_price(price: int, discount: float) -> int:
+    """A market price during a Market Sale."""
+    return max(1, round(price * (1 - discount))) if discount else price
 
 
 def ingot_value(material: str) -> int:
@@ -169,6 +178,8 @@ def gear_offer(ctx: Ctx, user_id: int, piece: dict) -> dict:
     """What /sell pays for a piece: market.gear_sell_rate of its value, times the durability it has left
     (Villagers get their bonus on top)."""
     value = gear_value(piece)
+    # During a Market Sale its craft is worth what the ingots cost now: buying cheap to sell gear isn't a profit.
+    value -= craft_cost(piece["item"], piece["material"]) * live_events.market_discount(ctx)
     left = piece["durability"] / piece["max_durability"] if piece["max_durability"] else 0.0
     base = max(1, int(round(value * float(settings.get()["market"]["gear_sell_rate"]) * left)))
     bonus = int(round(base * species.bonus(ctx, user_id, "villager")))

@@ -1,7 +1,7 @@
 """Player state: emeralds, blocks, items, stats, XP and talents."""
 from __future__ import annotations
 
-from game import settings
+from game import live_events, settings
 from game.catalog import BLOCK_TYPES, MATERIALS, TALENT_BRANCHES
 from game.db import Ctx
 from game.errors import GameError
@@ -164,7 +164,8 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     # Imported here: species depends on this module.
     from game import species
 
-    extra = trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager")
+    golden = live_events.sell_bonus(ctx)  # a Golden Hour
+    extra = trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
     bonus = int(round(base * extra))
     for b, n in sold.items():
         take_blocks(ctx, user_id, b, n)
@@ -173,7 +174,8 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     earn_emeralds(ctx, user_id, bonus)
     bump_stat(ctx, user_id, "emeralds_from_sales", base + bonus)
     left = {b: n for b, n in get_blocks(ctx, user_id).items() if n > 0}
-    return {"sold": sold, "base": base, "bonus": bonus, "balance": get_emeralds(ctx, user_id), "left": left}
+    return {"sold": sold, "base": base, "bonus": bonus, "golden": golden, "balance": get_emeralds(ctx, user_id),
+            "left": left}
 
 
 def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:

@@ -86,8 +86,33 @@ class RobTests(GameTestCase):
             await self.run_game(robbery.start, OTHER, VICTIM, "risky")
         self.advance(5 * HOUR)
         await self.run_game(robbery.start, THIEF, OTHER, "discreet")  # 6 h after the start
-        self.advance(7 * HOUR)
-        await self.run_game(robbery.start, OTHER, VICTIM, "risky")  # 13 h after the robbery
+        self.advance(7 * HOUR)  # 13 h after the robbery, but 01:00: everyone is asleep
+        with self.assertRaisesRegex(GameError, "asleep"):
+            await self.run_game(robbery.start, OTHER, VICTIM, "risky")
+        self.advance(5 * HOUR)  # 06:00
+        await self.run_game(robbery.start, OTHER, VICTIM, "risky")
+
+    async def test_no_robbery_starts_at_night(self):
+        self.advance(10 * HOUR - 60)  # 21:59: still open, and it goes on after 22:00
+        rob = await self.run_game(robbery.start, THIEF, VICTIM, "discreet")
+        self.advance(60)  # 22:00
+        with self.assertRaisesRegex(GameError, r"asleep.*22:00.*06:00"):
+            await self.run_game(robbery.start, OTHER, THIEF, "discreet")
+        self.assertEqual(await self.run_game(robbery.closed_until), int(self.now) + 8 * HOUR)
+        self.advance(HOUR)
+        self.assertEqual(len(await self.run_game(robbery.finish_due)), 1)
+        self.assertEqual((await self.run_game(robbery.get, rob["rob_id"]))["status"], "done")
+        self.advance(7 * HOUR - 60)  # 05:59
+        self.assertIsNotNone(await self.run_game(robbery.closed_until))
+        self.advance(60)  # 06:00
+        self.assertIsNone(await self.run_game(robbery.closed_until))
+        await self.run_game(robbery.start, OTHER, THIEF, "discreet")
+
+    async def test_the_night_can_be_turned_off(self):
+        settings.load({"rob": {"night_start_hour": 3, "night_end_hour": 3}})
+        self.advance(15 * HOUR)  # 03:00
+        self.assertIsNone(await self.run_game(robbery.closed_until))
+        await self.run_game(robbery.start, THIEF, VICTIM, "discreet")
 
     async def test_nothing_to_steal(self):
         await self.run_game(players.give_emeralds, OTHER, 0)

@@ -6,7 +6,7 @@ tomorrow. Losing never blocks anyone. Winnings never count for the seasons.
 """
 from __future__ import annotations
 
-from game import settings
+from game import live_events, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -16,13 +16,21 @@ def _cfg() -> dict:
 
 
 def max_bet(ctx: Ctx | None = None, user_id: int | None = None) -> int:
-    """The highest bet, for this player (Gamblers bet higher: species.gambler_max_bet)."""
-    top = int(_cfg()["max_bet"])
-    if ctx is not None and user_id is not None:
-        from game import species  # here: species imports a lot of the game
+    """The highest bet, for this player (Gamblers bet higher: species.gambler_max_bet; everyone during a
+    Gambling Frenzy)."""
+    top = float(_cfg()["max_bet"])
+    if ctx is not None:
+        top *= live_events.bet_multiplier(ctx)
+        if user_id is not None:
+            from game import species  # here: species imports a lot of the game
 
-        top = int(round(top * (1 + species.bonus(ctx, user_id, "gambler"))))
-    return top
+            top *= 1 + species.bonus(ctx, user_id, "gambler")
+    return int(round(top))
+
+
+def daily_cap(ctx: Ctx) -> int:
+    """What a player can win a day (0 = no cap): more during a Gambling Frenzy."""
+    return int(round(int(_cfg()["daily_win_cap"]) * live_events.bet_multiplier(ctx)))
 
 
 def check_bet(amount: int, ctx: Ctx | None = None, user_id: int | None = None) -> None:
@@ -37,13 +45,16 @@ def net_today(ctx: Ctx, user_id: int) -> int:
 
 
 def check_day(ctx: Ctx, user_id: int) -> None:
-    cap = int(_cfg()["daily_win_cap"])
+    cap = daily_cap(ctx)
     if cap and net_today(ctx, user_id) >= cap:
         raise GameError(f"You won **{cap:,}** emeralds or more at games of chance today: that's the limit. "
                         "Come back tomorrow!")
 
 
 def record(ctx: Ctx, user_id: int, net: int) -> None:
+    """A game was played: add what it won (or lost) to today's total."""
+    if live_events.active(ctx, "gambling_frenzy"):
+        players.bump_stat(ctx, user_id, "frenzy_games")
     ctx.execute(
         """
         INSERT INTO gamble_days(user_id, day, net) VALUES(?, ?, ?)

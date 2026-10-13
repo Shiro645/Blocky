@@ -170,8 +170,7 @@ class EffectTests(EnchantTestCase):
 
     async def test_all_weekly_challenges_give_a_book(self):
         settings.load({"challenges": {"per_week": 1}})
-        week = await self.run_game(lambda ctx: ctx.week_id)
-        challenge = progress.challenges_of_week(week)[0]
+        challenge = (await self.run_game(progress.current_challenges, "week"))[0]
         await self.run_game(players.bump_stat, ALICE, challenge.stat, challenge.target)
         self.assertTrue(any(isinstance(n, AllChallengesCompleted) for n in self.notices))
         self.assertEqual(len(await self.run_game(enchants.books, ALICE)), 1)

@@ -160,4 +160,25 @@ UPDATES: tuple[Update, ...] = (
         "it), times the durability it has left: a sword at 80% durability sells for 64% of its value. The "
         "suggestions show each price, and you confirm before it's sold.",
     ),
+    Update(
+        "2026-10-events-challenges", "2026-10-14", "Timed events, daily challenges and new achievements",
+        "Something new every day: timed events, daily challenges and 17 new achievements.",
+        (
+            ("⏱️ Timed events",
+             "Once a day, at a random time, an event gives everyone a bonus for an hour: 🎰 **Gambling Frenzy** "
+             "(bets and the daily limit ×2 at the Lucky Block and the wheel), ⛏️ **Mining Rush** (mining XP ×2), "
+             "💰 **Golden Hour** (`/sell` +50%), 🍀 **Lucky Hour** (obsidian and bedrock ×2) or 🏷️ **Market "
+             "Sale** (`/market` -25%). It's announced in the events channel; `/events` shows the one on now."),
+            ("🎯 Daily challenges",
+             "`/challenges` now has **3 small challenges every day** on top of the weekly ones, and both include "
+             "the mini-games: Lucky Blocks, the wheel, Blockdle, the quiz, the dungeon, the training dummy and "
+             "robberies. They're never the same as the day or the week before."),
+            ("🏅 17 new achievements",
+             "Mini-games (100 Lucky Blocks, 100 wheel spins, a number won at the wheel, Blockdle, quiz), "
+             "robberies, the dungeon in Hard, Hardcore and Nightmare, challenges, the Gambling Frenzy, enchanting, "
+             "repairs, the villager and loans. See them with `/achievements`."),
+            ("🌙 No robberies at night",
+             "Nobody can start a `/rob` from 22:00 to 06:00: everyone is asleep."),
+        ),
+    ),
 )

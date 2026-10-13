@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, guide, luckyblock, potions, progress, roulette
+from game import blockdle, enchants, guide, live_events, luckyblock, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
@@ -340,10 +340,33 @@ def _season(s: Settings) -> list[str]:
 
 
 def _challenges(s: Settings) -> list[str]:
-    lines = [f"**{num(s['challenges']['per_week'])}** challenges per week"]
+    c = s["challenges"]
+    lines = [f"**{num(c['per_day'])}** challenges per day and **{num(c['per_week'])}** per week, never the same "
+             "as the day or the week before"]
     if s["enchants"]["challenges_book"]:
-        lines.append("All of them done: a random enchanted book")
-    lines += [f"{c.text}: {em(c.reward)}" for c in progress.challenge_pool() if progress.available(c)]
+        lines.append("All the weekly ones done: a random enchanted book")
+    daily = [f"{ch.text} ({em(ch.reward)})" for ch in progress.challenge_pool("day") if progress.available(ch)]
+    weekly = [f"{ch.text} ({em(ch.reward)})" for ch in progress.challenge_pool("week") if progress.available(ch)]
+    for title, items in (("Daily", daily if c["per_day"] else []), ("Weekly", weekly)):
+        line = f"**{title}**:"
+        for item in items:  # lines of 400 characters at most
+            if len(line) + len(item) + 3 > 400:
+                lines.append(line)
+                line = f"**{title}** (more):"
+            line += (" " if line.endswith(":") else " · ") + item
+        if items:
+            lines.append(line)
+    return lines
+
+
+def _live_events(s: Settings) -> list[str]:
+    c = s["live_events"]
+    lines = [f"{k.label}: {live_events.describe(key)}" for key, k in live_events.KINDS.items()]
+    if c["daily_random"] and live_events.random_kinds():
+        lines.append(f"One comes by itself every day at a random time, between **{int(c['earliest_hour']):02d}:00** "
+                     f"and **{int(c['latest_hour']):02d}:00**, for **{duration(int(c['duration_minutes']) * 60)}**")
+    else:
+        lines.append("They only come when the staff starts one")
     return lines
 
 
@@ -542,6 +565,9 @@ def _rob(s: Settings) -> list[str]:
         f"**{num(r['fine_percent'])}%** of the loot as a fine",
         f"A robbery every **{num(r['cooldown_hours'])} h** · a robbed player is safe for "
         f"**{num(r['victim_protection_hours'])} h** · players below level **{num(r['min_victim_level'])}** are safe",
+        (f"No robbery starts at night, from **{int(r['night_start_hour']):02d}:00** to "
+         f"**{int(r['night_end_hour']):02d}:00** (one started before keeps going)"
+         if int(r["night_start_hour"]) != int(r["night_end_hour"]) else "Robberies are possible day and night"),
         "Stolen emeralds and fines don't count for the seasons",
     ]
 
@@ -1005,8 +1031,10 @@ PAGES: list[Page] = [
     ),
     Page(
         "challenges", "progress",
-        "Shows this week's challenges (the same for everyone) and your progress. Each completed challenge pays "
-        "emeralds. New challenges every Monday.",
+        "Shows today's and this week's challenges (the same for everyone) and your progress. Each completed "
+        "challenge pays emeralds, and they count for the season. New daily challenges every day at midnight, new "
+        "weekly ones every Monday, never the same as the ones before. Mining, selling, duels, the Lucky Block, the "
+        "wheel, Blockdle, the quiz, the dungeon, the training dummy, robberies…",
         _challenges,
         examples=("/challenges",),
         related=("achievements", "season"),
@@ -1063,6 +1091,17 @@ PAGES: list[Page] = [
         "a power of 2, some players (drawn at random) skip the first round.",
         examples=("/tournament bracket",),
         related=("tournament info",),
+    ),
+    Page(
+        "events", "events",
+        "Shows the **timed event** on now and what each one does. For a while (an hour by default) everyone gets a "
+        "bonus: 🎰 **Gambling Frenzy** (bigger bets and daily limit at the Lucky Block and the wheel), ⛏️ **Mining "
+        "Rush** (more mining XP), 💰 **Golden Hour** (/sell pays more), 🍀 **Lucky Hour** (more obsidian and "
+        "bedrock) or 🏷️ **Market Sale** (/market cheaper). One comes by itself every day at a random time, and the "
+        "staff can start one. It's announced in the events channel.",
+        _live_events,
+        examples=("/events",),
+        related=("luckyblock", "wheel", "sell", "market"),
     ),
     Page(
         "villager", "events",
@@ -1567,6 +1606,21 @@ PAGES: list[Page] = [
         _quiz,
         examples=("/event quiz",),
         related=("event drop",),
+    ),
+    Page(
+        "event start", "staff_events",
+        "Starts a timed event now, for everyone: Gambling Frenzy, Mining Rush, Golden Hour, Lucky Hour or Market "
+        "Sale. It's announced in the events channel (with the events role). One at a time: end the current one "
+        "first with /event stop. The daily random event still comes if none is on at its time.",
+        _live_events,
+        examples=("/event start event:🎰 Gambling Frenzy", "/event start event:💰 Golden Hour minutes:30"),
+        related=("event stop", "events"),
+    ),
+    Page(
+        "event stop", "staff_events",
+        "Ends the timed event that is on now. Its announcement shows that it's over.",
+        examples=("/event stop",),
+        related=("event start", "events"),
     ),
     Page(
         "event villager", "staff_events",

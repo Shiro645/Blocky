@@ -71,7 +71,8 @@ class FightTests(GameTestCase):
 
 
 class RunTests(GameTestCase):
-    overrides = {"pve": {"difficulties": {"easy": {"strength": 0.3}}}}  # can't lose
+    # Can't lose; no daily challenge paying for the waves on top of the loot.
+    overrides = {"pve": {"difficulties": {"easy": {"strength": 0.3}}}, "challenges": {"per_day": 0}}
 
     async def asyncSetUp(self):
         await super().asyncSetUp()

@@ -136,6 +136,8 @@ def spin(ctx: Ctx, user_id: int, bet: str, amount: int, number: str | None = Non
     players.bump_stat(ctx, user_id, "roulette_spins")
     players.bump_stat(ctx, user_id, "roulette_bet", amount)
     players.bump_stat(ctx, user_id, "roulette_paid", payout_)
+    if won and bet == "number":
+        players.bump_stat(ctx, user_id, "roulette_numbers_won")
     return {
         "slot": slot, "color": color(slot), "won": won, "bet": bet, "number": number, "amount": amount,
         "payout": payout_, "balance": players.get_emeralds(ctx, user_id),
