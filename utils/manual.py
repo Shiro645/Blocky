@@ -453,7 +453,8 @@ def _roulette(s: Settings) -> list[str]:
     bets = [f"{name} **×{pays.get(key, 2)}**" for key, name in names.items() if s["games"]["roulette_bets"].get(key)]
     return closed + [
         "You can bet on: " + (" · ".join(bets) or "nothing right now") + " (your bet included)",
-        f"Diamond blocks: **{zeros}**: every other bet loses on them. On average a bet gives back **{pct(rate)}**",
+        (f"Diamond block: **{zeros}**: every other bet loses on it" if zeros == "0" else
+         f"Diamond blocks: **{zeros}**: every other bet loses on them") + f". On average a bet gives back **{pct(rate)}**",
     ] + _games(s) + ["Winnings don't count for the seasons"]
 
 
@@ -1075,8 +1076,8 @@ PAGES: list[Page] = [
     Page(
         "wheel", "games",
         "Spins the Minecraft wheel (a roulette) for you alone. Its numbers are those of a real roulette: the red "
-        "ones are 🟥 **Redstone**, the black ones ⬛ **Obsidian**, and the green ones (0 and 00) 💎 **Diamond "
-        "blocks**: when the wheel stops on one, every Redstone or Obsidian bet loses. In `bet`, pick Redstone, "
+        "ones are 🟥 **Redstone**, the black ones ⬛ **Obsidian**, and the green 0 is a 💎 **Diamond "
+        "block**: when the wheel stops on it, every Redstone or Obsidian bet loses. In `bet`, pick Redstone, "
         "Obsidian or **A number**; for a number, pick it in the `number` option (type it to find it: Discord only "
         "lists 25 at a time), or just type the number in `bet`. The staff chooses which bets are open (`/config` → "
         "Games & events → Lucky Block & wheel).",
