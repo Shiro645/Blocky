@@ -311,9 +311,26 @@ DEFAULTS: dict[str, Any] = {
     },
     # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
     "games": {
+        # Games of chance (Lucky Block, roulette): bets, waiting time, and what a player may win in a day
+        # (winnings minus losses at these games; then they can't play before tomorrow, 0 = no cap).
         "min_bet": 1,
-        "max_bet": 1000,
-        "cooldown_seconds": 5,  # between two roulette spins of a player
+        "max_bet": 200,
+        "cooldown_seconds": 5,  # between two games of a player
+        "daily_win_cap": 1500,
+        # Lucky Block (/luckyblock): how often each thing falls out (weights) and what it pays (times the bet,
+        # the bet included). The defaults give back about 90% of the bets on average, mostly through small
+        # loot: netherite stays rare (1 in 500) and pays x10 at most.
+        "lucky_block": {
+            "creeper": {"weight": 190, "payout": 0.0},
+            "dirt": {"weight": 120, "payout": 0.0},
+            "cobblestone": {"weight": 160, "payout": 0.5},
+            "iron": {"weight": 210, "payout": 1.0},
+            "gold": {"weight": 240, "payout": 1.5},
+            "diamond": {"weight": 58, "payout": 2.5},
+            "emerald": {"weight": 20, "payout": 4.0},
+            "netherite": {"weight": 2, "payout": 10.0},
+        },
+        "roulette_enabled": False,  # closed: the Lucky Block replaces it (the staff can open it again)
         # Green slots of the roulette: 2 (0 and 00) = the bank keeps 5.3% of the bets on average, 1 (0 only) = 2.7%.
         "roulette_zeros": 2,
         # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).

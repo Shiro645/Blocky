@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, guide, potions, progress, roulette
+from game import blockdle, enchants, guide, luckyblock, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
@@ -404,16 +404,27 @@ def _moderation(s: Settings) -> list[str]:
 
 def _games(s: Settings) -> list[str]:
     g = s["games"]
+    cap = int(g["daily_win_cap"])
     return [
-        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds · **{duration(g['cooldown_seconds'])}** between two spins",
+        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds · **{duration(g['cooldown_seconds'])}** between two games",
+        (f"Daily limit: once you won **{num(cap)}** emeralds today at games of chance (winnings minus losses), "
+         "you play again tomorrow" if cap else "No daily limit"),
         "Played in the game channels set by the staff (anywhere when there are none)",
     ]
+
+
+def _luckyblock(s: Settings) -> list[str]:
+    lines = [f"{o.emoji} **{o.name}** ({pct(chance)}): " + ("nothing" if not payout else f"×{payout:g} the bet")
+             for o, chance, payout in luckyblock.chances()]
+    return lines + [f"On average a block gives back **{pct(luckyblock.return_rate())}** of the bet"] + _games(s) + [
+        "Winnings don't count for the seasons"]
 
 
 def _roulette(s: Settings) -> list[str]:
     zeros = "0 and 00" if s["games"]["roulette_zeros"] == 2 else "0"
     rate = 36 / (36 + int(s["games"]["roulette_zeros"]))
-    return [
+    closed = [] if s["games"]["roulette_enabled"] else ["🔒 **Closed right now**: the Lucky Block replaces it"]
+    return closed + [
         "Red, black, even, odd, 1-18, 19-36: **×2** · a dozen: **×3** · a number: **×36** (your bet included)",
         f"Green slots: **{zeros}**: every bet loses on them (except a bet on that number). On average a bet gives "
         f"back **{pct(rate)}**",
@@ -1020,13 +1031,22 @@ PAGES: list[Page] = [
     ),
     # ---- mini-games ----
     Page(
+        "luckyblock", "games",
+        "Bet emeralds and break a **Lucky Block**: a creeper or a pile of dirt and you lose your bet, cobblestone gives "
+        "half of it back, iron all of it, then gold, diamonds, emeralds and, rarely, **netherite** pay more and more. "
+        "The bank wins a little on average.",
+        _luckyblock,
+        examples=("/luckyblock amount:50",),
+        related=("blockdle guess", "quiz"),
+    ),
+    Page(
         "roulette", "games",
         "Spins the roulette for you alone. Bet on red or black, even or odd, 1-18 or 19-36, a dozen, or a number "
         "(add the `number` option). The wheel has the numbers 1 to 36 and green slots (0, and 00): the bank wins a "
-        "little on average.",
+        "little on average. The staff can close it (`/config` → Mini-games).",
         _roulette,
         examples=("/roulette bet:Red amount:50", "/roulette bet:A number amount:10 number:17"),
-        related=("blockdle guess", "quiz"),
+        related=("luckyblock", "blockdle guess"),
     ),
     Page(
         "blockdle guess", "games",

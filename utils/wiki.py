@@ -253,8 +253,12 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "games", "🎲 Mini-games",
         "They're played in the game channels (and in your guide channel).\n"
-        "**Roulette**: `/roulette <bet> <amount> [number]`: red/black, even/odd, 1-18/19-36, a dozen or a number. "
-        "The green slots make the bank win a little in the long run.\n"
+        "**Lucky Block**: `/luckyblock <amount>`: bet emeralds and break the block. A creeper or a pile of dirt "
+        "and you lose your bet; cobblestone gives half of it back, iron all of it, then gold, diamonds, emeralds and, "
+        "very rarely, netherite pay more. The bank wins a little in the long run, and there's a daily limit on "
+        "what you can win.\n"
+        "**Roulette**: `/roulette <bet> <amount> [number]` (when the staff opens it): red/black, even/odd, "
+        "1-18/19-36, a dozen or a number.\n"
         "**Blockdle**: guess the Minecraft block of the day with `/blockdle guess`. After each guess you see how "
         "your block compares on 6 properties (tool, hardness, blast resistance, transparent, craftable, version). "
         "The fewer guesses, the bigger the reward. `/blockdle today` and `/blockdle top`.\n"
@@ -264,7 +268,7 @@ SECTIONS: tuple[Section, ...] = (
         "loot). The victim has a while to press **Stop the thief!**: then the thief pays them a fine instead. "
         "Low-level players can't be robbed, and a robbed player is safe for a while.\n"
         "Winnings from these games don't count for the seasons.",
-        ("roulette", "blockdle guess", "quiz", "rob"),
+        ("luckyblock", "roulette", "blockdle guess", "quiz", "rob"),
     ),
     Section(
         "minecraft", "🌍 The Minecraft server",

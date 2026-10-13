@@ -537,6 +537,15 @@ MIGRATIONS: list[str] = [
         category_id INTEGER
     );
     """,
+    # 25: what each player won (or lost) at games of chance each day, for the daily cap
+    """
+    CREATE TABLE gamble_days (
+        user_id INTEGER NOT NULL,
+        day TEXT NOT NULL,             -- local date, YYYY-MM-DD
+        net INTEGER NOT NULL,          -- winnings minus bets
+        PRIMARY KEY (user_id, day)
+    );
+    """,
 ]
 
 
