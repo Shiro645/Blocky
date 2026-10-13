@@ -171,7 +171,7 @@ They work in the game channels set in `/config` (`channels.games`), or anywhere 
   | 💀 Nightmare | 1,200 | ×1.42 | 3,360 | enchanted netherite ~35% (potions help) |
 
   Monsters get +10% health and damage every wave. Everything is tuned with `balance.pve` (`/config` → PVE dungeon).
-- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, and stolen emeralds don't count for the seasons. All tuned with `balance.rob` (`/config` → Robberies).
+- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted in the robberies channel (`channels.robberies`, `/config` → Channels; game channels are busy with commands, so only the bot should write there) — or where `/rob` was used when none is set — with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, and stolen emeralds don't count for the seasons. All tuned with `balance.rob` (`/config` → Robberies).
 - Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_zeros` (1 = 0 only, 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `quiz_every_minutes` (0 = only `/event quiz`), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Mini-games.
 
 ### 🛡️ Teams
@@ -256,6 +256,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops and bosses (empty = drops appear where people chat) |
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
+| `channels.robberies` | Robberies channel: every `/rob` is posted there with its *Stop the thief!* button (0 = where `/rob` is used) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.games` | List of game channels: roulette and Blockdle only work there, and the quiz is posted there (empty = games work anywhere, but no automatic quiz) |
 | `channels.updates` | Updates channel: each new Blocky feature is announced there once, after the bot is updated (0 = the announcements wait) |

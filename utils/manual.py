@@ -1080,7 +1080,8 @@ PAGES: list[Page] = [
     Page(
         "rob", "games",
         "Robs a player. **Risky**: they get pinged, but the loot is big. **Discreet**: nobody is pinged, but the loot "
-        "is small. The robbery is posted in the channel with a **Stop the thief!** button that only the victim can "
+        "is small. The robbery is posted in the robberies channel (or here, when there is none) with a "
+        "**Stop the thief!** button that only the victim can "
         "use: if they click it in time the robbery fails and you pay them a fine; otherwise you take the loot and "
         "they get a DM.",
         _rob,

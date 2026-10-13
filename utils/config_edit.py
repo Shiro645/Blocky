@@ -159,6 +159,9 @@ FIELDS: list[Field] = [
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
           help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
                "but no automatic quiz)."),
+    Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
+          help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
+               "risky one). Best as a channel where members can't write. Not set = where /rob is used."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),

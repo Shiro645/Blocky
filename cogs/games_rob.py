@@ -10,6 +10,7 @@ from discord.ext import commands, tasks
 from game import robbery, settings
 from game.errors import GameError
 from utils.checks import check_game_channel
+from utils.config import channel_id
 from utils.ui import dm, em, report_error
 
 log = logging.getLogger("rob")
@@ -84,13 +85,25 @@ class RobCog(commands.Cog):
             raise GameError("Bots have nothing worth stealing.")
         rob = await self.bot.db.run(robbery.start, interaction.user.id, member.id, mode)
         risky = mode == "risky"
-        await interaction.response.send_message(
+        post = dict(
             content=member.mention if risky else None,
             embed=rob_embed(rob), view=rob_view(rob),
             # Risky pings the victim; discreet pings nobody.
             allowed_mentions=discord.AllowedMentions(users=[member]) if risky else discord.AllowedMentions.none(),
         )
-        message = await interaction.original_response()
+        # Posted in the robberies channel when there is one (game channels are busy), else right here.
+        message = None
+        channel = self.bot.get_channel(channel_id("robberies") or 0)
+        if isinstance(channel, discord.abc.Messageable) and channel.id != interaction.channel_id:
+            try:
+                message = await channel.send(**post)
+            except discord.HTTPException:
+                log.warning("Could not post the robbery in the robberies channel: posted where /rob was used")
+        if message is not None:
+            await interaction.response.send_message(f"🦹 Your robbery is on: {message.jump_url}", ephemeral=True)
+        else:
+            await interaction.response.send_message(**post)
+            message = await interaction.original_response()
         await self.bot.db.run(robbery.set_message, rob["rob_id"], message.channel.id, message.id)
 
     # ---------- background ----------
