@@ -1076,11 +1076,13 @@ PAGES: list[Page] = [
         "wheel", "games",
         "Spins the Minecraft wheel (a roulette) for you alone. Its numbers are those of a real roulette: the red "
         "ones are 🟥 **Redstone**, the black ones ⬛ **Obsidian**, and the green ones (0 and 00) 💎 **Diamond "
-        "blocks**: when the wheel stops on one, every Redstone or Obsidian bet loses. Bet on Redstone, Obsidian "
-        "or a number (0, 00, 1 to 36): pick it in the suggestions, or type the number. The staff chooses which bets "
-        "are open (`/config` → Games & events → Lucky Block & wheel).",
+        "blocks**: when the wheel stops on one, every Redstone or Obsidian bet loses. In `bet`, pick Redstone, "
+        "Obsidian or **A number**; for a number, pick it in the `number` option (type it to find it: Discord only "
+        "lists 25 at a time), or just type the number in `bet`. The staff chooses which bets are open (`/config` → "
+        "Games & events → Lucky Block & wheel).",
         _roulette,
-        examples=("/wheel bet:🟥 Redstone amount:50", "/wheel bet:⬛ Obsidian amount:20", "/wheel bet:17 amount:10"),
+        examples=("/wheel bet:🟥 Redstone amount:50", "/wheel bet:🎯 A number amount:10 number:17",
+                  "/wheel bet:17 amount:10"),
         related=("luckyblock", "blockdle guess"),
     ),
     Page(

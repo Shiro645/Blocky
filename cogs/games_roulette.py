@@ -40,32 +40,47 @@ class RouletteCog(commands.Cog):
         self._next: dict[int, float] = {}  # user_id -> monotonic time of their next spin
 
     async def bet_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """The open bets (a handful: they always fit in Discord's list of 25)."""
         text = current.strip().lower()
+        if text.isdigit() and roulette.bet_open("number"):  # a number typed here: offer it directly
+            return [app_commands.Choice(name=f"🎯 Number {slot} — {' '.join(roulette.BLOCKS[roulette.color(slot)])} (×36)",
+                                        value=f"number:{slot}")
+                    for slot in roulette.slots() if slot.startswith(text)][:25]
         out = []
         for bet in roulette.open_bets():
-            if bet == "number":
-                continue
-            label = f"{roulette.BETS[bet][0]} (×{roulette.payout(bet)})"
-            if text in label.lower():
-                out.append(app_commands.Choice(name=label, value=bet))
-        if roulette.bet_open("number"):
-            wanted = text.removeprefix("number").strip()
-            for slot in roulette.slots():
-                if not wanted or slot.startswith(wanted):
-                    emoji, name = roulette.BLOCKS[roulette.color(slot)]
-                    out.append(app_commands.Choice(name=f"🎯 Number {slot} — {emoji} {name} (×36)", value=f"number:{slot}"))
+            name = roulette.BETS[bet][0]
+            if text in name.lower() or text in bet:
+                label = f"{name} (×{roulette.payout(bet)})" + (" — then pick it in `number`" if bet == "number" else "")
+                out.append(app_commands.Choice(name=label[:100], value=bet))
+        return out[:25]
+
+    async def number_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """The numbers of the wheel with their block; type to narrow them (Discord shows 25 at most)."""
+        text = current.strip()
+        out = []
+        for slot in roulette.slots():
+            if not text or slot.startswith(text):
+                emoji, name = roulette.BLOCKS[roulette.color(slot)]
+                out.append(app_commands.Choice(name=f"{slot} — {emoji} {name}", value=slot))
         return out[:25]
 
     @app_commands.command(name="wheel", description="Spin the Minecraft wheel: bet on Redstone, Obsidian or a number!")
-    @app_commands.describe(bet="What you bet on: pick a suggestion, or type a number (0, 00, 1 to 36)",
-                           amount="Emeralds you bet")
-    @app_commands.autocomplete(bet=bet_autocomplete)
-    async def wheel_cmd(self, interaction: discord.Interaction, bet: str, amount: app_commands.Range[int, 1]):
+    @app_commands.describe(bet="Redstone, Obsidian, or A number", amount="Emeralds you bet",
+                           number="Only for a bet on a number: 0, 00 or 1 to 36 (type it to find it)")
+    @app_commands.autocomplete(bet=bet_autocomplete, number=number_autocomplete)
+    async def wheel_cmd(self, interaction: discord.Interaction, bet: str, amount: app_commands.Range[int, 1],
+                        number: app_commands.Range[str, 1, 2] | None = None):
         check_game_channel(interaction)
-        bet, _, number = bet.strip().partition(":")
-        if bet.isdigit():  # a number typed without picking the suggestion
+        bet, _, picked = bet.strip().lower().partition(":")
+        if bet.isdigit():  # a number typed in `bet`
             bet, number = "number", bet
-        bet = {"redstone": "red", "obsidian": "black", "diamond": "green"}.get(bet.lower(), bet.lower())
+        number = (number or picked or "").strip() or None
+        bet = {"redstone": "red", "rouge": "red", "obsidian": "black", "obsidienne": "black", "noir": "black",
+               "diamond": "green", "a number": "number", "numero": "number", "numéro": "number"}.get(bet, bet)
+        if bet == "number" and number is None:
+            raise GameError("Bet on a number: add the `number` option (0, 00 or 1 to 36).")
+        if bet != "number" and number is not None and bet in roulette.BETS:
+            raise GameError("The `number` option is only for a bet on **A number**.")
         now = time.monotonic()
         ready = self._next.get(interaction.user.id, 0.0)
         if now < ready:
@@ -73,7 +88,7 @@ class RouletteCog(commands.Cog):
         # Reserved before the await: a second command sent at the same time waits for the cooldown.
         self._next[interaction.user.id] = now + int(settings.get()["games"]["cooldown_seconds"])
         try:
-            res = await self.bot.db.run(roulette.spin, interaction.user.id, bet, amount, number or None)
+            res = await self.bot.db.run(roulette.spin, interaction.user.id, bet, amount, number)
         except BaseException:
             self._next[interaction.user.id] = ready  # nothing was played: no cooldown
             raise
