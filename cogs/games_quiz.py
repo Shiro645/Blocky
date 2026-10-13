@@ -110,7 +110,7 @@ class QuizCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.rng = random.Random()
-        self.recent: deque[int] = deque(maxlen=40)  # questions asked lately, not asked again soon
+        self.recent: deque[int] = deque()  # questions asked lately, not asked again soon (games.quiz_no_repeat)
         self.next_at = 0.0
 
     async def cog_load(self) -> None:
@@ -120,16 +120,20 @@ class QuizCog(commands.Cog):
         self.quiz_loop.cancel()
 
     async def post(self, channel: discord.abc.Messageable) -> None:
-        index = quiz.pick(self.rng, list(self.recent))
+        keep = int(settings.get()["games"]["quiz_no_repeat"])
+        index = quiz.pick(self.rng, list(self.recent)[-keep:] if keep > 0 else [])
         self.recent.append(index)
+        while len(self.recent) > max(keep, 0):
+            self.recent.popleft()
         options, right = quiz.answers(self.rng, index)
         view = QuizView(self, index, options, right)
         view.message = await channel.send(embed=view.embed(), view=view)
         view.start_clock()
 
     def schedule(self) -> None:
-        minutes = float(settings.get()["games"]["quiz_every_minutes"])
-        self.next_at = time.monotonic() + minutes * 60 * self.rng.uniform(0.75, 1.25) if minutes > 0 else 0.0
+        g = settings.get()["games"]
+        minutes, jitter = float(g["quiz_every_minutes"]), float(g["quiz_every_jitter"])
+        self.next_at = time.monotonic() + minutes * 60 * self.rng.uniform(1 - jitter, 1 + jitter) if minutes > 0 else 0.0
 
     @tasks.loop(minutes=1)
     async def quiz_loop(self):

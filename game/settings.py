@@ -39,11 +39,12 @@ DEFAULTS: dict[str, Any] = {
         "trader_bonus_per_point": 0.02,
         "efficiency_seconds_per_point": 2,
         # Miner: weight added to gravel / deepslate per point (up to the max), and a chance of one
-        # bonus block on piles of 4 blocks or more.
+        # bonus block on big piles (miner_bonus_min_pile blocks or more).
         "miner_gravel_4_5": 5, "miner_gravel_4_5_max": 40,
         "miner_gravel_2_3": 3, "miner_gravel_2_3_max": 30,
         "miner_deepslate_2_3": 2, "miner_deepslate_2_3_max": 30,
         "miner_bonus_block_chance": 0.05, "miner_bonus_block_max": 0.25,
+        "miner_bonus_min_pile": 4,  # the bonus block only comes on piles of at least this many blocks (1-6)
         # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
         "lucky_rare_weight": 1,
     },
@@ -348,7 +349,10 @@ DEFAULTS: dict[str, Any] = {
         # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).
         "blockdle_rewards": [300, 250, 200, 160, 130, 100, 80, 60, 50, 40],
         "blockdle_xp": 50,
+        "blockdle_no_repeat_days": 60,  # a block isn't the block of the day again before this many days
         "quiz_every_minutes": 60,  # a question in a games channel every X minutes (0 = only /event quiz)
+        "quiz_every_jitter": 0.25,  # ...give or take 25%, so it isn't predictable
+        "quiz_no_repeat": 40,  # the last 40 questions aren't asked again
         "quiz_seconds": 30,  # time to answer
         "quiz_reward": 50,
         "quiz_xp": 20,

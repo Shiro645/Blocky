@@ -18,7 +18,6 @@ from game.blockdle_blocks import BLOCKS as _ROWS, VERSIONS
 from game.db import Ctx
 from game.errors import GameError
 
-NO_REPEAT_DAYS = 60  # a block isn't picked again before this many days
 
 
 @dataclass(frozen=True)
@@ -141,12 +140,13 @@ def reward_for(tries: int) -> int:
 
 # ---------------- the day's block ----------------
 def block_of_day(ctx: Ctx, day: str | None = None) -> Block:
-    """The secret block of a day, picked the first time someone needs it (not one of the last 60 days)."""
+    """The secret block of a day, picked the first time someone needs it (not a recent one:
+    games.blockdle_no_repeat_days)."""
     day = day or ctx.today.isoformat()
     row = ctx.one("SELECT block FROM blockdle_days WHERE day=?;", (day,))
     if row and row["block"] in BY_ID:
         return BY_ID[row["block"]]
-    since = (ctx.today - timedelta(days=NO_REPEAT_DAYS)).isoformat()
+    since = (ctx.today - timedelta(days=int(settings.get()["games"]["blockdle_no_repeat_days"]))).isoformat()
     recent = {r["block"] for r in ctx.all("SELECT block FROM blockdle_days WHERE day >= ?;", (since,))}
     choices = [b for b in BLOCKS if b.id not in recent] or list(BLOCKS)
     block = ctx.rng.choice(choices)

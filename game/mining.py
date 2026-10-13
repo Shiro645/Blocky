@@ -52,7 +52,7 @@ def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tup
         block = rng.choices(list(weights), weights=list(weights.values()))[0]
 
     # Miner talent: small chance of one bonus block on big piles.
-    if amount >= 4 and rng.random() < min(float(t["miner_bonus_block_max"]), float(t["miner_bonus_block_chance"]) * miner):
+    if amount >= int(t["miner_bonus_min_pile"]) and rng.random() < min(float(t["miner_bonus_block_max"]), float(t["miner_bonus_block_chance"]) * miner):
         amount += 1
     return block, amount
 
