@@ -21,7 +21,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import duel, gear, players, potions, settings
+from game import cooldowns, duel, gear, players, potions, settings
 from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
@@ -301,7 +301,9 @@ def ready_at(ctx: Ctx, user_id: int) -> int:
         """,
         (user_id,),
     )
-    return int((row["t"] or 0) + float(_cfg()["cooldown_minutes"]) * MINUTE) if row["t"] else 0
+    if not row["t"] or cooldowns.cleared(ctx, user_id, "dungeon", row["t"]):
+        return 0
+    return int(row["t"] + float(_cfg()["cooldown_minutes"]) * MINUTE)
 
 
 def _check_can_enter(ctx: Ctx, user_id: int) -> None:

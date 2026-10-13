@@ -569,6 +569,16 @@ MIGRATIONS: list[str] = [
     ALTER TABLE auctions ADD COLUMN repairs INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN anvil INTEGER NOT NULL DEFAULT 0;
     """,
+    # 29: waiting times reset by the staff (/player cooldowns) when they're counted from an event kept in the
+    # history (a robbery, a dungeon run): the check ignores the events before the reset
+    """
+    CREATE TABLE cooldown_resets (
+        user_id INTEGER NOT NULL,
+        timer TEXT NOT NULL,           -- rob, rob_protection, dungeon
+        at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, timer)
+    );
+    """,
 ]
 
 

@@ -118,3 +118,50 @@ class ResetRewardTests(GameTestCase):
         await self.run_game(reset.apply, {"progress", "wealth"}, ALICE)
         await self.run_game(players.bump_stat, ALICE, "blocks_mined")
         self.assertGreater(await self.run_game(players.get_emeralds, ALICE), 0)  # a real fresh start pays again
+
+
+class CooldownResetTests(GameTestCase):
+    async def test_waiting_times_are_reset(self):
+        from game import cooldowns, daily, dummy, pve, robbery, species
+        alice, bob = 1, 2
+        for uid in (alice, bob):
+            await self.run_game(players.give_emeralds, uid, 1000)
+            await self.run_game(players.set_level, uid, 20)
+        # A robbery: the thief waits, the victim is protected.
+        rob = await self.run_game(robbery.start, alice, bob, "discreet")
+        self.advance(3601)
+        await self.run_game(robbery.finish_due)
+        with self.assertRaisesRegex(GameError, "rob again"):
+            await self.run_game(robbery.start, alice, bob, "discreet")
+        self.assertEqual(await self.run_game(cooldowns.reset, alice, ["rob"]), ["rob"])
+        with self.assertRaisesRegex(GameError, "protected"):  # the victim is still protected
+            await self.run_game(robbery.start, alice, bob, "discreet")
+        await self.run_game(cooldowns.reset, bob, ["rob_protection"])
+        await self.run_game(robbery.start, alice, bob, "discreet")
+        self.assertIsNotNone(rob)
+
+        # The daily: today's claim is undone, the streak doesn't grow twice.
+        first = await self.run_game(daily.claim, alice)
+        await self.run_game(cooldowns.reset, alice, ["daily"])
+        again = await self.run_game(daily.claim, alice)
+        self.assertEqual((again["streak"], again["emeralds"]), (first["streak"], first["emeralds"]))
+        self.assertEqual(await self.run_game(cooldowns.reset, alice, ["daily", "dummy"]), ["daily"])
+
+        # Species, dummy, dungeon.
+        await self.run_game(species.choose, alice, "miner")
+        await self.run_game(players.give_emeralds, alice, 5000)
+        with self.assertRaises(GameError):
+            await self.run_game(species.choose, alice, "dwarf")
+        await self.run_game(cooldowns.reset, alice, ["species"])
+        await self.run_game(species.choose, alice, "dwarf")
+        await self.run_game(dummy.hit_series, alice)
+        with self.assertRaises(GameError):
+            await self.run_game(dummy.hit_series, alice)
+        await self.run_game(cooldowns.reset, alice, ["dummy"])
+        await self.run_game(dummy.hit_series, alice)
+        run = await self.run_game(pve.create, alice, "easy")
+        await self.run_game(pve.start, run["run_id"], alice)
+        await self.run_game(pve.leave, run["run_id"], alice)
+        self.assertGreater(await self.run_game(pve.ready_at, alice), self.now)
+        await self.run_game(cooldowns.reset, alice, ["dungeon"])
+        self.assertEqual(await self.run_game(pve.ready_at, alice), 0)

@@ -1511,6 +1511,16 @@ PAGES: list[Page] = [
         examples=("/player sync_roles",),
         related=("config", "player level"),
     ),
+    Page(
+        "player cooldowns", "staff_players",
+        "Resets a member's waiting times so they can play again right away: one of them, or all of them when "
+        "`timer` is empty. Robbing again, the protection after being robbed, the dungeon, the training dummy, a "
+        "boss attack, duels, the Lucky Block and roulette, mining, changing species, and the daily reward (today's "
+        "claim is undone: claiming again gives today's reward once more, the streak doesn't grow twice). The "
+        "member gets a DM and the staff channel keeps a trace.",
+        examples=("/player cooldowns member:@Steve", "/player cooldowns member:@Steve timer:Robbing again"),
+        related=("rob", "daily", "pve start"),
+    ),
     # ---- staff: events ----
     Page(
         "event boss", "staff_events",
