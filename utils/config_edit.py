@@ -466,9 +466,17 @@ FIELDS: list[Field] = [
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
+    # shared by the Lucky Block and the wheel first: they're the ones changed most
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
+    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
+       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
     _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
        "Lucky Block and the wheel (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
     _b("games.roulette_enabled", "chance", "Wheel open", "Off: /wheel says it's closed.", kind="bool"),
+    _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
+       "win a little on average.", kind="choice", min=None,
+       choices=(("1: 0 only (the bank keeps 2.7%)", 1), ("2: 0 and 00 (the bank keeps 5.3%)", 2))),
     *[_b(f"games.roulette_bets.{key}", "chance", f"Wheel: bets on {name}", "On: players can bet on it.", kind="bool",
          min=None)
       for key, name in (("red", "Redstone"), ("black", "Obsidian"), ("green", "Diamond block"), ("even", "even"),
@@ -480,13 +488,6 @@ FIELDS: list[Field] = [
         _b(f"games.lucky_block.{key}.payout", "chance", f"Lucky Block: {name} pays (×bet)",
            "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
     )],
-    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
-    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
-    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
-       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
-    _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
-       "win a little on average.", kind="choice", min=None,
-       choices=(("1: 0 only (the bank keeps 2.7%)", 1), ("2: 0 and 00 (the bank keeps 5.3%)", 2))),
     *[_b(f"games.blockdle_rewards.{i}", "minigames", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
          "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
     _b("games.blockdle_xp", "minigames", "Blockdle: XP for finding the block"),
