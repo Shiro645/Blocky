@@ -144,4 +144,9 @@ UPDATES: tuple[Update, ...] = (
         "At `/wheel` you can now also bet on **one number** (0, 00 or 1 to 36): if the wheel stops on it, you win "
         "**36 times your bet**. Pick it in the suggestions or just type it, e.g. `/wheel bet:17 amount:10`.",
     ),
+    Update(
+        "2026-10-wheel-european", "2026-10-14", "The wheel: numbers 0 to 36",
+        "The wheel is now a European roulette: the numbers go from **0 to 36**, and the 0 is the only 💎 Diamond "
+        "block (no more 00). Bet on a number with `bet:A number` and the `number` option, or type it in `bet`.",
+    ),
 )
