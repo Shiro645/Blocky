@@ -131,12 +131,15 @@ class LateTests(LoanTestCase):
 
         # Half of everything he receives goes to the lender, earned or not.
         await self.run_game(players.earn_emeralds, BORROWER, 100)
-        await self.run_game(players.give_emeralds, BORROWER, 1)  # 0.5 rounds down
-        self.assertEqual((await self.emeralds(BORROWER), await self.emeralds(LENDER)), (51, 1250))
+        await self.run_game(players.give_emeralds, BORROWER, 2)
+        self.assertEqual((await self.emeralds(BORROWER), await self.emeralds(LENDER)), (51, 1251))
         self.assertEqual(await self.run_game(players.get_stat, BORROWER, "emeralds_earned"), 100)
 
-        # No moving wealth away meanwhile.
+        # No moving wealth away meanwhile (buying a friend's listing at any price would do it too).
+        await self.run_game(players.add_item, OTHER, "ingot", "iron", 1)
+        listing = await self.run_game(exchange.list_for_sale, OTHER, "ingot:iron", 1, 10)
         for fn, args in ((exchange.pay, (BORROWER, OTHER, 10)),
+                         (exchange.buy, (BORROWER, listing["auction_id"])),
                          (exchange.trade, (BORROWER, OTHER, "emeralds", 10, None, 1)),
                          (exchange.list_for_sale, (BORROWER, "lapis", 1, 10)),
                          (loans.propose, (BORROWER, BORROWER, OTHER, 100, 0, 1)),
@@ -147,11 +150,23 @@ class LateTests(LoanTestCase):
 
         # A big gain pays the rest: never more than what's left.
         await self.run_game(players.give_emeralds, BORROWER, 5000)
-        self.assertEqual(await self.emeralds(LENDER), 1250 + 960)
-        self.assertEqual(await self.emeralds(BORROWER), 51 + 5000 - 960)
+        self.assertEqual(await self.emeralds(LENDER), 1251 + 959)
+        self.assertEqual(await self.emeralds(BORROWER), 51 + 5000 - 959)
         self.assertIsNone(await self.run_game(loans.debt_of, BORROWER))
         self.assertIn(LoanRepaid(loan["loan_id"], LENDER, BORROWER, 1210, True), self.notices)
         await self.run_game(exchange.pay, BORROWER, OTHER, 10)  # free again
+
+    async def test_small_gains_are_garnished_too(self):
+        await self.lend(1000, 0, days=1)
+        await self.run_game(players.spend_emeralds, BORROWER, 1000)
+        self.advance(DAY)
+        await self.run_game(loans.tick)
+        before = await self.emeralds(LENDER)
+        for _ in range(400):  # 0.5 each time: rounded at random, not always down
+            await self.run_game(players.give_emeralds, BORROWER, 1)
+        to_lender = await self.emeralds(LENDER) - before
+        self.assertTrue(150 < to_lender < 250, to_lender)
+        self.assertEqual(await self.emeralds(BORROWER), 400 - to_lender)
 
     async def test_a_borrower_who_has_it_all_pays_at_the_deadline(self):
         await self.lend(1000, 10, days=1)

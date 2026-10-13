@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import enchants, gear, settings, shop
-from game.catalog import GEAR_EFFECTS, GEAR_ITEMS, MATERIALS, RECIPES, materials_for
+from game.catalog import GEAR_ITEMS, MATERIALS, RECIPES, gear_effect, materials_for
 from game.db import Ctx
 from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar
 
@@ -130,7 +130,7 @@ class EconomyCraftCog(commands.Cog):
                 worn = " — **worn out**, /repair it" if slot == "shield" and g["durability"] <= 0 else ""
                 lines.append(f"**{slot}**: {gear_label(g, show_durability=False)} `{bar}` {g['durability']}/{g['max_durability']}{worn}")
             else:
-                lines.append(f"**{slot}**: — *({GEAR_EFFECTS[slot]})*")
+                lines.append(f"**{slot}**: — *({gear_effect(slot)})*")
 
         embed = discord.Embed(title=f"{interaction.user.display_name}'s equipment", description="\n".join(lines), color=discord.Color.dark_teal())
         d = settings.get()["duel"]

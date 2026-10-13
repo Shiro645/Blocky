@@ -8,6 +8,7 @@ shared with the roulette (game/gambling.py, games.*).
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from game import gambling, players, settings
@@ -23,9 +24,10 @@ class Outcome:
 
 
 OUTCOMES: dict[str, Outcome] = {o.key: o for o in (
-    Outcome("creeper", "Creeper", "💥", "A creeper jumps out and explodes. Your bet is gone!"),
-    Outcome("cobblestone", "Cobblestone", "🪨", "Some cobblestone: half your bet back."),
-    Outcome("iron", "Iron", "⚙️", "Iron ingots: your bet back."),
+    # Only what falls out: what it pays comes from the settings (the result line says it).
+    Outcome("creeper", "Creeper", "💥", "A creeper jumps out and explodes!"),
+    Outcome("cobblestone", "Cobblestone", "🪨", "Just some cobblestone."),
+    Outcome("iron", "Iron", "⚙️", "Iron ingots."),
     Outcome("gold", "Gold", "🟨", "Gold ingots!"),
     Outcome("diamond", "Diamonds", "💎", "Diamonds!"),
     Outcome("emerald", "Emeralds", "🟩", "A pile of emeralds!"),
@@ -47,7 +49,7 @@ def chances() -> list[tuple[Outcome, float, float]]:
 
 
 def return_rate() -> float:
-    """What a bet gives back on average (about 0.9 with the defaults)."""
+    """What a bet gives back on average (about 0.84 with the defaults)."""
     return sum(chance * payout for _, chance, payout in chances())
 
 
@@ -57,7 +59,7 @@ def open_block(ctx: Ctx, user_id: int, amount: int) -> dict:
     players.spend_emeralds(ctx, user_id, amount)
     rows = [(o, w, p) for o, w, p in table() if w > 0]
     outcome, _, payout = ctx.rng.choices(rows, weights=[w for _, w, _ in rows])[0]
-    won = int(round(amount * payout))
+    won = math.floor(amount * payout + 0.5)  # halves round up (round() would round 2.5 to 2 but 3.5 to 4)
     if won:
         players.give_emeralds(ctx, user_id, won)  # chance: not counted for the seasons
     gambling.record(ctx, user_id, won - amount)

@@ -80,6 +80,9 @@ class TradeTests(GameTestCase):
         await self.run_game(players.add_blocks, ALICE, "bedrock", 3)
         await self.run_game(exchange.trade, ALICE, BOB, "block:bedrock", 2, None, 0)
         self.assertEqual((await self.run_game(players.get_blocks, BOB))["bedrock"], 2)
+        # A gift isn't a trade: passing it back and forth would complete trade challenges for free.
+        self.assertEqual(await self.run_game(players.get_stat, ALICE, "trades_completed"), 0)
+        self.assertEqual(await self.run_game(players.get_stat, BOB, "trades_completed"), 0)
 
 
 class AuctionTests(GameTestCase):

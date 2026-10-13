@@ -141,7 +141,7 @@ SECTIONS: tuple[Section, ...] = (
         "choose; `/loan ask` asks a player for a loan. The other player accepts with a button and the emeralds move "
         "at once. `/loan repay` pays back (all or part), `/loan list` shows what you owe and what you're owed, and "
         "`/loan forgive` cancels a debt. A **late** borrower pays a penalty, part of everything they earn goes to "
-        "the lender until it's paid, and until then they can't pay, trade, sell at the auction or take new loans.\n"
+        "the lender until it's paid, and until then they can't pay, trade, buy or sell at the auction or take new loans.\n"
         "The **Top senders** leaderboard ranks who sends and lends the most.",
         ("pay", "auction sell", "loan offer"),
     ),

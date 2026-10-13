@@ -479,7 +479,7 @@ def _loans(s: Settings) -> list[str]:
         f"an offer lasts **{duration(float(lo['offer_minutes']) * 60)}**",
         f"Late: **+{pct(lo['late_penalty'])}** of what's left, the bot takes what it can from the borrower's "
         f"emeralds, then **{pct(lo['garnish'])}** of every emerald they receive goes to the lender until it's "
-        "paid (and no /pay, /trade, auction listing or loan until then)",
+        "paid (and no /pay, /trade, auction purchase or listing, or loan until then)",
         "Loans, repayments and interest don't count for the seasons",
     ]
 
@@ -785,7 +785,7 @@ PAGES: list[Page] = [
         "trade", "trading",
         "Proposes a trade: what you give and, optionally, what you want in return. The other player accepts "
         "or declines with the buttons; nothing moves until they accept, and both sides are checked again then. "
-        "Leave `get` empty to make a **gift**.\n"
+        "Leave `get` empty to make a **gift** (a gift doesn't count as a trade for achievements and challenges).\n"
         "You can trade emeralds, blocks, sticks, ingots, lapis, books, potions and gear (one piece at a time, "
         "it keeps its enchantments and durability). The proposal expires after 5 minutes.",
         examples=(

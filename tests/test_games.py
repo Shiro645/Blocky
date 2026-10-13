@@ -221,6 +221,13 @@ class LuckyBlockGame(GameTestCase):
         with self.assertRaisesRegex(GameError, "Bets go"):
             await self.run_game(luckyblock.open_block, ALICE, 201)
 
+    async def test_halves_round_up(self):
+        settings.load({"games": {"lucky_block": {
+            k: {"weight": 1 if k == "cobblestone" else 0} for k in luckyblock.OUTCOMES}}})
+        await self.run_game(players.give_emeralds, ALICE, 100)
+        self.assertEqual([(await self.run_game(luckyblock.open_block, ALICE, bet))["won"] for bet in (1, 3, 5)],
+                         [1, 2, 3])  # 0.5, 1.5 and 2.5 all round up
+
     async def test_the_daily_limit(self):
         settings.load({"games": {"daily_win_cap": 30, "lucky_block": {
             k: {"weight": 1 if k == "netherite" else 0} for k in luckyblock.OUTCOMES}}})
