@@ -66,7 +66,7 @@ class RouletteCog(commands.Cog):
 
     @app_commands.command(name="wheel", description="Spin the Minecraft wheel: bet on Redstone, Obsidian or a number!")
     @app_commands.describe(bet="Redstone, Obsidian, or A number", amount="Emeralds you bet",
-                           number="Only for a bet on a number: 0, 00 or 1 to 36 (type it to find it)")
+                           number="Only for a bet on a number: 0 to 36 (type it to find it)")
     @app_commands.autocomplete(bet=bet_autocomplete, number=number_autocomplete)
     async def wheel_cmd(self, interaction: discord.Interaction, bet: str, amount: app_commands.Range[int, 1],
                         number: app_commands.Range[str, 1, 2] | None = None):
@@ -78,7 +78,7 @@ class RouletteCog(commands.Cog):
         bet = {"redstone": "red", "rouge": "red", "obsidian": "black", "obsidienne": "black", "noir": "black",
                "diamond": "green", "a number": "number", "numero": "number", "numéro": "number"}.get(bet, bet)
         if bet == "number" and number is None:
-            raise GameError("Bet on a number: add the `number` option (0, 00 or 1 to 36).")
+            raise GameError("Bet on a number: add the `number` option (" + ", ".join(roulette.slots()[:-36]) + " or 1 to 36).")
         if bet != "number" and number is not None and bet in roulette.BETS:
             raise GameError("The `number` option is only for a bet on **A number**.")
         now = time.monotonic()

@@ -20,11 +20,13 @@ class RouletteRules(unittest.TestCase):
         settings.load()
 
     def test_the_wheel(self):
-        self.assertEqual(len(roulette.slots()), 38)
+        # A European wheel by default: 0 to 36, the 0 is the only Diamond block.
+        self.assertEqual(roulette.slots(), [str(n) for n in range(37)])
         self.assertEqual(sum(roulette.color(s) == "red" for s in roulette.slots()), 18)
-        self.assertEqual(sum(roulette.color(s) == "green" for s in roulette.slots()), 2)
-        settings.load({"games": {"roulette_zeros": 1}})
-        self.assertEqual(roulette.slots()[:2], ["0", "1"])
+        self.assertEqual(sum(roulette.color(s) == "green" for s in roulette.slots()), 1)
+        self.assertAlmostEqual(roulette.return_rate(), 36 / 37)
+        settings.load({"games": {"roulette_zeros": 2}})  # American: 0 and 00
+        self.assertEqual(roulette.slots()[:3], ["0", "00", "1"])
 
     def test_every_bet_gives_back_the_same_on_average(self):
         for zeros, rate in ((2, 36 / 38), (1, 36 / 37)):
@@ -79,8 +81,10 @@ class RouletteGame(GameTestCase):
             await self.run_game(roulette.spin, ALICE, "number", 10, "37")
         with self.assertRaisesRegex(GameError, "Not enough"):
             await self.run_game(roulette.spin, BOB, "red", 10)
-        res = await self.run_game(roulette.spin, ALICE, "number", 10, "00")
-        self.assertEqual(res["payout"], 360 if res["slot"] == "00" else 0)
+        with self.assertRaisesRegex(GameError, "Pick the number"):  # no 00 on a European wheel
+            await self.run_game(roulette.spin, ALICE, "number", 10, "00")
+        res = await self.run_game(roulette.spin, ALICE, "number", 10, "0")
+        self.assertEqual(res["payout"], 360 if res["slot"] == "0" else 0)
 
 
 class BlockdleRules(unittest.TestCase):

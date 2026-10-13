@@ -1,12 +1,12 @@
 """The wheel (/wheel): a Minecraft roulette, a solo spin against the bank.
 
 The wheel has the numbers 1 to 36, as on a real roulette: the red ones are Redstone, the black
-ones Obsidian, and the green slots (0, and 00 with settings games.roulette_zeros = 2) are
-Diamond blocks. Payouts are the classic ones (the stake included): x2 for Redstone/Obsidian,
+ones Obsidian, and the green slot (0, plus 00 with settings games.roulette_zeros = 2) is a
+Diamond block. Payouts are the classic ones (the stake included): x2 for Redstone/Obsidian,
 even/odd and 1-18/19-36, x3 for a dozen, x36 for a number, and a Diamond block pays as a bet on
-those green slots (x18 with two, x36 with one). The green slots make every bet lose a little on
-average: 5.3% with 0 and 00, 2.7% with 0 only. Which bets players may make is a setting
-(games.roulette_bets): Redstone and Obsidian only by default. Winnings never count for the
+those green slots (x36 with one, x18 with two). The green slots make every bet lose a little on
+average: 2.7% with 0 only (the default), 5.3% with 0 and 00. Which bets players may make is a
+setting (games.roulette_bets): Redstone, Obsidian and a number by default. Winnings never count for the
 seasons (it's chance, not value created).
 """
 from __future__ import annotations
@@ -105,7 +105,7 @@ def is_open() -> bool:
 
 
 def return_rate() -> float:
-    """What a bet gives back on average (0.947 with 0 and 00)."""
+    """What a bet gives back on average (0.973 with 0 only, 0.947 with 0 and 00)."""
     return 36 / len(slots())
 
 

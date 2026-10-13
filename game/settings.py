@@ -381,8 +381,9 @@ DEFAULTS: dict[str, Any] = {
             "red": True, "black": True, "green": False, "even": False, "odd": False, "low": False, "high": False,
             "dozens": False, "number": True,
         },
-        # Green slots of the roulette: 2 (0 and 00) = the bank keeps 5.3% of the bets on average, 1 (0 only) = 2.7%.
-        "roulette_zeros": 2,
+        # Diamond blocks (green slots) of the wheel: 1 (0 only, a European roulette) = the bank keeps 2.7% of the
+        # bets on average, 2 (0 and 00, an American roulette) = 5.3%.
+        "roulette_zeros": 1,
         # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).
         "blockdle_rewards": [300, 250, 200, 160, 130, 100, 80, 60, 50, 40],
         "blockdle_xp": 50,
