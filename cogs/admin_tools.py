@@ -13,7 +13,7 @@ from game import backups, settings
 from game.errors import GameError
 from utils.checks import staff_only
 from utils.config import balance_overrides, load_config, reload_config
-from utils.mc_commands import DEFAULT_BLOCKED, blocked_by, clean_output
+from utils.mc_commands import blocked_by, blocked_list, clean_output
 from utils.minecraft_rcon import RconError, rcon_command
 from utils.ui import load_application_emojis
 
@@ -103,10 +103,6 @@ class AdminToolsCog(commands.Cog):
         await interaction.followup.send("\n".join([text, *notes]), ephemeral=True)
 
     # ---------- Minecraft console ----------
-    def blocked_list(self) -> list[str]:
-        custom = load_config().get("minecraft", {}).get("blocked_commands")
-        return list(custom) if isinstance(custom, list) else list(DEFAULT_BLOCKED)
-
     async def log_console(self, user: discord.abc.User, command: str, result: str, color: discord.Color) -> None:
         embed = discord.Embed(title="🖥️ Minecraft console", color=color)
         embed.add_field(name="By", value=f"{user.mention} (`{user}`)", inline=False)
@@ -118,7 +114,7 @@ class AdminToolsCog(commands.Cog):
     @app_commands.describe(command="Command without the slash, e.g. say Hello or give Steve diamond 3")
     @staff_only()
     async def mc(self, interaction: discord.Interaction, command: app_commands.Range[str, 1, 400]):
-        rule = blocked_by(command, self.blocked_list())
+        rule = blocked_by(command, blocked_list())
         if rule:
             await self.log_console(interaction.user, command, f"Blocked (rule: {rule})", discord.Color.red())
             raise GameError(

@@ -21,6 +21,19 @@ DEFAULT_BLOCKED = (
     "rl",  # Bukkit/Spigot's short reload
 )
 
+
+
+def blocked_list() -> list[str]:
+    """What /mc refuses: config.json minecraft.blocked_commands, or the default list."""
+    from utils.config import load_config  # here: the rules themselves don't need config.json
+
+    try:
+        custom = load_config().get("minecraft", {}).get("blocked_commands")
+    except (OSError, ValueError):  # no or broken config.json (tests, the manual outside the bot)
+        custom = None
+    return [str(c) for c in custom] if isinstance(custom, list) else list(DEFAULT_BLOCKED)
+
+
 _COLOR_CODES = re.compile(r"§[0-9a-fk-orA-FK-OR]")
 
 

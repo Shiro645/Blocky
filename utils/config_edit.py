@@ -157,8 +157,8 @@ FIELDS: list[Field] = [
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
-          help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
-               "but no automatic quiz)."),
+          help="/luckyblock, /roulette, /blockdle, /rob, /pve start and /dummy hit only work there (and in the guide "
+               "channels), and the quiz is posted there (not set = they work anywhere, but no automatic quiz)."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
           help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
                "risky one). Best as a channel where members can't write. Not set = where /rob is used."),
@@ -176,8 +176,9 @@ FIELDS: list[Field] = [
                "category (only them and the staff see it), with a checklist of first steps. When it's full "
                "(50 channels) the bot adds \"<name> 2\", \"<name> 3\"… Not set = no guide channels (/guide still "
                "shows the guide).", item="category"),
-    Field("role_event_ping", "roles", "Role pinged for bosses", ("roles", "event_ping"), "role",
-          help="Mentioned when a boss appears. Nobody else is pinged."),
+    Field("role_event_ping", "roles", "Role pinged for events", ("roles", "event_ping"), "role",
+          help="Mentioned when a boss appears, when the wandering villager arrives and when a tournament opens. "
+               "Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
@@ -519,6 +520,9 @@ def fields_in(category: str) -> list[Field]:
 
 
 # ---------------- reading ----------------
+LEGACY_COOLDOWN = ("economy", "cooldown_seconds")  # old place of balance.mining.cooldown_seconds
+
+
 def _check_path(path: tuple) -> None:
     if any(path[: len(p)] == p for p in PROTECTED):
         raise PermissionError("This setting can't be changed from Discord.")
@@ -682,6 +686,9 @@ def set_field(cfg: dict, field: Field, value: Any) -> dict:
     """
     if not field.is_balance:
         return set_value(cfg, field.path, value)
+    if field.path == ("balance", "mining", "cooldown_seconds") and _get(cfg, LEGACY_COOLDOWN) is not None:
+        # The old economy.cooldown_seconds would come back as soon as the new key is the default again.
+        cfg = set_value(cfg, LEGACY_COOLDOWN, None)
     rel = field.path[1:]
     used = settings.merged(balance_overrides(cfg))
     if isinstance(rel[-1], int):

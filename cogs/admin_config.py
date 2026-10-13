@@ -132,8 +132,17 @@ class ConfigCog(commands.Cog):
 
     async def save_whole(self, user: discord.abc.User, field: ce.Field, value: Any, what: str) -> str:
         """Replace a list, the automatic mutes or a table (`what` says what changed)."""
-        before = show(field, ce.current_value(load_config(), field))
-        return await self.apply(user, field.label, before, what, lambda cfg: ce.set_whole(cfg, field, value))
+        old = ce.current_value(load_config(), field)
+        text = await self.apply(user, field.label, show(field, old), what, lambda cfg: ce.set_whole(cfg, field, value))
+        self.bot.dispatch("blocky_config_changed", field.key, old)
+        return text
+
+    async def save_level_roles(self, user: discord.abc.User, label: str, before: str, after: str, change) -> str:
+        """Add, move or remove a level role."""
+        old = ce.level_roles(load_config())
+        text = await self.apply(user, label, before, after, change)
+        self.bot.dispatch("blocky_config_changed", "level_roles", old)
+        return text
 
     # ---------- embeds ----------
     def home_embed(self) -> discord.Embed:
@@ -807,7 +816,7 @@ class LevelModal(discord.ui.Modal, title="Level role"):
                     cfg = ce.set_level_role(cfg, lvl, None)
             return ce.set_level_role(cfg, level, role_id)
 
-        note = await self.menu.cog.apply(
+        note = await self.menu.cog.save_level_roles(
             interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", f"<@&{role_id}>", change,
         )
         note += "\nRun `/player sync_roles` to update the members who already passed this level."
@@ -830,7 +839,7 @@ class RemoveLevelRoleSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         level = int(self.values[0])
         before = ce.level_roles(load_config()).get(level)
-        note = await self.view.cog.apply(
+        note = await self.view.cog.save_level_roles(
             interaction.user, f"Level {level} role", f"<@&{before}>" if before else "*none*", "*removed*",
             lambda cfg: ce.set_level_role(cfg, level, None),
         )

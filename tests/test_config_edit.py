@@ -147,6 +147,15 @@ class RegistryTests(unittest.TestCase):
         price = ce.FIELDS_BY_KEY["market.ingots.diamond"]
         self.assertEqual(ce.set_field(BASE, price, 60), BASE)
 
+    def test_the_old_mining_cooldown_key_never_comes_back(self):
+        cooldown = ce.FIELDS_BY_KEY["mining.cooldown_seconds"]
+        old = {**BASE, "economy": {"cooldown_seconds": 45}}
+        self.assertEqual(ce.current_value(old, cooldown), 45)
+        back_to_default = ce.set_field(old, cooldown, None)
+        self.assertNotIn("economy", back_to_default)
+        self.assertEqual(ce.current_value(back_to_default, cooldown), 30)
+        self.assertEqual(ce.current_value(ce.set_field(old, cooldown, 40), cooldown), 40)
+
     def test_editors(self):
         for kind, _ in ce.DROP_REWARDS:
             amount = 1 if kind == "book" else 4

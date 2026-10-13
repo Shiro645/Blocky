@@ -16,7 +16,7 @@ from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
 from game.pve import DIFFICULTIES as DUNGEON
 from game.species import SPECIES
-from utils.mc_commands import DEFAULT_BLOCKED
+from utils.mc_commands import DEFAULT_BLOCKED, blocked_list
 
 Settings = dict[str, Any]
 
@@ -1526,7 +1526,8 @@ PAGES: list[Page] = [
     # ---- staff: server ----
     Page(
         "config", "staff_server",
-        "Opens the settings panel: **every setting of the bot**, in categories (channels, roles, mining and its "
+        "Opens the settings panel: **almost every setting of the bot** (not the server and Minecraft connection, "
+        "the staff role or the database: only config.json changes those), in categories (channels, roles, mining and its "
         "odds, XP and talents, market, gear, duels, potions, enchanting, drops, bosses, seasons, challenges, "
         "achievements, teams, tournament, villager…). Each setting shows what it does, its value and its default, "
         "with buttons to change it or to reset it. Lists, automatic mutes, the drop table and the villager's goods "
@@ -1569,7 +1570,8 @@ PAGES: list[Page] = [
         "mc", "staff_server",
         "Runs a command on the Minecraft server console (RCON) and shows the answer. Dangerous commands are "
         "refused, also when hidden after `execute … run`.",
-        lambda s: ["Blocked: " + ", ".join(f"`{c}`" for c in DEFAULT_BLOCKED)],
+        lambda s: ["Blocked: " + (", ".join(f"`{c}`" for c in blocked_list()) or "nothing")
+                   + ("" if tuple(blocked_list()) == DEFAULT_BLOCKED else " (the list set in config.json)")],
         examples=("/mc command:say Hello everyone", "/mc command:give Steve diamond 3"),
         related=("whitelist list", "server_status"),
     ),
