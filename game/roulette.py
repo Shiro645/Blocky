@@ -29,7 +29,7 @@ BETS: dict[str, tuple[str, int]] = {
     "dozen1": ("1st dozen (1-12)", 3),
     "dozen2": ("2nd dozen (13-24)", 3),
     "dozen3": ("3rd dozen (25-36)", 3),
-    "number": ("A number", 36),
+    "number": ("🎯 A number", 36),
 }
 
 

@@ -52,15 +52,19 @@ class RouletteCog(commands.Cog):
             wanted = text.removeprefix("number").strip()
             for slot in roulette.slots():
                 if not wanted or slot.startswith(wanted):
-                    out.append(app_commands.Choice(name=f"🎯 Number {slot} (×36)", value=f"number:{slot}"))
+                    emoji, name = roulette.BLOCKS[roulette.color(slot)]
+                    out.append(app_commands.Choice(name=f"🎯 Number {slot} — {emoji} {name} (×36)", value=f"number:{slot}"))
         return out[:25]
 
-    @app_commands.command(name="wheel", description="Spin the Minecraft wheel: bet on Redstone or Obsidian!")
-    @app_commands.describe(bet="What you bet on (pick a suggestion)", amount="Emeralds you bet")
+    @app_commands.command(name="wheel", description="Spin the Minecraft wheel: bet on Redstone, Obsidian or a number!")
+    @app_commands.describe(bet="What you bet on: pick a suggestion, or type a number (0, 00, 1 to 36)",
+                           amount="Emeralds you bet")
     @app_commands.autocomplete(bet=bet_autocomplete)
     async def wheel_cmd(self, interaction: discord.Interaction, bet: str, amount: app_commands.Range[int, 1]):
         check_game_channel(interaction)
-        bet, _, number = bet.partition(":")
+        bet, _, number = bet.strip().partition(":")
+        if bet.isdigit():  # a number typed without picking the suggestion
+            bet, number = "number", bet
         bet = {"redstone": "red", "obsidian": "black", "diamond": "green"}.get(bet.lower(), bet.lower())
         now = time.monotonic()
         ready = self._next.get(interaction.user.id, 0.0)

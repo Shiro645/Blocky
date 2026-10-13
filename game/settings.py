@@ -376,10 +376,10 @@ DEFAULTS: dict[str, Any] = {
             "netherite": {"weight": 2, "payout": 10.0},
         },
         "roulette_enabled": True,  # the wheel (/wheel), a Minecraft roulette
-        # What players may bet on at the wheel: Redstone (red) and Obsidian (black) for now.
+        # What players may bet on at the wheel: Redstone (red), Obsidian (black) and a number for now.
         "roulette_bets": {
             "red": True, "black": True, "green": False, "even": False, "odd": False, "low": False, "high": False,
-            "dozens": False, "number": False,
+            "dozens": False, "number": True,
         },
         # Green slots of the roulette: 2 (0 and 00) = the bank keeps 5.3% of the bets on average, 1 (0 only) = 2.7%.
         "roulette_zeros": 2,

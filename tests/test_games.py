@@ -44,8 +44,8 @@ class RouletteRules(unittest.TestCase):
                          ("💎 Diamond block 0", "🟥 Redstone 1", "⬛ Obsidian 2"))
 
     def test_only_the_open_bets(self):
-        self.assertEqual(roulette.open_bets(), ["red", "black"])  # Redstone and Obsidian for now
-        settings.load({"games": {"roulette_bets": {"dozens": True, "green": True}}})
+        self.assertEqual(roulette.open_bets(), ["red", "black", "number"])  # Redstone, Obsidian and a number for now
+        settings.load({"games": {"roulette_bets": {"dozens": True, "green": True, "number": False}}})
         self.assertEqual(roulette.open_bets(), ["red", "black", "green", "dozen1", "dozen2", "dozen3"])
 
 
@@ -75,7 +75,6 @@ class RouletteGame(GameTestCase):
             await self.run_game(roulette.spin, ALICE, "red", 201)
         with self.assertRaisesRegex(GameError, "can't bet on that"):
             await self.run_game(roulette.spin, ALICE, "even", 10)
-        settings.load({"games": {"roulette_bets": {"number": True}}})
         with self.assertRaisesRegex(GameError, "Pick the number"):
             await self.run_game(roulette.spin, ALICE, "number", 10, "37")
         with self.assertRaisesRegex(GameError, "Not enough"):

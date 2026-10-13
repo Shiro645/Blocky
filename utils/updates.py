@@ -139,4 +139,9 @@ UPDATES: tuple[Update, ...] = (
              "`/help command:wheel` shows everything."),
         ),
     ),
+    Update(
+        "2026-10-wheel-numbers", "2026-10-14", "The wheel: bet on a number",
+        "At `/wheel` you can now also bet on **one number** (0, 00 or 1 to 36): if the wheel stops on it, you win "
+        "**36 times your bet**. Pick it in the suggestions or just type it, e.g. `/wheel bet:17 amount:10`.",
+    ),
 )
