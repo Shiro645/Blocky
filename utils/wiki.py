@@ -253,7 +253,7 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "games", "🎲 Mini-games",
         "They're played in the game channels (and in your guide channel).\n"
-        "**Lucky Block**: `/luckyblock <amount>`: bet emeralds and break the block. A creeper or a pile of dirt "
+        "**Lucky Block**: `/luckyblock <amount>`: bet emeralds and break the block. A creeper explodes "
         "and you lose your bet; cobblestone gives half of it back, iron all of it, then gold, diamonds, emeralds and, "
         "very rarely, netherite pay more. The bank wins a little in the long run, and there's a daily limit on "
         "what you can win.\n"

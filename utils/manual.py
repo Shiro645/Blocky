@@ -1032,7 +1032,7 @@ PAGES: list[Page] = [
     # ---- mini-games ----
     Page(
         "luckyblock", "games",
-        "Bet emeralds and break a **Lucky Block**: a creeper or a pile of dirt and you lose your bet, cobblestone gives "
+        "Bet emeralds and break a **Lucky Block**: a creeper explodes and you lose your bet, cobblestone gives "
         "half of it back, iron all of it, then gold, diamonds, emeralds and, rarely, **netherite** pay more and more. "
         "The bank wins a little on average.",
         _luckyblock,

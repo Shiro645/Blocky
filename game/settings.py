@@ -321,8 +321,7 @@ DEFAULTS: dict[str, Any] = {
         # the bet included). The defaults give back about 90% of the bets on average, mostly through small
         # loot: netherite stays rare (1 in 500) and pays x10 at most.
         "lucky_block": {
-            "creeper": {"weight": 190, "payout": 0.0},
-            "dirt": {"weight": 120, "payout": 0.0},
+            "creeper": {"weight": 310, "payout": 0.0},
             "cobblestone": {"weight": 160, "payout": 0.5},
             "iron": {"weight": 210, "payout": 1.0},
             "gold": {"weight": 240, "payout": 1.5},

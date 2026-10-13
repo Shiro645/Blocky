@@ -404,7 +404,7 @@ FIELDS: list[Field] = [
        "Lucky Block and the roulette (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
     _b("games.roulette_enabled", "games", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
        "replaces it).", kind="bool"),
-    *[f for key, name in (('creeper', 'Creeper'), ('dirt', 'Dirt'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
+    *[f for key, name in (('creeper', 'Creeper'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
         _b(f"games.lucky_block.{key}.weight", "games", f"Lucky Block: {name} weight",
            "How often it falls out, compared with the others (0 = never).", max=100_000),
         _b(f"games.lucky_block.{key}.payout", "games", f"Lucky Block: {name} pays (×bet)",

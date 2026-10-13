@@ -2,8 +2,8 @@
 
 What can fall out, how often (weight) and what it pays (times the bet, the bet
 included) are settings (games.lucky_block). With the defaults a block gives back
-about 90% of the bets on average, mostly through small loot: a dirt pile or a creeper
-loses everything, iron gives the bet back, and netherite (1 in 500) pays x10. Bets, the daily cap and the waiting time are
+about 90% of the bets on average, mostly through small loot: a creeper loses everything,
+iron gives the bet back, and netherite (1 in 500) pays x10. Bets, the daily cap and the waiting time are
 shared with the roulette (game/gambling.py, games.*).
 """
 from __future__ import annotations
@@ -24,7 +24,6 @@ class Outcome:
 
 OUTCOMES: dict[str, Outcome] = {o.key: o for o in (
     Outcome("creeper", "Creeper", "💥", "A creeper jumps out and explodes. Your bet is gone!"),
-    Outcome("dirt", "Dirt", "🟫", "Just a pile of dirt…"),
     Outcome("cobblestone", "Cobblestone", "🪨", "Some cobblestone: half your bet back."),
     Outcome("iron", "Iron", "⚙️", "Iron ingots: your bet back."),
     Outcome("gold", "Gold", "🟨", "Gold ingots!"),
