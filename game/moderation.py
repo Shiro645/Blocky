@@ -206,6 +206,11 @@ def history(ctx: Ctx, user_id: int, limit: int = 20) -> dict:
     }
 
 
+def reopen(ctx: Ctx, sanction_id: int) -> None:
+    """Discord refused to lift an expired ban: it stays active, so the next check tries again."""
+    ctx.execute("UPDATE sanctions SET active=1, ended_at=NULL WHERE sanction_id=?;", (sanction_id,))
+
+
 def due(ctx: Ctx) -> dict:
     """What the bot must do now: lift expired bans, end expired mutes, renew long mutes."""
     now = int(ctx.now)

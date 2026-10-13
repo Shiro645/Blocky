@@ -140,6 +140,8 @@ class ProfileCog(commands.Cog):
     @app_commands.describe(color="A dye color")
     @app_commands.autocomplete(color=color_autocomplete)
     async def color(self, interaction: discord.Interaction, color: str):
+        if color != "default" and color not in profiles.DYES:
+            raise GameError("Pick a color from the suggestions (for a #hex code, use `/customize hex`).")
         cost = await self.bot.db.run(profiles.color_cost, interaction.user.id, color)
         name = "Default" if color == "default" else profiles.DYES[color][0]
         await self.change(interaction, {"color": color}, f"Color: **{name}**", cost,

@@ -132,7 +132,8 @@ class ModerationCog(commands.Cog):
             except discord.NotFound:
                 pass  # already unbanned by hand
             except discord.HTTPException:
-                log.exception("Could not unban %s", ban["user_id"])
+                log.exception("Could not unban %s: trying again in a minute", ban["user_id"])
+                await self.bot.db.run(moderation.reopen, ban["sanction_id"])
                 continue
             await self.log_action("🔓 Temporary ban ended", ban["user_id"], None, ban["reason"], discord.Color.green())
         for mute in due["unmuted"]:

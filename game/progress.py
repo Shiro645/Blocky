@@ -113,9 +113,13 @@ def check_achievements(ctx: Ctx, user_id: int) -> list[Achievement]:
             "INSERT INTO achievements(user_id, code, unlocked_at) VALUES(?, ?, ?);",
             (user_id, a.code, int(ctx.now)),
         )
+        # Paid once ever: unlocked again after a /reset of the progress, it pays nothing.
+        first = ctx.execute("INSERT OR IGNORE INTO rewards_paid(user_id, kind, key) VALUES(?, 'achievement', ?);",
+                            (user_id, a.code)).rowcount
+        reward = a.reward if first else 0
         # Not "earned": rewards for milestones must not snowball into other milestones.
-        players.give_emeralds(ctx, user_id, a.reward)
-        ctx.notices.append(AchievementUnlocked(user_id, a.code, f"{a.icon} {a.name}", a.reward))
+        players.give_emeralds(ctx, user_id, reward)
+        ctx.notices.append(AchievementUnlocked(user_id, a.code, f"{a.icon} {a.name}", reward))
         new.append(a)
     return new
 

@@ -68,13 +68,28 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
         )
 
     if "progress" in parts:
-        for table in ("stats", "achievements", "challenge_progress", "season_scores", "season_results", "team_season_scores",
+        for table in ("stats", "achievements", "challenge_progress", "season_scores", "team_season_scores",
                       "dummy_scores"):
             ctx.execute(f"DELETE FROM {table}{where};", args)
         if user_id is None:
+            # Past results only go for a whole-server fresh start: for one player, the champion of a past
+            # week must stay who it was (the champion role follows the latest winner).
+            ctx.execute("DELETE FROM season_results;")
             ctx.execute("DELETE FROM team_season_results;")
-        # The guide checklist starts over (its steps are read from the stats), reward included.
-        ctx.execute(f"UPDATE guides SET done='', completed_at=NULL, rewarded_at=NULL{where};", args)
+        # The guide checklist starts over (its steps are read from the stats).
+        ctx.execute(f"UPDATE guides SET done='', completed_at=NULL{where};", args)
+        # Rewards already paid (achievements, the guide) are only paid again after a reset of the emeralds too:
+        # otherwise a player whose progress is reset would cash them in a second time.
+        if "wealth" in parts:
+            ctx.execute(f"DELETE FROM rewards_paid{where};", args)
+            ctx.execute(f"UPDATE guides SET rewarded_at=NULL{where};", args)
+        # Titles and earned frames worn without their condition anymore are taken off.
+        from game import profiles  # imported here: profiles imports game modules that import this one
+
+        targets = [user_id] if user_id is not None else [
+            r["user_id"] for r in ctx.all("SELECT user_id FROM profiles WHERE title IS NOT NULL OR frame IS NOT NULL;")]
+        for uid in targets:
+            profiles.check_worn(ctx, uid)
         # The streak goes back to 0 but today's daily stays claimed (no free second claim).
         ctx.execute(f"UPDATE users SET daily_streak=0{where};", args)
     return out

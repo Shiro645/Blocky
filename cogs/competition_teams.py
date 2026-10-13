@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 
 import discord
 from discord import app_commands
@@ -173,9 +174,9 @@ class TeamsCog(commands.Cog):
             for space in await self.bot.db.run(team_spaces.every):
                 try:
                     await self.sync_space(guild, space)
-                except discord.HTTPException:
-                    log.warning("Could not update the space of team %s (check Manage Channels and Manage Roles)",
-                                space["team_id"], exc_info=True)
+                except Exception:  # one team's problem never stops the others (nor the loop)
+                    log.warning("Could not update the space of team %s (check Manage Channels and Manage Roles, "
+                                "and the 500-channel limit)", space["team_id"], exc_info=True)
 
     async def sync_space(self, guild: discord.Guild, space: dict) -> None:
         role = guild.get_role(space["role_id"]) if space["role_id"] else None
@@ -187,7 +188,11 @@ class TeamsCog(commands.Cog):
             await self.bot.db.run(team_spaces.forget, space["team_id"])
             return
         if not space["category_id"]:
-            return  # being unlocked right now
+            # Being unlocked right now; still not made after 10 minutes (the bot restarted meanwhile): refunded.
+            if time.time() - space["unlocked_at"] > 600:
+                back = await self.bot.db.run(team_spaces.refund, space["team_id"])
+                log.warning("Team %s's category was never made: %s emeralds refunded", space["team_id"], back)
+            return
         name = space_name(team)
         if role is None:
             role = await guild.create_role(name=name, reason="Blocky: team role (it was missing)")
@@ -231,7 +236,10 @@ class TeamsCog(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def space_loop(self) -> None:
-        await self.sync_spaces()  # repairs what was changed by hand (a deleted role or category…)
+        try:
+            await self.sync_spaces()  # repairs what was changed by hand (a deleted role or category…)
+        except Exception:  # never let the loop die
+            log.exception("Team spaces loop failed")
 
     @space_loop.before_loop
     async def before_space_loop(self) -> None:
@@ -246,6 +254,19 @@ class TeamsCog(commands.Cog):
         guild = getattr(self.bot, "main_guild", None)
         if guild is not None and member.guild.id == guild.id:
             await self.after_change()  # a member coming back gets their team role again
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member) -> None:
+        """Leaving the server leaves the team: a departed leader would freeze it (nobody could invite,
+        kick or transfer), and a departed member would hold a place forever."""
+        guild = getattr(self.bot, "main_guild", None)
+        if guild is None or member.guild.id != guild.id:
+            return
+        if await self.bot.db.run(teams.team_of, member.id) is None:
+            return
+        res = await self.bot.db.run(teams.leave, member.id)
+        log.info("%s left the server and team %s", member, res["team"]["tag"])
+        await self.after_change()
 
     @commands.Cog.listener()
     async def on_blocky_config_changed(self, key: str, before) -> None:

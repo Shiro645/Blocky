@@ -99,3 +99,22 @@ class StaffLogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ResetRewardTests(GameTestCase):
+    async def test_a_progress_reset_doesnt_pay_achievements_again(self):
+        from game import profiles, progress, reset
+        await self.run_game(players.set_level, ALICE, 50)
+        await self.run_game(progress.check_achievements, ALICE)
+        await self.run_game(players.bump_stat, ALICE, "seasons_won")
+        await self.run_game(profiles.set_title, ALICE, "season_champion")
+        rich = await self.run_game(players.get_emeralds, ALICE)
+        self.assertGreater(rich, 0)
+        await self.run_game(reset.apply, {"progress"}, ALICE)
+        self.assertIsNone((await self.run_game(profiles.get, ALICE))["title"])  # not earned anymore
+        await self.run_game(players.bump_stat, ALICE, "blocks_mined")  # re-unlocks the level achievements
+        self.assertIn("level_10", await self.run_game(progress.unlocked_codes, ALICE))
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), rich)  # but pays nothing
+        await self.run_game(reset.apply, {"progress", "wealth"}, ALICE)
+        await self.run_game(players.bump_stat, ALICE, "blocks_mined")
+        self.assertGreater(await self.run_game(players.get_emeralds, ALICE), 0)  # a real fresh start pays again

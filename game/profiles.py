@@ -148,6 +148,17 @@ def get(ctx: Ctx, user_id: int) -> dict:
     return out
 
 
+def check_worn(ctx: Ctx, user_id: int) -> None:
+    """Take off an earned title or frame whose condition isn't met anymore (after a /reset)."""
+    worn = get(ctx, user_id)
+    title = worn["title"]
+    if title and not title.startswith("custom:") and (title not in TITLES or not _met(ctx, user_id, TITLES[title].unlock)):
+        _set(ctx, user_id, "title", None)
+    frame = worn["frame"]
+    if frame and frames_of(ctx, user_id).get(frame) != "owned":
+        _set(ctx, user_id, "frame", None)
+
+
 def frames_of(ctx: Ctx, user_id: int) -> dict[str, str]:
     """frame -> "owned", "price" (can be bought) or "locked" (earned by playing)."""
     owned = _owned(ctx, user_id, "frame")

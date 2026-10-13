@@ -87,9 +87,11 @@ class GuideTests(GameTestCase):
         self.assertIsNone(await self.run_game(guide.channel_deleted, 100))
         self.assertIsNone((await self.run_game(guide.overview, ALICE))["channel_id"])
 
-    async def test_a_full_reset_starts_the_checklist_over(self):
+    async def test_a_reset_starts_the_checklist_over(self):
         await self.run_game(guide.opened, ALICE, 100, 200)
         await self.do_everything(ALICE)
         await self.run_game(reset.apply, {"progress"}, ALICE)
         state = await self.run_game(guide.overview, ALICE)
-        self.assertFalse(state["completed"] or state["rewarded"])
+        self.assertEqual((state["completed"], state["rewarded"]), (False, True))  # the reward isn't paid twice
+        await self.run_game(reset.apply, {"progress", "wealth"}, ALICE)  # a real fresh start
+        self.assertFalse((await self.run_game(guide.overview, ALICE))["rewarded"])

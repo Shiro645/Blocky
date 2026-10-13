@@ -546,6 +546,16 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (user_id, day)
     );
     """,
+    # 26: rewards already paid (achievements…), kept by a /reset of the progress so they're never paid twice
+    """
+    CREATE TABLE rewards_paid (
+        user_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,            -- achievement
+        key TEXT NOT NULL,
+        PRIMARY KEY (user_id, kind, key)
+    );
+    INSERT OR IGNORE INTO rewards_paid(user_id, kind, key) SELECT user_id, 'achievement', code FROM achievements;
+    """,
 ]
 
 
