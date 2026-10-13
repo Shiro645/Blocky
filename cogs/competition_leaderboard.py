@@ -83,8 +83,10 @@ class LeaderboardCog(commands.Cog):
         if file is None:
             await interaction.response.send_message(embed=embed)
         else:
-            embed.set_image(url="attachment://profile.png")
-            await interaction.response.send_message(embed=embed, file=file)
+            # The card first: an embed's image always comes under its fields, so it gets its own embed above.
+            card = discord.Embed(color=embed.color)
+            card.set_image(url="attachment://profile.png")
+            await interaction.response.send_message(embeds=[card, embed], file=file)
         await self.bot.db.run(players.bump_stat, interaction.user.id, "profiles_viewed")  # a guide step
 
     def build_profile_embed(self, target: discord.abc.User, p: dict, card: bool = False) -> discord.Embed:
