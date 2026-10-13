@@ -35,7 +35,7 @@ class Fighter:
     attacks: int = 0
     hits_taken: int = 0
     potions_used: int = 0
-    strong_potion_used: bool = False  # level II potions: one per duel
+    strong_potions_used: int = 0  # level II potions: potions.strong_per_fight per duel
     speed_turns: int = 0  # own turns left with the Speed potion
     speed_chance: float = 0.0
     potion_boost: float = 0.0  # Witches: potion effects +X%
@@ -120,8 +120,8 @@ class Fight:
             raise GameError("You already drank a potion this turn: now attack!")
         if self.potions_left(self.current) <= 0:
             raise GameError(f"You already drank {potions.max_per_duel()} potions in this duel.")
-        if potions.parse(key)[1] >= 2 and self.current.strong_potion_used:
-            raise GameError("Only one reinforced (II) potion per duel.")
+        if potions.parse(key)[1] >= 2 and self.current.strong_potions_used >= potions.strong_per_fight():
+            raise GameError(potions.strong_limit_text("duel"))
         if potions.parse(key)[0] == "healing" and self.current.hp >= self.current.max_hp:
             raise GameError("You are already at full health.")
 
@@ -138,7 +138,7 @@ class Fight:
         crit = rng.random() < d["crit_chance"]
         if crit:
             damage *= d["crit_multiplier"]
-        damage = max(0.5, damage * (1 - defender.reduction))
+        damage = max(float(d["min_hit_after_armor"]), damage * (1 - defender.reduction))
         if defender.blocking:
             return Hit(damage, crit, blocked=True)  # what it would have dealt
         defender.hp = max(0.0, defender.hp - damage)
@@ -154,7 +154,7 @@ class Fight:
         kind, level = potions.parse(potion)
         boost = 1.0 + attacker.potion_boost
         attacker.potions_used += 1
-        attacker.strong_potion_used = attacker.strong_potion_used or level >= 2
+        attacker.strong_potions_used += 1 if level >= 2 else 0
         if kind == "healing":
             turn.healed = min(potions.effect(potion, "healing_hp") * boost, attacker.max_hp - attacker.hp)
             attacker.hp += turn.healed

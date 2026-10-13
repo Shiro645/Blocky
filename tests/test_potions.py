@@ -147,6 +147,19 @@ class FightEngineTests(unittest.TestCase):
             fight.play(random.Random(8), "strength", block=True)
         self.assertEqual(a.potions_used, 0)  # refused before the potion
 
+    def test_reinforced_potions_per_fight_and_random_weights(self):
+        settings.load({"potions": {"strong_per_fight": 2}})
+        fight = duel.Fight(random.Random(1), *fighters(attack=0.1))
+        fight.play(random.Random(1), "speed:2")
+        fight.play(random.Random(2))
+        fight.play(random.Random(3), "strength:2")  # a second one is fine now
+        fight.play(random.Random(4))
+        with self.assertRaisesRegex(GameError, "Only 2 reinforced"):
+            fight.drink("harming:2")
+        settings.load({"potions": {"random_weights": {"strength": 0, "speed": 0, "healing": 0, "harming": 1}}})
+        rng = random.Random(5)
+        self.assertEqual({potions.random_kind(rng) for _ in range(30)}, {"harming"})
+
     def test_no_healing_at_full_health(self):
         fight = duel.Fight(random.Random(1), *fighters())
         with self.assertRaisesRegex(GameError, "full health"):
@@ -249,6 +262,18 @@ class PotionSourceTests(GameTestCase):
         for r in rewards:
             owned = sum((await self.run_game(potions.owned, r["user_id"])).values())
             self.assertEqual(owned, 1 if r["potion"] else 0)
+
+    async def test_boss_books_and_potions_follow_the_settings(self):
+        settings.load({"potions": {"boss_top": 1, "boss_potions": 2}, "enchants": {"boss_book_top": 2}})
+        await self.run_game(events.spawn_boss, "Test", 1000)
+        for uid in (ALICE, BOB, CAROL):
+            await self.run_game(events.attack_boss, uid)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
+        self.advance(120)
+        rewards = (await self.run_game(events.attack_boss, ALICE))["defeat"]["rewards"]
+        self.assertEqual([bool(r["book"]) for r in rewards], [True, True, False])
+        self.assertEqual(sum((await self.run_game(potions.owned, rewards[0]["user_id"])).values()), 2)
+        self.assertIsNone(rewards[1]["potion"])
 
     async def test_potions_trade_and_count_in_the_fortune(self):
         await self.run_game(potions.give, ALICE, "speed", 3)

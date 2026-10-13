@@ -109,7 +109,7 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "enchanting", "✨ Enchanting",
         "**Lapis lazuli** is found while mining and in drops. **Enchanted books** (levels I to III) come from "
-        "drops, bosses (the top damage dealer gets a strong one), completing every weekly challenge, the wandering "
+        "drops, bosses (the top damage dealers get a strong one), completing every weekly challenge, the wandering "
         "villager (level III) and other players.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
@@ -155,7 +155,7 @@ SECTIONS: tuple[Section, ...] = (
         "sometimes a **critical hit** (double damage). Armor lowers the damage you take, and the player who strikes "
         "second gets a few extra HP. Better gear wins more often, but not always: luck matters.\n\n"
         "**Potions** (`/potions`): at most one per turn and a few per duel. Found in drops and on bosses; "
-        "**reinforced** potions (II) are twice as strong (only one per duel) and sold by the wandering villager. "
+        "**reinforced** potions (II) are stronger (only a few per duel) and sold by the wandering villager. "
         "Witches make potions stronger.\n\n"
         "**Training dummy**: `/dummy hit` hits a dummy with your gear and shows every hit, your total and your "
         "records, with a leaderboard (`/dummy top`). `/dummy duel [gear]` is a whole training duel against a dummy "
@@ -182,7 +182,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
         "**Bosses**: a boss with shared health. Everyone can attack (`/attack` or the button) once in a while; when "
-        "it's defeated, the rewards are shared by damage dealt and the top damage dealer gets a bonus and a book. "
+        "it's defeated, the rewards are shared by damage dealt and the top damage dealers get a bonus, a book and potions. "
         "If nobody defeats it in time, it escapes. `/boss` shows the current one.\n\n"
         "**The wandering villager** comes every day at the same hours in the events channel, with 3 offers: a sale "
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "

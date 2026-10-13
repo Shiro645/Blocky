@@ -98,6 +98,7 @@ DEFAULTS: dict[str, Any] = {
         "hp": 20,
         # A hit deals between min_damage and the sword's maximum (gear.sword_max_damage).
         "min_damage": 1,
+        "min_hit_after_armor": 0.5,  # armor never lowers a hit below this
         "crit_chance": 0.15,
         "crit_multiplier": 2.0,
         "second_player_bonus_hp": 2,  # makes up for not striking first
@@ -117,8 +118,12 @@ DEFAULTS: dict[str, Any] = {
         "speed_turns": 3,  # ...during this turn and the next 2 turns of the player
         "healing_hp": 3,
         "harming_damage": 3,  # direct damage, reduced by armor
-        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get a random potion
-        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2, one per duel
+        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get boss_potions random potions
+        "boss_potions": 1,
+        "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2...
+        "strong_per_fight": 1,  # ...and only this many per duel or dungeon run
+        # Random potions (drops, bosses, the villager's goods): how often each kind comes (0 = never).
+        "random_weights": {"strength": 1, "speed": 1, "healing": 1, "harming": 1},
         "value": 40,  # reference values in emeralds (fortune, fair prices)
         "value_ii": 120,
     },
@@ -175,7 +180,8 @@ DEFAULTS: dict[str, Any] = {
         "lapis_amount": [1, 2],
         "apply_cost": [2, 4, 8],  # lapis to apply a book of level I / II / III
         "book_weights": [60, 30, 10],  # chances of level I / II / III (drops, challenges)
-        "boss_book_weights": [0, 70, 30],  # book of the top damage dealer
+        "boss_book_weights": [0, 70, 30],  # book of the top damage dealers (boss_book_top)
+        "boss_book_top": 1,
         "challenges_book": True,  # a random book for completing every weekly challenge
         # Effects for level I / II / III.
         "efficiency_seconds": [2, 4, 6],  # pickaxe: shorter mining cooldown
@@ -254,8 +260,19 @@ DEFAULTS: dict[str, Any] = {
         "cooldown_minutes": 60,
         "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
         "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
-        "max_potions": 3,  # per player and per run (one reinforced II at most)
+        "max_potions": 3,  # per player and per run (reinforced II ones: potions.strong_per_fight)
         "wave_growth": 0.10,
+        # Each extra player in the group adds this share of every wave's monsters (1 = a whole wave more).
+        "group_monsters": 1.0,
+        "min_hit_after_armor": 0.1,  # armor never lowers a monster's hit below this
+        # Health and damage of each monster at strength 1 (Normal); difficulty and wave_growth multiply them.
+        "monsters": {
+            "zombie": {"hp": 3.2, "min_damage": 0.18, "max_damage": 0.59},
+            "skeleton": {"hp": 2.6, "min_damage": 0.18, "max_damage": 0.59},
+            "spider": {"hp": 2.6, "min_damage": 0.14, "max_damage": 0.36},
+            "creeper": {"hp": 2.6, "min_damage": 1.3, "max_damage": 2.1},
+            "ravager": {"hp": 8.5, "min_damage": 0.36, "max_damage": 0.95},
+        },
         "clear_bonus": 0.5,
         "xp_per_wave": 15,
         "wave_rewards": [5, 8, 12, 18, 27],
@@ -616,6 +633,13 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for key in ("book_weights", "boss_book_weights"):
         if sum(float(w) for w in ench[key]) <= 0:
             out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    if sum(float(w) for w in merged["potions"]["random_weights"].values()) <= 0:
+        out.append(("`balance.potions.random_weights`: at least one potion needs a weight above 0.",
+                    [("potions", "random_weights", k) for k in merged["potions"]["random_weights"]]))
+    for kind, monster in merged["pve"]["monsters"].items():
+        if float(monster["min_damage"]) > float(monster["max_damage"]):
+            out.append((f"`balance.pve.monsters.{kind}`: the smallest hit can't be above the biggest.",
+                        [("pve", "monsters", kind, "min_damage"), ("pve", "monsters", kind, "max_damage")]))
     if sum(float(w) for w in merged["villager"]["book_weights"]) <= 0:
         out.append(("`balance.villager.book_weights`: at least one level needs a weight above 0.",
                     [("villager", "book_weights")]))

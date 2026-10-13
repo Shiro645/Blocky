@@ -305,9 +305,11 @@ def _potions(s: Settings) -> list[str]:
     p = s["potions"]
     lines = [f"**{potion.name}**: {potions.effect_text(key)}" for key, potion in potions.POTIONS.items()]
     lines += [
-        f"Reinforced (II): effect **×{num(p['level2_multiplier'])}**, only one per duel",
+        f"Reinforced (II): effect **×{num(p['level2_multiplier'])}**, **{num(p['strong_per_fight'])}** per duel or "
+        "dungeon run at most",
         f"Up to **{num(p['max_per_duel'])}** potions per duel, one per turn",
-        f"Bosses: the top **{num(p['boss_top'])}** damage dealers get a random potion",
+        f"Bosses: the top **{num(p['boss_top'])}** damage dealers get **{num(p['boss_potions'])}** random "
+        f"potion{'s' if int(p['boss_potions']) != 1 else ''}",
     ]
     return lines
 
@@ -336,9 +338,10 @@ def _boss(s: Settings) -> list[str]:
     return [
         spawn,
         f"HP: **{num(b['hp'])}** · stays **{num(b['duration_hours'])} h**, then escapes (nobody is paid)",
-        f"Reward pool: {em(b['reward_pool'])} shared by damage · top damage dealer: **+{num(b['top_damage_bonus'])}** "
-        f"and a book",
-        f"Top **{num(s['potions']['boss_top'])}**: a random potion · XP for everyone: **{num(b['xp_reward'])}**",
+        f"Reward pool: {em(b['reward_pool'])} shared by damage · top damage dealer: **+{num(b['top_damage_bonus'])}**",
+        f"Top **{num(s['enchants']['boss_book_top'])}**: a book · top **{num(s['potions']['boss_top'])}**: "
+        f"**{num(s['potions']['boss_potions'])}** random potion{'s' if int(s['potions']['boss_potions']) != 1 else ''} "
+        f"· XP for everyone: **{num(b['xp_reward'])}**",
         "Looting: " + per_level(s["enchants"]["looting_boss_bonus"], pct) + " more reward",
     ]
 
@@ -495,7 +498,8 @@ def _pve(s: Settings) -> list[str]:
                      f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
     lines += [
         f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
-        f"Up to **{num(p['max_players'])}** players (as many monsters per player) · a run every "
+        f"Up to **{num(p['max_players'])}** players (each extra player: **+{pct(p['group_monsters'])}** monsters) · "
+        "a run every "
         f"**{duration(float(p['cooldown_minutes']) * 60)}**",
         f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
         f"**{duration(float(p['decision_minutes']) * 60)}** to decide between waves",

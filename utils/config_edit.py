@@ -305,6 +305,8 @@ FIELDS: list[Field] = [
     _b("duel.min_stake", "duels", "Minimum stake", min=1),
     _b("duel.hp", "duels", "HP of each player", min=1, max=10_000),
     _b("duel.min_damage", "duels", "Minimum damage of a hit", "Strength potions raise it for a turn.", "float", 0, 1000),
+    _b("duel.min_hit_after_armor", "duels", "Smallest hit after armor", "Armor never lowers a hit below this "
+       "(duels, tournament, dummy).", kind="float", max=100),
     _pct("duel.crit_chance", "duels", "Critical hit chance"),
     _b("duel.crit_multiplier", "duels", "Critical hit multiplier", kind="float", min=1, max=10),
     _b("duel.second_player_bonus_hp", "duels", "Extra HP for the second player", "Makes up for not striking first.", max=1000),
@@ -325,7 +327,13 @@ FIELDS: list[Field] = [
     _b("potions.healing_hp", "potions", "Healing: HP healed", kind="float", max=100),
     _b("potions.harming_damage", "potions", "Harming: direct damage", "Reduced by armor.", "float", max=100),
     _b("potions.level2_multiplier", "potions", "Reinforced potions: effect ×", kind="float", min=1, max=10),
-    _b("potions.boss_top", "potions", "Bosses: top N fighters get a potion", max=50),
+    _b("potions.boss_top", "potions", "Bosses: top N fighters get potions", max=50),
+    _b("potions.boss_potions", "potions", "Bosses: potions each of them gets", max=20),
+    _b("potions.strong_per_fight", "potions", "Reinforced (II) potions per fight", "Per duel and per dungeon run.",
+       max=20),
+    *[_b(f"potions.random_weights.{k}", "potions", f"Random potions: {name} weight",
+         "How often it comes in drops, bosses and the villager's goods (0 = never).", kind="float", max=1000)
+      for k, name in (("strength", "Strength"), ("speed", "Speed"), ("healing", "Healing"), ("harming", "Harming"))],
     _b("potions.value", "potions", "Potion value (emeralds)", "Used for fortunes and fair prices."),
     _b("potions.value_ii", "potions", "Reinforced potion value (emeralds)", "Used for fortunes and fair prices."),
     # ---- enchanting ----
@@ -336,7 +344,8 @@ FIELDS: list[Field] = [
     *_per_level("enchants.book_weights", "enchant_books", "Book level weight", "Chances of each level for books "
                 "from drops and challenges (weight ÷ total).", max=10_000),
     *_per_level("enchants.boss_book_weights", "enchant_books", "Boss book level weight", "Chances of each level for "
-                "the book of a boss's top damage dealer.", max=10_000),
+                "the book of a boss's top damage dealers.", max=10_000),
+    _b("enchants.boss_book_top", "enchant_books", "Bosses: top N fighters get a book", max=50),
     _b("enchants.challenges_book", "enchant_books", "Book for all weekly challenges", kind="bool", min=None,
        help="A random book for completing every challenge of the week."),
     _b("enchants.lapis_value", "enchant_books", "Lapis value (emeralds)", "Used for fortunes and fair prices."),
@@ -495,7 +504,20 @@ FIELDS: list[Field] = [
     _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
     _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
        "Then everyone still in leaves with their loot.", min=1, max=60),
-    _b("pve.max_potions", "pve", "Potions per player and run", "One reinforced (II) at most.", max=20),
+    _b("pve.max_potions", "pve", "Potions per player and run", "Reinforced (II) ones: see Potions.", max=20),
+    _pct("pve.group_monsters", "pve", "Monsters added per extra player",
+         "100% = each player in the group adds a whole wave of monsters.", max=5),
+    _b("pve.min_hit_after_armor", "pve", "Smallest monster hit after armor", "Armor never lowers a hit below "
+       "this.", kind="float", max=10),
+    *[f for key, name in (("zombie", "Zombie"), ("skeleton", "Skeleton"), ("spider", "Spider"),
+                          ("creeper", "Creeper"), ("ravager", "Ravager")) for f in (
+        _b(f"pve.monsters.{key}.hp", "pve", f"{name}: health", "At Normal difficulty, wave 1.", kind="float",
+           min=0.1, max=1000),
+        _b(f"pve.monsters.{key}.min_damage", "pve", f"{name}: smallest hit", "At Normal difficulty, wave 1, "
+           "before armor.", kind="float", max=100),
+        _b(f"pve.monsters.{key}.max_damage", "pve", f"{name}: biggest hit", "At Normal difficulty, wave 1, "
+           "before armor.", kind="float", max=100),
+    )],
     _pct("pve.wave_growth", "pve", "Monsters stronger each wave", "Health and damage.", max=2),
     _pct("pve.clear_bonus", "pve", "Bonus for clearing wave 5", "Added to the loot.", max=10),
     _b("pve.xp_per_wave", "pve", "XP per wave cleared", max=10_000),

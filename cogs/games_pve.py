@@ -50,7 +50,7 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
         lines.append("This group was cancelled: entries refunded.")
     else:
         if last is not None:
-            title += f" · wave {last['wave']}/5 " + ("cleared ✅" if last["result"]["cleared"] else "lost ☠️")
+            title += f" · wave {last['wave']}/{len(pve.WAVES)} " + ("cleared ✅" if last["result"]["cleared"] else "lost ☠️")
             lines += last["result"]["log"][-12:]
             if last["result"]["cleared"] and not last["cleared_all"]:
                 lines.append(f"💰 +{em(last['reward'])} loot and +{last['xp']} XP each")
@@ -58,7 +58,7 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
                 lines.append(f"🏆 **The dungeon is cleared!** Loot +{float(c['clear_bonus']):.0%}, paid to everyone left.")
         if run["status"] == "between":
             nxt = run["wave"] + 1
-            lines.append(f"\n**Next: wave {nxt}/5** — {pve.wave_text(nxt, len(run['in']))} "
+            lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, len(run['in']))} "
                          f"(+{em(pve.wave_reward(diff, nxt))} each)")
         elif run["status"] == "done" and last is None:
             lines.append("This run is over.")
@@ -67,7 +67,7 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
     embed.add_field(name=f"Players ({len(run['members'])}/{c['max_players']})", value=join_lines(members), inline=False)
     if run["status"] == "lobby":
         waves = [f"{w}. {pve.wave_text(w)} — {em(pve.wave_reward(diff, w))}" for w in range(1, 6)]
-        waves.append(f"Clear all 5: loot +{float(c['clear_bonus']):.0%}")
+        waves.append(f"Clear all {len(pve.WAVES)}: loot +{float(c['clear_bonus']):.0%}")
         embed.add_field(name="Waves (per player)", value="\n".join(waves), inline=False)
     elif run["status"] == "between":
         embed.set_footer(text="The leader starts the next wave · anyone can drink a potion or leave with their loot. "
@@ -186,9 +186,9 @@ class PveCog(commands.Cog):
         embed = discord.Embed(
             title="⚔️ Dungeon",
             description=(
-                "5 waves, alone or in a group (`/pve start`). Health isn't restored between waves. Each wave "
+                f"{len(pve.WAVES)} waves, alone or in a group (`/pve start`). Health isn't restored between waves. Each wave "
                 "cleared adds to your loot, but if you die you lose it (and the entry): leave in time! "
-                f"Clearing all 5 gives +{float(c['clear_bonus']):.0%}.\n\n" + "\n".join(lines)
+                f"Clearing all {len(pve.WAVES)} gives +{float(c['clear_bonus']):.0%}.\n\n" + "\n".join(lines)
             ),
             color=discord.Color.blurple(),
         )

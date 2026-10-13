@@ -102,7 +102,8 @@ class DummyMember:
 def free_potions() -> dict[str, int]:
     """Training: every potion, as many as a duel allows (nothing is taken from the inventory)."""
     out = {kind: potions.max_per_duel() for kind in potions.POTIONS}
-    out.update({potions.key_of(kind, 2): 1 for kind in potions.POTIONS})
+    if potions.strong_per_fight() > 0:
+        out.update({potions.key_of(kind, 2): potions.strong_per_fight() for kind in potions.POTIONS})
     return out
 
 
