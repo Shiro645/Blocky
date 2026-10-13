@@ -14,7 +14,7 @@ from game import backups, settings
 from game.errors import GameError
 from utils import config_edit as ce
 from utils.checks import staff_only
-from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config
+from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config, staff_role_id
 from utils.ui import BaseView, report_error
 
 log = logging.getLogger("admin_config")
@@ -59,19 +59,23 @@ class Screen:
     category_page: int = 0  # page of the category menu (more than 25 categories)
 
 
-def role_list(guild: discord.Guild | None, assignable: bool) -> list[discord.Role]:
+def role_list(guild: discord.Guild | None, assignable: bool, exclude: set[int] = frozenset()) -> list[discord.Role]:
     """The server's roles for a menu, the highest first.
 
     Discord's own role menu only shows some of the roles, so the bot lists them itself.
-    Bot and integration roles are left out, and for roles the bot gives (level and champion
-    roles) the ones above the bot's own role too: it couldn't give them.
+    Bot and integration roles are left out. For roles the bot gives and takes back (level, champion, team
+    leader and species roles) also: the ones above the bot's own role (it couldn't give them), the staff role,
+    roles with staff or admin powers (the bot would hand them to players, and take them from everyone else),
+    and roles already used by another setting (`exclude`).
     """
     if guild is None:
         return []
     roles = [r for r in reversed(guild.roles) if not r.is_default() and not r.managed]
     top = guild.me.top_role if guild.me is not None else None
-    if assignable and top is not None:
-        roles = [r for r in roles if r < top]
+    if assignable:
+        staff = staff_role_id()
+        roles = [r for r in roles if (top is None or r < top) and r.id != staff and ce.safe_to_give(r.permissions)
+                 and r.id not in exclude]
     return roles
 
 
@@ -275,7 +279,8 @@ class ConfigView(BaseView):
 
     def role_controls(self, assignable: bool) -> None:
         """A page of the server's roles (row 1) and the page buttons (row 2)."""
-        roles = role_list(self.guild, assignable)
+        keep = self.field.path if self.screen.field else ("roles", "level_roles")
+        roles = role_list(self.guild, assignable, ce.roles_in_use(load_config(), keep) if assignable else frozenset())
         pages = max(1, -(-len(roles) // PAGE_SIZE))
         page = min(self.screen.role_page, pages - 1)
         if roles:

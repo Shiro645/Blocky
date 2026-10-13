@@ -194,3 +194,17 @@ class PrepareChangeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RolesTheBotGivesTests(unittest.TestCase):
+    def test_no_staff_or_admin_powers(self):
+        from types import SimpleNamespace as P
+        self.assertTrue(ce.safe_to_give(P(send_messages=True, administrator=False)))
+        self.assertFalse(ce.safe_to_give(P(administrator=True)))
+        self.assertFalse(ce.safe_to_give(P(moderate_members=True)))
+        self.assertFalse(ce.safe_to_give(P(manage_roles=True)))
+
+    def test_roles_already_used_elsewhere(self):
+        cfg = {"roles": {"team_leader": 5, "species_miner": 6, "event_ping": 7, "level_roles": {"10": 8, "25": 9}}}
+        self.assertEqual(ce.roles_in_use(cfg, ("roles", "team_leader")), {6, 7, 8, 9})
+        self.assertEqual(ce.roles_in_use(cfg, ("roles", "level_roles")), {5, 6, 7})

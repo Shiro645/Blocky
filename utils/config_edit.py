@@ -834,3 +834,30 @@ def write_config(path: Path, cfg: dict, backup_folder: Path, keep: int = 20) -> 
             p.unlink()
     path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return copy_path
+
+
+# ---------------- roles the bot gives out ----------------
+# A role with one of these is never given out by the bot (staff and admin powers).
+POWERS = ("administrator", "manage_guild", "manage_roles", "manage_channels", "manage_webhooks", "manage_messages",
+          "manage_nicknames", "manage_threads", "manage_events", "ban_members", "kick_members", "moderate_members",
+          "mention_everyone", "view_audit_log", "move_members", "mute_members", "deafen_members")
+
+
+def safe_to_give(permissions: Any) -> bool:
+    """A role the bot may give out automatically: no staff or admin power (`permissions`: discord.Permissions)."""
+    return not any(getattr(permissions, p, False) for p in POWERS)
+
+
+def roles_in_use(cfg: dict, keep: tuple = ()) -> set[int]:
+    """Roles already set in another role setting (`keep`: the path of the setting being changed)."""
+    roles = cfg.get("roles", {}) or {}
+    used: set[int] = set()
+    for key, value in roles.items():
+        if ("roles", key) == tuple(keep):
+            continue
+        if key == "level_roles" and isinstance(value, dict):
+            if tuple(keep[:2]) != ("roles", "level_roles"):
+                used |= {int(v) for v in value.values() if int(v or 0)}
+        elif isinstance(value, int) and value:
+            used.add(value)
+    return used
