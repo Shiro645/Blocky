@@ -185,7 +185,11 @@ SECTIONS: tuple[Section, ...] = (
         ("pve start",),
     ),
     Section(
-        "events", "🐉 Bosses, drops and the wandering villager",
+        "events", "🐉 Timed events, bosses, drops and the wandering villager",
+        "**Timed events** (`/events`): for an hour, a bonus for everyone: 🎰 **Gambling Frenzy** (bigger bets and "
+        "daily limit at the Lucky Block and the wheel), ⛏️ **Mining Rush** (more mining XP), 💰 **Golden Hour** "
+        "(`/sell` pays more), 🍀 **Lucky Hour** (more obsidian and bedrock) or 🏷️ **Market Sale** (cheaper "
+        "`/market`). One comes every day at a random time, announced in the events channel.\n\n"
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
         "**Bosses**: a boss with shared health. Everyone can attack (`/attack` or the button) once in a while; when "
@@ -195,7 +199,7 @@ SECTIONS: tuple[Section, ...] = (
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "
         "reinforced potion). Each offer exists **once**: the first to click gets it. `/villager` says when he's "
         "next here.",
-        ("boss", "villager"),
+        ("events", "boss", "villager"),
     ),
     Section(
         "competition", "🏆 Seasons, challenges, achievements and leaderboards",
@@ -205,8 +209,9 @@ SECTIONS: tuple[Section, ...] = (
         "the top 3 win emeralds and the winner gets the **champion role** until the next season ends.\n"
         "**Leaderboards** (`/leaderboard`): emeralds, level, total fortune, this week's season, top senders, blocks "
         "mined, bedrock, crafts, duels won, boss damage and achievements.\n\n"
-        "**Weekly challenges** (`/challenges`): a few goals each week, the same for everyone, with a reward each, "
-        "and an enchanted book when you finish them all.\n"
+        "**Challenges** (`/challenges`): a few small goals **every day** and bigger ones **every week**, the same "
+        "for everyone, with a reward each (and an enchanted book when you finish all the weekly ones). Mining, "
+        "selling, duels, mini-games, the dungeon, robberies… and never the same as the day or the week before.\n"
         "**Achievements** (`/achievements`): milestones with a reward, announced when you unlock them. You can show "
         "your favourite ones on your profile card.",
         ("season", "challenges"),
@@ -276,7 +281,8 @@ SECTIONS: tuple[Section, ...] = (
         "try each).\n"
         "**Robbery**: `/rob <member> <mode>`: **risky** (they get pinged, big loot) or **discreet** (no ping, small "
         "loot). The victim has a while to press **Stop the thief!**: then the thief pays them a fine instead. "
-        "Low-level players can't be robbed, and a robbed player is safe for a while.\n"
+        "Low-level players can't be robbed, a robbed player is safe for a while, and nobody can start a robbery "
+        "at night (everyone is asleep).\n"
         "Winnings from these games don't count for the seasons.",
         ("luckyblock", "wheel", "blockdle guess", "quiz", "rob"),
     ),

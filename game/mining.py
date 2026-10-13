@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import enchants, gear, players, settings, species, teams
+from game import enchants, gear, live_events, players, settings, species, teams
 from game.catalog import BLOCK_TYPES
 from game.db import Ctx
 
@@ -19,8 +19,9 @@ def cooldown_seconds(efficiency_points: int, enchant_seconds: float = 0) -> int:
     return max(int(m["min_cooldown_seconds"]), int(base - t["efficiency_seconds_per_point"] * points - enchant_seconds))
 
 
-def pile_weights(amount: int, miner: int, lucky: int) -> dict[str, float]:
-    """Weight of each block for a pile of `amount` blocks, with the talent bonuses."""
+def pile_weights(amount: int, miner: int, lucky: int, rare: float = 1.0) -> dict[str, float]:
+    """Weight of each block for a pile of `amount` blocks, with the talent bonuses (`rare`: obsidian and
+    bedrock weigh that much more, during a Lucky Hour)."""
     m, t = settings.get()["mining"], settings.get()["talents"]
     if amount >= 6:
         weights = dict(m["odds_6_blocks"])
@@ -35,16 +36,18 @@ def pile_weights(amount: int, miner: int, lucky: int) -> dict[str, float]:
         weights = dict(m["odds_1_block"])
         weights["obsidian"] += t["lucky_rare_weight"] * lucky
         weights["bedrock"] += t["lucky_rare_weight"] * lucky
+    for block in ("obsidian", "bedrock"):
+        weights[block] *= rare
     return {b: float(weights[b]) for b in BLOCK_TYPES}
 
 
-def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int) -> tuple[str, int]:
+def roll_blocks(rng: random.Random, miner_points: int, lucky_points: int, rare: float = 1.0) -> tuple[str, int]:
     t = settings.get()["talents"]
     miner = min(max(0, miner_points), t["caps"]["miner"])
     lucky = min(max(0, lucky_points), t["caps"]["lucky"])
     amount = rng.randint(1, 6)
 
-    weights = pile_weights(amount, miner, lucky)
+    weights = pile_weights(amount, miner, lucky, rare)
     possible = [b for b, w in weights.items() if w > 0]
     if len(possible) == 1:  # nothing to roll
         block = possible[0]
@@ -92,7 +95,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     g = settings.get()["gear"]
     user = players.get_user(ctx, user_id)
     tools = gear.get_equipped(ctx, user_id)
-    block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"])
+    block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"], live_events.rare_multiplier(ctx))
     used: list[dict] = []
     sticks = 0
 
@@ -136,6 +139,9 @@ def mine(ctx: Ctx, user_id: int) -> dict:
     team_bonus = teams.activity_bonus(ctx, user_id)
     if team_bonus:
         xp = int(round(xp * (1 + team_bonus)))
+    rush = live_events.xp_multiplier(ctx)  # a Mining Rush
+    if rush != 1:
+        xp = int(round(xp * rush))
 
     players.add_blocks(ctx, user_id, block, amount)
     players.add_blocks(ctx, user_id, "cobblestone", bonus)
@@ -166,6 +172,7 @@ def mine(ctx: Ctx, user_id: int) -> dict:
         "sticks": sticks,
         "xp": xp,
         "team_bonus": team_bonus,
+        "rush": rush,
         "lapis": lapis,
         "broken": broken,
         "cooldown": cooldown,

@@ -579,6 +579,26 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (user_id, timer)
     );
     """,
+    # 30: timed events (Gambling Frenzy, Mining Rush…) and the challenges picked for each day and week (kept so
+    # the next period can pick different ones)
+    """
+    CREATE TABLE live_events (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        starts_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        day TEXT,                      -- local date of the day's random event, NULL when the staff started it
+        started_by INTEGER,
+        announced INTEGER NOT NULL DEFAULT 0,  -- 0 = to post, 1 = posted, 2 = its end posted
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX live_events_ends ON live_events(ends_at);
+    CREATE TABLE challenge_sets (
+        period TEXT PRIMARY KEY,       -- "day:YYYY-MM-DD" or "week:YYYY-Www"
+        codes TEXT NOT NULL            -- the challenges picked, comma separated
+    );
+    """,
 ]
 
 

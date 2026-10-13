@@ -265,6 +265,25 @@ DEFAULTS: dict[str, Any] = {
         "cooldown_hours": 6,  # between two robberies of a thief
         "victim_protection_hours": 12,  # a robbed player can't be robbed again for this long
         "min_victim_level": 5,  # players below this level can't be robbed
+        # No robbery can start from night_start_hour to night_end_hour (local time): nobody robs sleeping
+        # players. The same hour twice = robberies all day.
+        "night_start_hour": 22,
+        "night_end_hour": 6,
+    },
+    # Timed events (/event start, and one random event a day): a bonus for everyone for a while.
+    "live_events": {
+        "daily_random": True,  # one event comes by itself every day
+        "earliest_hour": 10,  # it starts at a random time from this hour (local time)…
+        "latest_hour": 22,  # …to this one
+        "duration_minutes": 60,
+        # The events that can come by themselves (the staff can start any of them).
+        "random_kinds": {"gambling_frenzy": True, "mining_rush": True, "golden_hour": True, "lucky_hour": True,
+                         "market_sale": True},
+        "frenzy_multiplier": 2.0,  # Gambling Frenzy: the maximum bet and the daily cap of games of chance
+        "rush_xp_multiplier": 2.0,  # Mining Rush: mining XP
+        "golden_sell_bonus": 0.5,  # Golden Hour: /sell pays this much more for blocks
+        "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of obsidian and bedrock when mining
+        "market_sale_discount": 0.25,  # Market Sale: /market costs this much less
     },
     # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
     # every wave cleared adds up but is lost on death. Monsters' health and damage: x strength of the
@@ -399,7 +418,9 @@ DEFAULTS: dict[str, Any] = {
     },
     "challenges": {
         "per_week": 3,
-        # The pool the weekly challenges are picked from: what to reach, and the emeralds it pays.
+        "per_day": 3,
+        # The pool the weekly challenges are picked from: what to reach, and the emeralds it pays. A week never
+        # has the same challenges as the week before (when there are enough others).
         "goals": {
             "mine_blocks": {"target": 500, "reward": 150},
             "find_bedrock": {"target": 5, "reward": 150},
@@ -410,6 +431,27 @@ DEFAULTS: dict[str, Any] = {
             "boss_damage": {"target": 100, "reward": 150},
             "daily_rewards": {"target": 5, "reward": 150},
             "trades": {"target": 2, "reward": 75},
+            "lucky_blocks": {"target": 25, "reward": 150},
+            "wheel_spins": {"target": 25, "reward": 150},
+            "blockdle": {"target": 4, "reward": 150},
+            "quiz": {"target": 3, "reward": 150},
+            "pve_waves": {"target": 15, "reward": 150},
+            "dummy": {"target": 10, "reward": 100},
+            "robs": {"target": 3, "reward": 150},
+        },
+        # The pool of the daily challenges (small ones), never the same as the day before.
+        "daily_goals": {
+            "mine_blocks": {"target": 150, "reward": 30},
+            "find_bedrock": {"target": 1, "reward": 40},
+            "sell_blocks": {"target": 200, "reward": 30},
+            "win_duels": {"target": 1, "reward": 40},
+            "lucky_blocks": {"target": 5, "reward": 30},
+            "wheel_spins": {"target": 5, "reward": 30},
+            "blockdle": {"target": 1, "reward": 40},
+            "quiz": {"target": 1, "reward": 40},
+            "pve_waves": {"target": 3, "reward": 40},
+            "dummy": {"target": 3, "reward": 25},
+            "robs": {"target": 1, "reward": 50},
         },
     },
     # Achievements: the emeralds each one pays once, and the goal of the ones that count something.
@@ -442,6 +484,23 @@ DEFAULTS: dict[str, Any] = {
         "team_champion": {"reward": 150},
         "tycoon": {"goal": 10000, "reward": 500},
         "wear_and_tear": {"reward": 10},
+        "lucky_100": {"goal": 100, "reward": 200},
+        "wheel_100": {"goal": 100, "reward": 200},
+        "bullseye": {"reward": 100},
+        "blockdle_10": {"goal": 10, "reward": 150},
+        "quiz_10": {"goal": 10, "reward": 150},
+        "thief_10": {"goal": 10, "reward": 200},
+        "watch_5": {"goal": 5, "reward": 150},
+        "dungeon_hard": {"reward": 300},
+        "dungeon_hardcore": {"reward": 500},
+        "dungeon_nightmare": {"reward": 1000},
+        "challenger_10": {"goal": 10, "reward": 150},
+        "challenger_50": {"goal": 50, "reward": 500},
+        "high_roller": {"reward": 50},
+        "enchanter_10": {"goal": 10, "reward": 150},
+        "handyman_10": {"goal": 10, "reward": 100},
+        "regular_20": {"goal": 20, "reward": 200},
+        "moneylender": {"goal": 10000, "reward": 200},
     },
 }
 
@@ -615,6 +674,14 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for mode in ("risky", "discreet"):
         if r[f"{mode}_min"] > r[f"{mode}_max"]:
             out.append((f"`balance.rob.{mode}_min` must not be above `{mode}_max`.", [("rob", f"{mode}_min"), ("rob", f"{mode}_max")]))
+    if r["night_start_hour"] > 23 or r["night_end_hour"] > 23:
+        out.append(("`balance.rob.night_start_hour` and `night_end_hour` are hours: 0 to 23.",
+                    [("rob", "night_start_hour"), ("rob", "night_end_hour")]))
+    le = merged["live_events"]
+    if not 0 <= le["earliest_hour"] < le["latest_hour"] <= 23:
+        out.append(("Timed events: the random event starts between `earliest_hour` and `latest_hour`: hours from 0 "
+                    "to 23, the first one before the second.",
+                    [("live_events", "earliest_hour"), ("live_events", "latest_hour")]))
     if r["minutes_to_stop"] < 1:
         out.append(("`balance.rob.minutes_to_stop` must be at least 1.", [("rob", "minutes_to_stop")]))
     lo = merged["loans"]
@@ -638,9 +705,11 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
             out.append((f"`balance.mining.{pile}`: at least one block needs a weight above 0.", [("mining", pile)]))
     if merged["levels"]["xp_first_level"] < 1:
         out.append(("`balance.levels.xp_first_level` must be at least 1.", [("levels", "xp_first_level")]))
-    for code, goal in merged["challenges"]["goals"].items():
-        if goal["target"] < 1:
-            out.append((f"`balance.challenges.goals.{code}.target` must be at least 1.", [("challenges", "goals", code, "target")]))
+    for pool in ("goals", "daily_goals"):
+        for code, goal in merged["challenges"][pool].items():
+            if goal["target"] < 1:
+                out.append((f"`balance.challenges.{pool}.{code}.target` must be at least 1.",
+                            [("challenges", pool, code, "target")]))
     for code, achievement in merged["achievements"].items():
         if achievement.get("goal", 1) < 1:
             out.append((f"`balance.achievements.{code}.goal` must be at least 1.", [("achievements", code, "goal")]))

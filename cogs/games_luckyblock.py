@@ -29,7 +29,7 @@ def result_embed(user: discord.abc.User, res: dict) -> discord.Embed:
              else discord.Color.dark_grey())
     embed = discord.Embed(title=f"{o.emoji} {o.name}!", description="\n".join(lines), color=color)
     embed.set_author(name=f"{user.display_name} breaks a Lucky Block", icon_url=user.display_avatar.url)
-    cap = int(settings.get()["games"]["daily_win_cap"])
+    cap = res["cap"]
     if cap:
         net = res["net_today"]
         embed.set_footer(text=f"Today at games of chance: {'+' if net >= 0 else ''}{net:,} (you can win {cap:,} a day)")

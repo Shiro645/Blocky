@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from cogs.economy_market import QuantityModal, market_options
-from game import assets, botstate, exchange, settings, shop
+from game import assets, botstate, exchange, live_events, settings, shop
 from utils.autocomplete import owned_asset_choices
 from utils.config import channel_id
 from utils.ui import ConfirmView, asset_icon, em, report_error
@@ -21,14 +21,17 @@ BOARD_PAGE = 10
 
 
 # ---------------- the market message (fixed prices), above the auctions ----------------
-def shop_embed() -> discord.Embed:
+def shop_embed(discount: float = 0.0) -> discord.Embed:
+    """`discount`: a Market Sale is on."""
     lines = []
     for offer in shop.market_offers().values():
         icon = asset_icon("stick" if offer["item"] == "stick" else f"ingot:{offer['material']}") or "•"
-        lines.append(f"{icon} **{offer['label']}** — {em(offer['price'])}")
+        now = shop.sale_price(offer["price"], discount)
+        lines.append(f"{icon} **{offer['label']}** — {em(now)}" + (f" ~~{offer['price']:,}~~" if now != offer["price"] else ""))
+    sale = f"🏷️ **Market Sale**: everything is **{discount:.0%}** cheaper for a while!\n\n" if discount else ""
     embed = discord.Embed(
         title="🛒 Market",
-        description="Buy from the server at fixed prices: pick an item in the menu, then the quantity.\n\n"
+        description=f"{sale}Buy from the server at fixed prices: pick an item in the menu, then the quantity.\n\n"
                     + "\n".join(lines),
         color=discord.Color.gold(),
     )
@@ -38,18 +41,18 @@ def shop_embed() -> discord.Embed:
     return embed
 
 
-def shop_view() -> discord.ui.View:
+def shop_view(discount: float = 0.0) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
-    view.add_item(ShopBuySelect())
+    view.add_item(ShopBuySelect(discount))
     return view
 
 
 class ShopBuySelect(discord.ui.DynamicItem[discord.ui.Select], template=r"blocky:shop:buy"):
     """The market message's menu: pick an item, then type the quantity. It survives restarts."""
 
-    def __init__(self) -> None:
+    def __init__(self, discount: float = 0.0) -> None:
         super().__init__(discord.ui.Select(placeholder="Buy an item…", custom_id="blocky:shop:buy",
-                                           options=market_options()))
+                                           options=market_options(discount)))
 
     @classmethod
     async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Select, match: re.Match[str], /):
@@ -235,14 +238,15 @@ class AuctionCog(commands.Cog):
 
     async def ensure_shop(self, channel: discord.abc.Messageable, cid: int) -> bool:
         """Keep the market message (fixed prices) up to date. Returns True if it had to be posted again."""
-        embed = shop_embed()
-        signature = (cid, repr(shop.market_offers()), embed.footer.text)
+        discount = await self.bot.db.run(live_events.market_discount)
+        embed = shop_embed(discount)
+        signature = (cid, repr(shop.market_offers()), embed.footer.text, discount)
         saved = await self.bot.db.run(botstate.get, SHOP_KEY)
         if saved and saved.startswith(f"{cid}:"):
             try:
                 message = await channel.fetch_message(int(saved.split(":")[1]))  # type: ignore[attr-defined]
                 if signature != self._shop_shown:
-                    await message.edit(embed=embed, view=shop_view())
+                    await message.edit(embed=embed, view=shop_view(discount))
                     self._shop_shown = signature
                 return False
             except discord.NotFound:
@@ -251,13 +255,19 @@ class AuctionCog(commands.Cog):
                 log.warning("Could not update the market message", exc_info=True)
                 return False
         try:
-            message = await channel.send(embed=embed, view=shop_view())
+            message = await channel.send(embed=embed, view=shop_view(discount))
         except discord.HTTPException:
             log.warning("Could not post the market message in channel %s", cid, exc_info=True)
             return False
         await self.bot.db.run(botstate.put, SHOP_KEY, f"{cid}:{message.id}")
         self._shop_shown = signature
         return True
+
+    @commands.Cog.listener()
+    async def on_blocky_live_event(self) -> None:
+        """A timed event started or ended: a Market Sale changes the prices shown."""
+        self._board_shown = None
+        await self.refresh_board()
 
     @commands.Cog.listener()
     async def on_blocky_config_changed(self, key: str, before) -> None:

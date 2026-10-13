@@ -30,10 +30,11 @@ PROTECTED = (
 SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
     "economy": ("💰 Economy", ("mining", "mining_odds", "market", "trading", "loans", "villager")),
-    "progress": ("⭐ Progress", ("xp", "seasons", "achievements", "species", "profiles", "titles", "guide", "teams")),
+    "progress": ("⭐ Progress", ("xp", "seasons", "challenges", "achievements", "species", "profiles", "titles", "guide",
+                                 "teams")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
-    "games": ("🎉 Games & events", ("chance", "minigames", "rob", "drops")),
+    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "drops")),
 }
 
 CATEGORIES = {
@@ -50,7 +51,8 @@ CATEGORIES = {
     "loans": "💳 Loans",
     "villager": "🧑‍🌾 Villager",
     "xp": "📈 XP, levels & talents",
-    "seasons": "🏆 Seasons & challenges",
+    "seasons": "🏆 Seasons",
+    "challenges": "🎯 Daily & weekly challenges",
     "achievements": "🏅 Achievements",
     "species": "🧬 Species",
     "profiles": "🎨 Profiles",
@@ -67,6 +69,7 @@ CATEGORIES = {
     "pve_monsters": "🧟 Dungeon monsters",
     "bosses": "🐉 Bosses",
     "tournament": "🏟️ Tournament",
+    "live_events": "⏱️ Timed events",
     "chance": "🟨 Lucky Block & wheel",
     "minigames": "🧩 Blockdle & quiz",
     "rob": "🦹 Robberies",
@@ -152,11 +155,15 @@ _ACHIEVEMENT_NAMES = {
     "merchant": "Merchant", "auctioneer": "Auctioneer", "treasure_hunter": "Treasure Hunter",
     "boss_slayer": "Boss Slayer", "champion": "Champion", "arena_champion": "Arena Champion",
     "team_champion": "Squad Goals", "tycoon": "Emerald Tycoon", "wear_and_tear": "Wear and Tear",
+    "lucky_100": "Feeling Lucky", "wheel_100": "Spin Doctor", "bullseye": "Bullseye", "blockdle_10": "Block Detective", "quiz_10": "Know-It-All", "thief_10": "Master Thief", "watch_5": "Neighborhood Watch", "dungeon_hard": "Into the Depths", "dungeon_hardcore": "Hardcore Hero", "dungeon_nightmare": "Nightmare Slayer", "challenger_10": "Challenger", "challenger_50": "Challenge Master", "high_roller": "High Roller", "enchanter_10": "Enchanter", "handyman_10": "Handyman", "regular_20": "Regular Customer", "moneylender": "Moneylender",
 }
 _CHALLENGE_NAMES = {
     "mine_blocks": "Mine blocks", "find_bedrock": "Find bedrock", "sell_blocks": "Earn emeralds by selling",
     "craft_gear": "Craft gear", "win_duels": "Win duels", "claim_drops": "Claim drops",
     "boss_damage": "Damage bosses", "daily_rewards": "Claim the daily reward", "trades": "Complete trades",
+    "lucky_blocks": "Break Lucky Blocks", "wheel_spins": "Spin the wheel", "blockdle": "Find the Blockdle block",
+    "quiz": "Win quiz questions", "pve_waves": "Clear dungeon waves", "dummy": "Hit the training dummy",
+    "robs": "Rob players",
 }
 
 
@@ -171,9 +178,14 @@ def _achievement_fields() -> list[Field]:
 
 def _challenge_fields() -> list[Field]:
     out = []
-    for code, name in _CHALLENGE_NAMES.items():
-        out.append(_b(f"challenges.goals.{code}.target", "seasons", f"{name}: target", "What to reach during the week.", min=1))
-        out.append(_b(f"challenges.goals.{code}.reward", "seasons", f"{name}: reward", "Emeralds paid when it's done."))
+    for pool, when, label in (("goals", "week", "Weekly"), ("daily_goals", "day", "Daily")):
+        for code, name in _CHALLENGE_NAMES.items():
+            if code not in settings.DEFAULTS["challenges"][pool]:
+                continue
+            out.append(_b(f"challenges.{pool}.{code}.target", "challenges", f"{label} · {name}: target",
+                          f"What to reach during the {when}.", min=1))
+            out.append(_b(f"challenges.{pool}.{code}.reward", "challenges", f"{label} · {name}: reward",
+                          "Emeralds paid when it's done (they count for the season)."))
     return out
 
 
@@ -413,7 +425,10 @@ FIELDS: list[Field] = [
     # ---- seasons & challenges ----
     _b("seasons.rewards", "seasons", "Season podium rewards", "Emeralds for #1, #2, #3… of the weekly season.",
        "list", None, item="int", max_items=10),
-    _b("challenges.per_week", "seasons", "Challenges per week", max=len(_CHALLENGE_NAMES)),
+    _b("challenges.per_week", "challenges", "Challenges per week", "Never the same as the week before when the "
+       "pool has enough others.", max=len(settings.DEFAULTS["challenges"]["goals"])),
+    _b("challenges.per_day", "challenges", "Challenges per day", "0 = no daily challenges. Never the same as the "
+       "day before when the pool has enough others.", max=len(settings.DEFAULTS["challenges"]["daily_goals"])),
     *_challenge_fields(),
     # ---- achievements ----
     *_achievement_fields(),
@@ -506,6 +521,28 @@ FIELDS: list[Field] = [
     _b("games.quiz_reward", "minigames", "Quiz: emeralds for the right answer"),
     _b("games.quiz_xp", "minigames", "Quiz: XP for the right answer"),
     # ---- robberies ----
+    _b("live_events.daily_random", "live_events", "A random event every day",
+       "On: one event comes by itself every day, at a random time. The staff can always start one with /event start.",
+       kind="bool", min=None),
+    _b("live_events.earliest_hour", "live_events", "Random event: from (hour, 0-23)", "Server time.", max=23),
+    _b("live_events.latest_hour", "live_events", "Random event: until (hour, 0-23)",
+       "It starts before this hour.", max=23),
+    _b("live_events.duration_minutes", "live_events", "How long an event lasts (minutes)",
+       "Also the default of /event start.", min=1, max=1440),
+    *[_b(f"live_events.random_kinds.{key}", "live_events", f"Random: {name}",
+         "On: it can come by itself. The staff can start it anyway.", kind="bool", min=None)
+      for key, name in (("gambling_frenzy", "🎰 Gambling Frenzy"), ("mining_rush", "⛏️ Mining Rush"),
+                        ("golden_hour", "💰 Golden Hour"), ("lucky_hour", "🍀 Lucky Hour"),
+                        ("market_sale", "🏷️ Market Sale"))],
+    _b("live_events.frenzy_multiplier", "live_events", "Gambling Frenzy: bets ×",
+       "The maximum bet and the daily limit of the Lucky Block and the wheel are multiplied by this.",
+       kind="float", min=1, max=10),
+    _b("live_events.rush_xp_multiplier", "live_events", "Mining Rush: mining XP ×", kind="float", min=1, max=10),
+    _pct("live_events.golden_sell_bonus", "live_events", "Golden Hour: /sell bonus for blocks",
+         "Added to the price of blocks (it counts for the season, like the Trader bonus).", max=5),
+    _b("live_events.lucky_rare_multiplier", "live_events", "Lucky Hour: obsidian & bedrock ×",
+       "Their weight when mining is multiplied by this.", kind="float", min=1, max=10),
+    _pct("live_events.market_sale_discount", "live_events", "Market Sale: /market discount"),
     _b("rob.risky_min", "rob", "Risky robbery: minimum loot", "The victim is pinged. Never more than they have."),
     _b("rob.risky_max", "rob", "Risky robbery: maximum loot"),
     _b("rob.discreet_min", "rob", "Discreet robbery: minimum loot", "Nobody is pinged. Never more than they have."),
@@ -516,6 +553,9 @@ FIELDS: list[Field] = [
     _b("rob.cooldown_hours", "rob", "Hours between two robberies (thief)", kind="float", max=720),
     _b("rob.victim_protection_hours", "rob", "Hours a robbed player is protected", kind="float", max=720),
     _b("rob.min_victim_level", "rob", "Players below this level are safe", max=10_000),
+    _b("rob.night_start_hour", "rob", "Night: no robbery from (hour, 0-23)",
+       "Server time. A robbery started before keeps going. Same hour as the end = robberies all day.", max=23),
+    _b("rob.night_end_hour", "rob", "Night: robberies again at (hour, 0-23)", max=23),
     # ---- profiles ----
     _b("profiles.bio_max", "profiles", "Bio: maximum characters", min=10, max=300),
     _b("profiles.color_price", "profiles", "Price of a profile color", "Each of the 16 dye colors, bought once."),
