@@ -159,6 +159,9 @@ FIELDS: list[Field] = [
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
           help="Roulette and Blockdle only work there, and the quiz is posted there (not set = games work anywhere, "
                "but no automatic quiz)."),
+    Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
+          help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
+               "risky one). Best as a channel where members can't write. Not set = where /rob is used."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),
@@ -397,6 +400,16 @@ FIELDS: list[Field] = [
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
+    _b("games.daily_win_cap", "games", "Daily limit at games of chance", "Once a player won this much today at the "
+       "Lucky Block and the roulette (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
+    _b("games.roulette_enabled", "games", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
+       "replaces it).", kind="bool"),
+    *[f for key, name in (('creeper', 'Creeper'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
+        _b(f"games.lucky_block.{key}.weight", "games", f"Lucky Block: {name} weight",
+           "How often it falls out, compared with the others (0 = never).", max=100_000),
+        _b(f"games.lucky_block.{key}.payout", "games", f"Lucky Block: {name} pays (×bet)",
+           "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
+    )],
     _b("games.min_bet", "games", "Roulette: minimum bet", min=1),
     _b("games.max_bet", "games", "Roulette: maximum bet", min=1),
     _b("games.cooldown_seconds", "games", "Roulette: seconds between two spins", max=3600),

@@ -63,19 +63,25 @@ class GiveTakeTests(GameTestCase):
 
 
 class VisibilityTests(unittest.TestCase):
-    def test_a_permission_of_the_staff_role_that_everyone_lacks(self):
-        everyone = {"send_messages", "read_message_history"}
-        self.assertEqual(staff_visibility.pick({"send_messages", "moderate_members", "kick_members"}, everyone), "moderate_members")
-        self.assertEqual(staff_visibility.pick({"manage_messages"}, everyone), "manage_messages")
-        self.assertEqual(staff_visibility.pick({"administrator"}, everyone), "administrator")
+    EVERYONE = {"send_messages", "read_message_history"}
 
-    def test_no_permission_fits(self):
-        self.assertIsNone(staff_visibility.pick({"send_messages"}, {"send_messages"}))
-        # @everyone can already manage messages: it wouldn't hide anything.
-        self.assertIsNone(staff_visibility.pick({"manage_messages"}, {"manage_messages"}))
+    def test_a_permission_only_the_staff_role_has(self):
+        pick = staff_visibility.pick
+        self.assertEqual(pick({"send_messages", "moderate_members", "kick_members"}, [self.EVERYONE]),
+                         ("moderate_members", True))
+        self.assertEqual(pick({"manage_messages"}, [self.EVERYONE]), ("manage_messages", True))
+        # A players' role (e.g. "Helper") that can time out members: that permission would show the commands to them.
+        helper = {"send_messages", "moderate_members"}
+        self.assertEqual(pick({"moderate_members", "kick_members"}, [self.EVERYONE, helper]), ("kick_members", True))
+
+    def test_nothing_fits_hides_behind_administrator(self):
+        self.assertEqual(staff_visibility.pick({"send_messages"}, [self.EVERYONE]), ("administrator", False))
+        # Another role can already do everything the staff role can.
+        self.assertEqual(staff_visibility.pick({"manage_messages"}, [self.EVERYONE, {"manage_messages"}]),
+                         ("administrator", False))
 
     def test_no_staff_role(self):
-        self.assertEqual(staff_visibility.pick(None, set()), "manage_guild")
+        self.assertEqual(staff_visibility.pick(None, [self.EVERYONE]), ("administrator", True))
 
 
 class StaffLogTests(unittest.TestCase):

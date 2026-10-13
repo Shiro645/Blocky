@@ -75,4 +75,17 @@ UPDATES: tuple[Update, ...] = (
              "them (`/team channel rename`, `/team channel delete`). `/team info` lists them."),
         ),
     ),
+    Update(
+        "2026-10-lucky-block", "2026-10-13", "The Lucky Block replaces the roulette",
+        "A new, more Minecraft game of chance: **`/luckyblock <amount>`**. Bet emeralds and break the block!",
+        (
+            ("🟨 What can fall out",
+             "💥 A creeper (your bet is lost), 🪨 cobblestone (half your bet back), ⚙️ iron (your bet back), "
+             "🟨 gold (×1.5), 💎 diamonds (×2.5), 🟩 emeralds (×4) and, very rarely, ⬛ netherite (×10). "
+             "It pays in emeralds."),
+            ("📏 The rules",
+             "Bets from 1 to 200 emeralds, and a daily limit on what you can win at games of chance. The roulette is "
+             "closed for now. `/help command:luckyblock` shows the chances."),
+        ),
+    ),
 )

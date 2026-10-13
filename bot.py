@@ -67,6 +67,7 @@ EXTENSIONS = [
     "cogs.events_tournament",
     "cogs.events_villager",
     "cogs.games_roulette",
+    "cogs.games_luckyblock",
     "cogs.games_blockdle",
     "cogs.games_quiz",
     "cogs.games_rob",
@@ -106,6 +107,7 @@ class Bot(commands.Bot):
         self.announcer = Announcer(self)
         self.db.notice_handler = self.announcer.handle
         self.blocked: dict[int, dict] = {}  # players blocked from Blocky (/blocky ban), see block_of
+        self.staff_visibility_problem: str | None = None  # told in the staff channel once connected
 
     @property
     def main_guild(self) -> discord.Guild | None:
@@ -239,20 +241,23 @@ class Bot(commands.Bot):
             return
         staff = None
         role_id = staff_role_id()
-        if role_id:
-            role = guild.get_role(role_id)
-            if role is None:
-                log.warning("Staff role %s not found: the staff commands stay visible to everyone", role_id)
-                return
+        role = guild.get_role(role_id) if role_id else None
+        if role_id and role is None:
+            log.warning("Staff role %s not found: only the administrators are staff", role_id)
+        if role is not None:
             staff = {name for name, allowed in role.permissions if allowed}
-        everyone = {name for name, allowed in guild.default_role.permissions if allowed}
-        permission = staff_visibility.pick(staff, everyone)
-        if permission is None:
-            log.warning(
-                "The staff role has no moderation permission (e.g. Timeout Members): "
-                "the staff commands stay visible to everyone"
+        # Every other role a player could have (other bots' roles and admin roles don't matter).
+        others = [{name for name, allowed in r.permissions if allowed} for r in guild.roles
+                  if r.id != role_id and not r.managed and not r.permissions.administrator]
+        permission, fits = staff_visibility.pick(staff, others)
+        if not fits:
+            self.staff_visibility_problem = (
+                "⚠️ **Staff commands**: no permission belongs to the staff role only, so they are hidden behind "
+                "*Administrator* (staff members who aren't admins don't see them). Give the staff role a permission "
+                "no other role has (e.g. *Timeout Members*), or allow the staff role in Server Settings → "
+                "Integrations → Blocky."
             )
-            return
+            log.warning(self.staff_visibility_problem.replace("*", ""))
         hidden = [c for c in self.tree.get_commands() if is_staff_command(c)]
         for command in hidden:
             command.default_permissions = discord.Permissions(**{permission: True})
@@ -291,6 +296,9 @@ class Bot(commands.Bot):
 
     async def on_ready(self) -> None:
         log.info("Connected as %s (%s)", self.user, self.user.id)
+        if self.staff_visibility_problem:
+            await self.announcer.send(self.staff_visibility_problem, channel="staff_log")
+            self.staff_visibility_problem = None
 
     async def close(self) -> None:
         await super().close()

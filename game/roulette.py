@@ -9,7 +9,7 @@ seasons (it's chance, not value created).
 """
 from __future__ import annotations
 
-from game import players, settings
+from game import gambling, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -64,10 +64,12 @@ def wins(bet: str, number: str | None, slot: str) -> bool:
     }[bet]
 
 
-def check_bet(amount: int) -> None:
-    lo, hi = int(_cfg()["min_bet"]), int(_cfg()["max_bet"])
-    if not lo <= amount <= hi:
-        raise GameError(f"Bets go from **{lo:,}** to **{hi:,}** emeralds.")
+check_bet = gambling.check_bet
+
+
+def is_open() -> bool:
+    """The roulette can be closed by the staff (games.roulette_enabled): the Lucky Block replaces it."""
+    return bool(_cfg()["roulette_enabled"])
 
 
 def return_rate() -> float:
@@ -85,13 +87,17 @@ def spin(ctx: Ctx, user_id: int, bet: str, amount: int, number: str | None = Non
             raise GameError(f"Pick the number you bet on: 0{zeros}, or 1 to 36.")
     else:
         number = None
+    if not is_open():
+        raise GameError("🎡 The roulette is closed for now: try `/luckyblock`!")
     check_bet(amount)
+    gambling.check_day(ctx, user_id)
     players.spend_emeralds(ctx, user_id, amount)
     slot = ctx.rng.choice(slots())
     won = wins(bet, number, slot)
     payout = amount * BETS[bet][1] if won else 0
     if payout:
         players.give_emeralds(ctx, user_id, payout)  # chance: not counted for the seasons
+    gambling.record(ctx, user_id, payout - amount)
     players.bump_stat(ctx, user_id, "roulette_spins")
     players.bump_stat(ctx, user_id, "roulette_bet", amount)
     players.bump_stat(ctx, user_id, "roulette_paid", payout)

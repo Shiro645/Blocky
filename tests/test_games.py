@@ -4,7 +4,7 @@ from __future__ import annotations
 import random
 import unittest
 
-from game import blockdle, players, quiz, roulette, settings
+from game import blockdle, luckyblock, players, quiz, roulette, settings
 from game.blockdle_blocks import VERSIONS
 from game.errors import GameError
 from tests.helpers import DAY, GameTestCase
@@ -43,6 +43,14 @@ class RouletteRules(unittest.TestCase):
 
 
 class RouletteGame(GameTestCase):
+    overrides = {"games": {"roulette_enabled": True}}
+
+    async def test_closed_by_default(self):
+        settings.load(None)
+        await self.run_game(players.give_emeralds, ALICE, 100)
+        with self.assertRaisesRegex(GameError, "closed"):
+            await self.run_game(roulette.spin, ALICE, "red", 10)
+
     async def test_spin_takes_the_bet_and_pays(self):
         await self.run_game(players.give_emeralds, ALICE, 1000)
         results = [await self.run_game(roulette.spin, ALICE, "red", 10) for _ in range(40)]
@@ -57,7 +65,7 @@ class RouletteGame(GameTestCase):
     async def test_bets_are_checked(self):
         await self.run_game(players.give_emeralds, ALICE, 5000)
         with self.assertRaisesRegex(GameError, "Bets go"):
-            await self.run_game(roulette.spin, ALICE, "red", 1001)
+            await self.run_game(roulette.spin, ALICE, "red", 201)
         with self.assertRaisesRegex(GameError, "Pick the number"):
             await self.run_game(roulette.spin, ALICE, "number", 10, "37")
         with self.assertRaisesRegex(GameError, "Not enough"):
@@ -186,3 +194,40 @@ class QuizTests(GameTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LuckyBlockGame(GameTestCase):
+    def test_the_table(self):
+        chances = luckyblock.chances()
+        self.assertAlmostEqual(sum(c for _, c, _ in chances), 1)
+        self.assertAlmostEqual(luckyblock.return_rate(), 0.842)
+        # Each step is rarer than the one before, from the creeper to netherite.
+        self.assertEqual([o.key for o, _, _ in chances], list(luckyblock.OUTCOMES))
+        self.assertEqual([c for _, c, _ in chances], sorted((c for _, c, _ in chances), reverse=True))
+        netherite = next((c, p) for o, c, p in chances if o.key == "netherite")
+        self.assertEqual(netherite, (0.002, 10.0))  # stays rare, and not too strong
+        settings.load({"games": {"lucky_block": {"netherite": {"weight": 0}}}})
+        self.assertNotIn("netherite", [o.key for o, _, _ in luckyblock.chances()])
+
+    async def test_a_block_takes_the_bet_and_pays(self):
+        await self.run_game(players.give_emeralds, ALICE, 2000)
+        results = [await self.run_game(luckyblock.open_block, ALICE, 10) for _ in range(60)]
+        paid = sum(r["won"] for r in results)
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 2000 - 600 + paid)
+        self.assertTrue(all(r["won"] == round(10 * r["payout"]) for r in results))
+        self.assertEqual(results[-1]["net_today"], paid - 600)
+        stats = await self.run_game(players.get_stats, ALICE)
+        self.assertEqual((stats["lucky_blocks"], stats["lucky_bet"], stats.get("emeralds_earned", 0)), (60, 600, 0))
+        with self.assertRaisesRegex(GameError, "Bets go"):
+            await self.run_game(luckyblock.open_block, ALICE, 201)
+
+    async def test_the_daily_limit(self):
+        settings.load({"games": {"daily_win_cap": 30, "lucky_block": {
+            k: {"weight": 1 if k == "netherite" else 0} for k in luckyblock.OUTCOMES}}})
+        await self.run_game(players.give_emeralds, ALICE, 1000)
+        res = await self.run_game(luckyblock.open_block, ALICE, 10)  # netherite: +90 today
+        self.assertEqual(res["net_today"], 90)
+        with self.assertRaisesRegex(GameError, "Come back tomorrow"):
+            await self.run_game(luckyblock.open_block, ALICE, 10)
+        self.advance(DAY)  # a new day
+        await self.run_game(luckyblock.open_block, ALICE, 10)

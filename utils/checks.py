@@ -8,16 +8,18 @@ from utils.config import channel_ids, staff_role_id
 
 
 def is_staff(member: discord.abc.User) -> bool:
+    """Members with the staff role (config staff.role_id). Only when no staff role is set (or it was
+    deleted), the administrators, so the server is never locked out of the staff commands."""
     if not isinstance(member, discord.Member):
         return False
-    if member.guild_permissions.manage_guild:
-        return True
     role_id = staff_role_id()
-    return any(r.id == role_id for r in member.roles)
+    if role_id and member.guild.get_role(role_id) is not None:
+        return any(r.id == role_id for r in member.roles)
+    return member.guild_permissions.administrator
 
 
 def staff_only():
-    """Staff role (config staff.role_id) or Manage Server permission."""
+    """The staff role (see is_staff)."""
 
     async def predicate(interaction: discord.Interaction) -> bool:
         if interaction.guild is None:
