@@ -208,3 +208,22 @@ class RolesTheBotGivesTests(unittest.TestCase):
         cfg = {"roles": {"team_leader": 5, "species_miner": 6, "event_ping": 7, "level_roles": {"10": 8, "25": 9}}}
         self.assertEqual(ce.roles_in_use(cfg, ("roles", "team_leader")), {6, 7, 8, 9})
         self.assertEqual(ce.roles_in_use(cfg, ("roles", "level_roles")), {5, 6, 7})
+
+
+class SafetyChecksTests(unittest.TestCase):
+    def test_weights_all_at_zero_are_refused(self):
+        from game import settings
+        _, problems = settings.clean({"enchants": {"book_weights": [0, 0, 0], "boss_book_weights": [0, 0, 0]},
+                                      "games": {"lucky_block": {k: {"weight": 0} for k in (
+                                          "creeper", "cobblestone", "iron", "gold", "diamond", "emerald", "netherite")}}})
+        text = " ".join(problems)
+        for key in ("book_weights", "boss_book_weights", "lucky_block"):
+            self.assertIn(key, text)
+
+    def test_mc_commands_that_get_around_the_blocked_list(self):
+        from utils import mc_commands as mc
+        for command in ("execute as @e run kill @s", "bukkit:reload", "spigot:restart", "rl",
+                        'setblock 0 64 0 command_block{auto:1b,Command:"op Steve"}'):
+            self.assertIsNotNone(mc.blocked_by(command, mc.DEFAULT_BLOCKED), command)
+        for command in ("say hello", "give Steve diamond 1", "kill Steve", "execute as Steve run say hi"):
+            self.assertIsNone(mc.blocked_by(command, mc.DEFAULT_BLOCKED), command)

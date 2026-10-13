@@ -13,7 +13,7 @@ HOUR = 3600
 # ---------------- drops ----------------
 def roll_drop(rng: random.Random) -> dict:
     table = settings.get()["drops"]["table"]
-    return rng.choices(table, weights=[int(e["weight"]) for e in table])[0]
+    return rng.choices(table, weights=[float(e["weight"]) for e in table])[0]
 
 
 def describe_reward(reward: dict) -> str:

@@ -594,6 +594,14 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if lo > hi:
         out.append(("`balance.enchants.lapis_amount`: the first value is the minimum, the second the maximum.", [("enchants", "lapis_amount")]))
 
+    # Weights picked at random: all at 0 would make the draw fail (a challenge reward, a boss, a block…).
+    ench = merged["enchants"]
+    for key in ("book_weights", "boss_book_weights"):
+        if sum(float(w) for w in ench[key]) <= 0:
+            out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    if sum(float(o["weight"]) for o in g["lucky_block"].values()) <= 0:
+        out.append(("`balance.games.lucky_block`: at least one outcome needs a weight above 0.",
+                    [("games", "lucky_block", k, "weight") for k in g["lucky_block"]]))
     if sum(float(e["weight"]) for e in merged["drops"]["table"]) <= 0:
         out.append(("`balance.drops.table` needs at least one drop with a weight above 0.", [("drops", "table")]))
     for i, e in enumerate(merged["drops"]["table"]):
