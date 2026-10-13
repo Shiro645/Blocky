@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import mining, players, shop
+from game.catalog import BLOCK_TYPES
 from game.db import Ctx
 from utils.config import channel_ids
 from utils.ui import EMOJI, block_icon, em, gear_label, item_label, join_lines
@@ -90,9 +91,13 @@ class EconomyMiningCog(commands.Cog):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="sell", description="Sell all your blocks for emeralds.")
-    async def sell(self, interaction: discord.Interaction):
-        res = await self.bot.db.run(players.sell_all_blocks, interaction.user.id)
+    @app_commands.command(name="sell", description="Sell your blocks for emeralds: all of them, one kind, or an amount.")
+    @app_commands.describe(block="Only this kind of block (empty = every kind)",
+                           amount="How many (empty = all; more than you have = all you have)")
+    @app_commands.choices(block=[app_commands.Choice(name=b, value=b) for b in BLOCK_TYPES])
+    async def sell(self, interaction: discord.Interaction, block: str | None = None,
+                   amount: app_commands.Range[int, 1] | None = None):
+        res = await self.bot.db.run(players.sell_blocks, interaction.user.id, block, amount)
 
         lines = [
             f"{block_icon(b)} **{b}** ×{amt} → +{em(amt * players.block_value(b))}"
@@ -105,6 +110,9 @@ class EconomyMiningCog(commands.Cog):
         else:
             embed.add_field(name="Gained", value=em(gained))
         embed.add_field(name="New balance", value=em(res["balance"]))
+        if res["left"]:
+            embed.add_field(name="Kept", value=" · ".join(f"{block_icon(b)} {b} ×{n:,}" for b, n in res["left"].items()),
+                            inline=False)
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=embed)  # public: rewards are shown to everyone
 

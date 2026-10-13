@@ -75,13 +75,15 @@ def list_for_sale(ctx: Ctx, seller_id: int, key: str, amount: int, price: int) -
     piece = assets.take(ctx, seller_id, key, amount)
     cur = ctx.execute(
         """
-        INSERT INTO auctions(seller_id, asset, amount, durability, max_durability, price, created_at, expires_at)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO auctions(seller_id, asset, amount, durability, max_durability, repairs, price, created_at,
+                             expires_at)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
         """,
         (
             seller_id, key, amount,
             piece["durability"] if piece else None,
             piece["max_durability"] if piece else None,
+            piece["repairs"] if piece else 0,
             price, int(ctx.now), int(ctx.now + int(a["duration_days"]) * DAY),
         ),
     )
@@ -96,7 +98,8 @@ def get_listing(ctx: Ctx, auction_id: int) -> dict:
 
 
 def _return_to_seller(ctx: Ctx, listing: dict) -> None:
-    assets.give(ctx, listing["seller_id"], listing["asset"], listing["amount"], durability=listing["durability"])
+    assets.give(ctx, listing["seller_id"], listing["asset"], listing["amount"], durability=listing["durability"],
+                repairs=listing["repairs"])
     ctx.execute("DELETE FROM auctions WHERE auction_id=?;", (listing["auction_id"],))
 
 
@@ -108,7 +111,8 @@ def buy(ctx: Ctx, buyer_id: int, auction_id: int) -> dict:
     players.spend_emeralds(ctx, buyer_id, listing["price"])
     tax = tax_for(listing["price"])
     players.give_emeralds(ctx, listing["seller_id"], listing["price"] - tax)
-    assets.give(ctx, buyer_id, listing["asset"], listing["amount"], durability=listing["durability"])
+    assets.give(ctx, buyer_id, listing["asset"], listing["amount"], durability=listing["durability"],
+                repairs=listing["repairs"])
     ctx.execute("DELETE FROM auctions WHERE auction_id=?;", (auction_id,))
     players.bump_stat(ctx, listing["seller_id"], "auction_sales")
     players.bump_stat(ctx, buyer_id, "auction_purchases")

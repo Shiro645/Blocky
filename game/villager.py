@@ -64,8 +64,10 @@ def _buy_offer(ctx: Ctx) -> dict:
 
 def _exclusive_offer(ctx: Ctx) -> dict:
     c = _cfg()
-    if ctx.rng.random() < float(c["exclusive_book_chance"]):
-        asset, price = f"book:{ctx.rng.choice(sorted(enchants.ENCHANTS))}:3", int(c["book_iii_price"])
+    if ctx.rng.random() < float(c["exclusive_mending_chance"]):
+        asset, price = "book:mending:1", int(c["mending_price"])
+    elif ctx.rng.random() < float(c["exclusive_book_chance"]):
+        asset, price = f"book:{ctx.rng.choice(enchants.RANDOM_BOOKS)}:3", int(c["book_iii_price"])
     else:
         asset, price = f"potion:{potions.random_kind(ctx.rng)}:2", int(c["potion_ii_price"])
     return {"kind": "exclusive", "asset": asset, "amount": 1, "price": price, "value": int(assets.unit_value(asset))}

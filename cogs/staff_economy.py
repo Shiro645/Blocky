@@ -137,7 +137,7 @@ class StaffEconomyCog(commands.Cog):
     @app_commands.describe(member="Who gets the XP", amount="How much XP")
     @staff_only()
     async def xp_add(self, interaction: discord.Interaction, member: discord.Member, amount: Amount):
-        p = await self.bot.db.run(players.add_xp, member.id, amount)
+        p = await self.bot.db.run(players.add_xp, member.id, amount, False)  # the staff's XP never mends gear
         await self.answer(
             interaction, f"✅ {member.mention} is now level **{p['level']}** ({p['xp']} XP).",
             member, f"✨ The staff gave you **{amount:,} XP** (you're level **{p['level']}**)",

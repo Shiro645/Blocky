@@ -184,8 +184,8 @@ def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
     return None
 
 
-def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None = None) -> None:
-    """Add an asset to a player (gear keeps the given durability and the key's enchantments)."""
+def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None = None, repairs: int = 0) -> None:
+    """Add an asset to a player (gear keeps the given durability, repairs and the key's enchantments)."""
     parts = parse(key)
     kind = parts[0]
     if kind == "emeralds":
@@ -203,14 +203,16 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
     else:
         for _ in range(amount):
             gear_id = shop.create_gear(ctx, user_id, parts[2], parts[1])
-            if durability is not None:
-                ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (durability, gear_id))
+            if durability is not None or repairs:
+                ctx.execute("UPDATE gear SET durability=COALESCE(?, durability), repairs=? WHERE gear_id=?;",
+                            (durability, int(repairs or 0), gear_id))
             enchants.set_enchants(ctx, gear_id, gear_enchants(key))
 
 
 def transfer(ctx: Ctx, from_id: int, to_id: int, key: str, amount: int) -> None:
     piece = take(ctx, from_id, key, amount)
-    give(ctx, to_id, key, amount, durability=piece["durability"] if piece else None)
+    give(ctx, to_id, key, amount, durability=piece["durability"] if piece else None,
+         repairs=piece["repairs"] if piece else 0)
 
 
 # ---------------- staff ----------------
@@ -221,7 +223,7 @@ def catalog() -> list[str]:
     """Every asset staff can give. Gear comes without enchantments (a full key such as
     "gear:diamond:sword:sharpness3" gives an enchanted piece)."""
     keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis"]
-    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.MAX_LEVEL + 1)]
+    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.ENCHANTS[e].max_level + 1)]
     keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
     keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS if m in materials_for(i)]
     return keys

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 
 import discord
 from discord import app_commands
@@ -25,6 +26,40 @@ DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 
 class GuideLimit(GameError):
     """No room left for one more guide channel."""
+
+
+class GuideSetupProblem(GameError):
+    """The bot can't make guide channels (permissions): a staff problem, not the player's."""
+
+
+# What the bot needs in the guide category: it creates the channels, and gives each player these permissions
+# (Discord only lets a bot give the permissions it has itself). Names as in Discord's permission screens.
+NEEDED = (
+    ("view_channel", "View Channels"),
+    ("manage_channels", "Manage Channels"),
+    ("send_messages", "Send Messages"),
+    ("embed_links", "Embed Links"),
+    ("attach_files", "Attach Files"),
+    ("read_message_history", "Read Message History"),
+    ("add_reactions", "Add Reactions"),
+    ("use_application_commands", "Use Application Commands"),
+)
+
+
+def missing_permissions(guild: discord.Guild, category: discord.CategoryChannel) -> list[str]:
+    """The permissions the bot lacks in the guide category (empty = all good)."""
+    perms = category.permissions_for(guild.me)
+    return [name for attr, name in NEEDED if not getattr(perms, attr)]
+
+
+def permissions_problem(guild: discord.Guild, category: discord.CategoryChannel) -> str | None:
+    """What to tell the staff when the bot can't make guide channels there."""
+    missing = missing_permissions(guild, category)
+    if not missing:
+        return None
+    return (f"I can't create guide channels in the **{category.name}** category: my role is missing "
+            + ", ".join(f"**{m}**" for m in missing) + ". Give them to my role in the category's permissions "
+            "(right-click the category → Edit Category → Permissions).")
 
 
 # ---------------- what the guide says ----------------
@@ -62,7 +97,7 @@ def guide_pages() -> list[discord.Embed]:
             "(spam channels give almost nothing). Writing here, in your guide channel, doesn't mine: chat in the "
             "server's channels.\n\n"
             "`/inventory` — your blocks, emeralds, items and gear.\n"
-            f"`/sell` — sells all your blocks: cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
+            f"`/sell` — sells your blocks (all of them, or pick a kind and an amount): cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
             f"deepslate {values['deepslate']}, obsidian {values['obsidian']}, bedrock {values['bedrock']} emeralds each.\n"
             f"`/daily` — {em(daily['base_reward'])} and XP once a day. Come back every day: the streak adds a bonus "
             f"(up to {daily['streak_cap_days']} days) and every {daily['bonus_every_days']}th day in a row gives a "
@@ -80,10 +115,11 @@ def guide_pages() -> list[discord.Embed]:
             "• **Sword**: more damage. **Armor**: less damage taken.\n"
             f"• **Shield** (iron): in a duel, **Attack + block** blocks the opponent's next attack, "
             f"{s['gear']['shield_blocks_per_fight']} time(s) per duel.\n"
-            "Gear wears out when used: `/repair` it before it breaks.\n\n"
+            "Gear wears out when used: `/repair` it before it breaks, with ingots of its material on an **anvil** "
+            f"(`/craft item:anvil`, {s['repair']['anvil_iron']} iron ingots).\n\n"
             "**Enchanting.** Mining sometimes finds lapis, and enchanted books drop from events and bosses: "
             "`/enchant apply` puts a book on a piece (Efficiency, Fortune, Unbreaking, Sharpness, Looting, "
-            "Protection), `/enchant combine` merges two books into a stronger one."
+            "Protection, and the rare Mending), `/enchant combine` merges two books into a stronger one (on your anvil)."
         )),
         ("🧬 3. Species and profile", (
             "Pick a **species** with `/species choose` for a small bonus. Your first choice is free; changing later "
@@ -180,6 +216,7 @@ class GuideCog(commands.Cog):
         self.bot = bot
         self.lock = asyncio.Lock()  # one channel created at a time (counting the categories)
         self.sending = False  # /guide_resend for everyone is running
+        self.last_told: tuple[str, int] | None = None  # the last setup problem told to the staff, and its hour
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(CloseGuideButton)
@@ -275,6 +312,9 @@ class GuideCog(commands.Cog):
         if base is None:
             await self.bot.db.run(guide.opened, member.id, None, None)  # the checklist works with /guide
             return None
+        problem = permissions_problem(guild, base)
+        if problem:
+            raise GuideSetupProblem(problem)
         async with self.lock:
             await self.close_for(guild, member.id)
             category = await self.free_category(guild, base)
@@ -287,8 +327,9 @@ class GuideCog(commands.Cog):
                 )
             except discord.HTTPException as exc:
                 log.warning("Could not create a guide channel for %s: %s", member, exc)
-                raise GameError("I couldn't create the guide channel: I need the *Manage Channels* and *Manage Roles* "
-                                "permissions.") from exc
+                raise GuideSetupProblem(f"Discord refused to create a guide channel ({exc.text or exc.status}). Check "
+                                        "my role's permissions in the guide category: "
+                                        + ", ".join(n for _, n in NEEDED) + ".") from exc
             self.cache[channel.id] = member.id
         state = await self.bot.db.run(guide.overview, member.id)
         first = None
@@ -372,6 +413,8 @@ class GuideCog(commands.Cog):
     async def welcome(self, member: discord.Member) -> None:
         try:
             await self.open_for(member)
+        except GuideSetupProblem as exc:
+            await self.tell_staff(str(exc))
         except GameError as exc:
             log.warning("No guide channel for %s: %s", member, exc)
 
@@ -386,6 +429,32 @@ class GuideCog(commands.Cog):
         if channel.id in self.cache:
             self.cache.pop(channel.id, None)
             await self.bot.db.run(guide.channel_deleted, channel.id)
+
+    async def tell_staff(self, problem: str) -> None:
+        """A guide setup problem, in the staff channel (at most once an hour for the same problem)."""
+        now = time.monotonic()
+        if self.last_told == (problem, int(now // 3600)):
+            return
+        self.last_told = (problem, int(now // 3600))
+        log.warning(problem.replace("*", ""))
+        await self.bot.announcer.send(f"📘 Guide: {problem}", channel="staff_log")
+
+    async def check_setup(self) -> None:
+        """Tell the staff channel when the bot can't make guide channels (missing permissions)."""
+        guild = getattr(self.bot, "main_guild", None)
+        base = self.base_category(guild) if guild is not None else None
+        problem = permissions_problem(guild, base) if base is not None else None
+        if problem:
+            await self.tell_staff(problem)
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        await self.check_setup()
+
+    @commands.Cog.listener()
+    async def on_blocky_config_changed(self, key: str, before) -> None:
+        if key in ("ch_guide_category", "role_blocky_player"):
+            await self.check_setup()
 
     @tasks.loop(minutes=10)
     async def cleanup_loop(self) -> None:
@@ -419,6 +488,10 @@ class GuideCog(commands.Cog):
             except GuideLimit:
                 channel = None
                 await self.bot.db.run(guide.opened, member.id, None, None)
+            except GuideSetupProblem as exc:  # the staff is told; the player still gets the guide here
+                channel = None
+                await self.bot.db.run(guide.opened, member.id, None, None)
+                await self.tell_staff(str(exc))
             state = await self.bot.db.run(guide.overview, member.id)
             if channel is not None:
                 await interaction.followup.send(f"📘 Your guide channel is ready: {channel.mention}",
@@ -440,6 +513,9 @@ class GuideCog(commands.Cog):
             raise GameError("Use this in the server.")
         if self.base_category(guild) is None:
             raise GameError("Set the guide category first: `/config` → Channels → Guide category.")
+        problem = permissions_problem(guild, self.base_category(guild))
+        if problem:
+            raise GameError(problem)
         if member is not None:
             if member.bot:
                 raise GameError("Bots don't play.")

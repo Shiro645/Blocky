@@ -136,25 +136,49 @@ def trader_multiplier(trader_points: int) -> float:
     return 1.0 + t["trader_bonus_per_point"] * points
 
 
-def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:
-    """Sell every block. Returns {"sold": {type: amount}, "base": n, "bonus": n, "balance": n}."""
+def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | None = None) -> dict:
+    """Sell blocks: everything, every block of one type, or `amount` of them (never more than the player has;
+    without a type, the least valuable blocks go first). Returns {"sold": {type: amount}, "base": n,
+    "bonus": n, "balance": n, "left": {type: amount}}."""
     user = get_user(ctx, user_id)
     blocks = get_blocks(ctx, user_id)
-    sold = {b: amt for b, amt in blocks.items() if amt > 0}
+    if block is not None and block not in BLOCK_TYPES:
+        raise GameError(f"Unknown block. You can sell: {', '.join(BLOCK_TYPES)}.")
+    if amount is not None and amount <= 0:
+        raise GameError("Sell at least 1 block.")
+    order = [block] if block else sorted(BLOCK_TYPES, key=block_value)  # the cheapest first
+    sold: dict[str, int] = {}
+    wanted = amount
+    for b in order:
+        have = blocks.get(b, 0)
+        n = have if wanted is None else min(have, wanted)
+        if n > 0:
+            sold[b] = n
+            if wanted is not None:
+                wanted -= n
+                if wanted <= 0:
+                    break
     base = sum(amt * block_value(b) for b, amt in sold.items())
-    if base == 0:
-        raise GameError("You have no blocks to sell.")
+    if not sold:
+        raise GameError(f"You have no **{block}** to sell." if block else "You have no blocks to sell.")
     # Imported here: species depends on this module.
     from game import species
 
     extra = trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager")
     bonus = int(round(base * extra))
-    ctx.execute("UPDATE blocks SET amount = 0 WHERE user_id=?;", (user_id,))
+    for b, n in sold.items():
+        take_blocks(ctx, user_id, b, n)
     # The blocks' value was scored when they were mined: only the trader bonus is new.
     give_emeralds(ctx, user_id, base)
     earn_emeralds(ctx, user_id, bonus)
     bump_stat(ctx, user_id, "emeralds_from_sales", base + bonus)
-    return {"sold": sold, "base": base, "bonus": bonus, "balance": get_emeralds(ctx, user_id)}
+    left = {b: n for b, n in get_blocks(ctx, user_id).items() if n > 0}
+    return {"sold": sold, "base": base, "bonus": bonus, "balance": get_emeralds(ctx, user_id), "left": left}
+
+
+def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:
+    """Sell every block."""
+    return sell_blocks(ctx, user_id)
 
 
 # ---------------- items (sticks, ingots) ----------------
@@ -262,7 +286,12 @@ def _spent_talent_points(user: dict) -> int:
     return sum(user[f"{b}_points"] for b in TALENT_BRANCHES)
 
 
-def add_xp(ctx: Ctx, user_id: int, amount: int) -> dict:
+def add_xp(ctx: Ctx, user_id: int, amount: int, mending: bool = True) -> dict:
+    """XP earned by playing. With Mending gear, it repairs that gear first (`mending=False`: the staff's XP)."""
+    if mending and amount > 0:
+        from game import gear  # here: gear depends on this module
+
+        amount = gear.mend(ctx, user_id, amount)
     user = get_user(ctx, user_id)
     if amount <= 0:
         return user
@@ -285,7 +314,7 @@ def set_xp(ctx: Ctx, user_id: int, xp: int) -> dict:
     """Staff: set the XP inside the current level (levels up if it overflows)."""
     ensure_user(ctx, user_id)
     ctx.execute("UPDATE users SET xp=0 WHERE user_id=?;", (user_id,))
-    return add_xp(ctx, user_id, max(0, xp))
+    return add_xp(ctx, user_id, max(0, xp), mending=False)
 
 
 def set_level(ctx: Ctx, user_id: int, level: int) -> dict:

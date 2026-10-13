@@ -67,8 +67,9 @@ SECTIONS: tuple[Section, ...] = (
         "**What makes you mine better**: a pickaxe (more cobblestone and a chance to upgrade the block), a shovel "
         "(more gravel), an axe (sticks), a hoe (more XP), the Efficiency enchantment and talent (shorter cooldown), "
         "the Miner and Lucky talents (better blocks), and the Miner species.\n\n"
-        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear. `/sell` sells **all** your "
-        "blocks at once (the Trader talent and the Villager species pay more). Rare blocks are worth much more than "
+        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear. `/sell` sells your blocks: "
+        "all of them, one kind (`block`) or a number of them (`amount`) (the Trader talent and the Villager species "
+        "pay more). Rare blocks are worth much more than "
         "cobblestone.\n"
         "**The market**: `/market` sells sticks and ingots, what you need to craft, at fixed prices. The market "
         "channel shows them too, above the auctions.\n"
@@ -102,18 +103,24 @@ SECTIONS: tuple[Section, ...] = (
         "opponent's whole next attack, a few times per duel. Nobody sees it coming: the duel only says how much it "
         "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
-        "enchantments. Watch it in `/gear` and `/repair` a piece before it breaks: it costs part of its crafting "
-        "value and keeps its enchantments. A shield at 0 doesn't break: it stays unusable until repaired.",
+        "enchantments. Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
+        "(`/craft item:anvil`, iron), with ingots of its material: each ingot gives back part of its durability, "
+        "and each repair makes the next one cost more ingots, like in Minecraft. The piece keeps its enchantments, "
+        "and the anvil wears out a little with each use. A shield at 0 doesn't break: it stays unusable until "
+        "repaired.",
         ("craftlist", "gear", "repair"),
     ),
     Section(
         "enchanting", "✨ Enchanting",
         "**Lapis lazuli** is found while mining and in drops. **Enchanted books** (levels I to III) come from "
         "drops, bosses (the top damage dealers get a strong one), completing every weekly challenge, the wandering "
-        "villager (level III) and other players.\n\n"
+        "villager (level III) and other players.\n"
+        "**Mending** is the rarest book (one level): only the villager's exclusive offer, or now and then the top "
+        "damage dealer of a boss. On any piece, the XP you gain repairs your equipped Mending gear first, and only the "
+        "XP left goes to you.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
-        "two identical books into one of the next level (I + I = II, II + II = III). `/enchant info` lists your "
+        "two identical books into one of the next level (I + I = II, II + II = III), on your anvil. `/enchant info` lists your "
         "books, your lapis and every effect.\n"
         "Enchantments stay on the piece when you trade or sell it, and are lost if it breaks: repair it in time! "
         "The Mage species makes every effect stronger.",

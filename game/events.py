@@ -166,8 +166,14 @@ def _defeat(ctx: Ctx, boss: dict) -> dict:
         players.add_xp(ctx, r["user_id"], int(b["xp_reward"]))
         players.bump_stat(ctx, r["user_id"], "bosses_defeated")
         reward = {**r, "reward": share + looting, "looting": looting, "book": None, "potion": None, "potion_key": None}
-        if i < int(settings.get()["enchants"]["boss_book_top"]):
-            book = enchants.give_random_book(ctx, r["user_id"], settings.get()["enchants"]["boss_book_weights"])
+        ench = settings.get()["enchants"]
+        if i < int(ench["boss_book_top"]):
+            if i == 0 and ctx.rng.random() < float(ench["boss_mending_chance"]):
+                book = ("mending", 1)  # the rarest book, now and then
+                enchants.give_book(ctx, r["user_id"], *book)
+                players.bump_stat(ctx, r["user_id"], "books_found")
+            else:
+                book = enchants.give_random_book(ctx, r["user_id"], ench["boss_book_weights"])
             reward["book"] = enchants.label(*book)
         if i < int(settings.get()["potions"]["boss_top"]):
             found = potions.give_random(ctx, r["user_id"], int(settings.get()["potions"]["boss_potions"]))

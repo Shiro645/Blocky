@@ -46,7 +46,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown (30 s, at least 10 s with talents and enchantments).
 - **Spam channels** (`channels.spam`, set in `/config`): messages there don't mine blocks, give no XP, no drops and no challenge progress — only a tiny reward (0.01 emerald per message by default, so about 1 emerald an hour of spam), with a cooldown of their own.
 - `/inventory` — Blocks, emeralds, items and gear
-- `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds)
+- `/sell [block] [amount]` — Sell your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds): all of them, only one kind (`block`), or a number of them (`amount`: more than you have sells all you have; without a kind, the least valuable blocks go first)
 - `/market` — Buy sticks and gold (5) / iron (10) / diamond (60) / netherite (300) ingots
 - `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day in a row gives a diamond ingot (`balance.daily.weekly_bonus_item`, `bonus_every_days`), and missing a day resets the streak.
 - Rewards are public: the results of `/daily`, `/sell` and `/craft` are shown in the channel (level-ups and achievements go to the announcements channel). Personal info (`/inventory`, `/gear`, `/xp`…) and errors are only shown to the player.
@@ -57,7 +57,8 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - `/craft <item> <material>` and `/craftlist` — Swords, tools and armor in gold, iron, diamond or netherite.
 - **Shield** — `/craft item:shield material:iron` (iron only, **6 iron ingots**), equipped in its own slot. In a duel, on your turn, press **🛡️ Attack + block** instead of Attack: you attack, then the opponent's **next attack is entirely blocked** (all its hits, critical or not). Nobody sees it coming: the duel only shows "🛡️ Shiro blocked 7.2 damage" when it happens, and the result sums up the damage each shield stopped. **2 blocks per duel**. It has **100 durability** and each block uses **10**; at 0 it **stays in your inventory, unusable** until you `/repair` it (like any gear: 60% of its crafting value for a full repair). It isn't used in the tournament (fights play out on their own), the PVE dungeon nor against bosses, and can't take Unbreaking. There is no dodge anymore.
 - `/equip`, `/equip_best`, `/unequip`, `/gear` — One piece per slot. Freshly crafted gear is equipped if the slot is empty.
-- `/repair <piece>` — Repair a piece for emeralds (it keeps its enchantments): a broken-down piece costs 60% of its crafting value, a half-worn one 30%.
+- **Anvil** — `/craft item:anvil` (iron only, **22 iron ingots**, one at a time). Needed to repair gear and to combine books. Like in Minecraft it wears out: each use has a **12%** chance to damage it (new → chipped → damaged → broken). `/gear` shows it.
+- `/repair <piece> [ingots]` — Repair a piece on your anvil with **ingots of its material** (iron for the shield); it keeps its enchantments. One ingot gives back **25%** of its durability at the first repair, and each repair the piece already had adds 25% to the ingots needed: **4, 5, 6, 7…** ingots for a full repair. You choose how many ingots to put in (empty = as many as needed, or all you have). The repair count follows the piece in trades and at the auction.
 - What gear does:
   - **Pickaxe**: extra cobblestone each time you mine (+1 per tier) + chance to upgrade the block
   - **Shovel**: extra gravel
@@ -71,9 +72,10 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### ✨ Enchanting
 
 - **Lapis lazuli** is found while mining (about 1 mining reward in 40, 1–2 lapis) and in drops.
-- **Enchanted books** (levels I to III: 60% / 30% / 10%) come from drops, the top damage dealer of a boss (II or III), completing every weekly challenge of the week, and other players.
+- **Enchanted books** (levels I to III: 60% / 30% / 10%) come from drops, the top damage dealer of a boss (II or III), completing every weekly challenge of the week, the wandering villager and other players.
+- **Mending** — the rarest book (one level, worth **600**): only the villager's exclusive offer (10% of his visits, 600 emeralds) or, 5% of the time, a boss's top damage dealer. On any gear: the XP you gain repairs your equipped Mending pieces first (**2 durability per XP**), and only the XP left goes to you. XP given by the staff doesn't repair.
 - `/enchant apply <book> <piece>` — Costs 2 / 4 / 8 lapis for a level I / II / III book. A higher level replaces a lower one.
-- `/enchant combine <book>` — Two identical books make one book of the next level (I + I = II, II + II = III).
+- `/enchant combine <book>` — Two identical books make one book of the next level (I + I = II, II + II = III), on your anvil (Mending can't be combined).
 - `/enchant info` — Your books and lapis, and every effect.
 - Enchantments follow the piece in `/trade` and `/auction` (the suggestions list enchanted pieces separately) and are lost when it breaks.
 
@@ -85,6 +87,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 | Sharpness | sword | +1 / +2 / +3 maximum damage (duels, bosses, tournament) |
 | Looting | sword | +10% / +20% / +30% boss reward |
 | Protection | armor | +1 / +2 / +3 armor points per piece |
+| Mending | all gear | one level: 2 durability per XP gained (the XP repairs the piece first) |
 
 ### ⭐ XP & talents
 
@@ -324,7 +327,7 @@ Every number of the game (rewards, prices, durability, cooldowns, boss HP, tax, 
 }
 ```
 
-`/repair` uses `balance.repair.cost_percent` (60). Spam channels use `balance.mining.spam_reward` (0.01).
+`/repair` and the anvil use `balance.repair`: `durability_per_ingot` (0.25), `penalty_per_repair` (0.25), `anvil_iron` (22) and `anvil_damage_chance` (0.12). Spam channels use `balance.mining.spam_reward` (0.01).
 
 Everything below can also be changed from Discord with `/config`.
 
@@ -338,13 +341,13 @@ Weekly challenges: `balance.challenges.per_week` and `balance.challenges.goals.<
 
 `balance.boss.auto_spawn_hours` spawns a boss automatically that many hours after the previous one ended (0 = only `/event boss`).
 
-Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `boss_book_top` (how many of a boss's top damage dealers get a book), `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`) and the reference values `lapis_value` / `book_values`.
+Enchanting is tuned with `balance.enchants`: `lapis_chance`, `lapis_amount`, `apply_cost`, `book_weights`, `boss_book_weights`, `boss_book_top` (how many of a boss's top damage dealers get a book), `challenges_book`, the effects (`efficiency_seconds`, `fortune_bonus`, `fortune_hoe_xp`, `unbreaking_chance`, `sharpness_damage`, `looting_boss_bonus`, `protection_points`, `mending_durability_per_xp`), `boss_mending_chance` and the reference values `lapis_value` / `book_values` / `mending_value`.
 
 Duels and potions are tuned with `balance.duel` (`hp`, `min_damage`, `min_hit_after_armor`, `crit_chance`, `crit_multiplier`, `second_player_bonus_hp`, `turn_seconds`, `afk_turns`, `min_stake`…), `balance.gear` (`sword_max_damage`, `damage_reduction_per_armor_point`, `max_damage_reduction`, and the shield: `shield_blocks_per_fight`, `shield_durability`, `shield_wear_per_block`) and `balance.potions`: `max_per_duel`, `strength_min_bonus`, `speed_chance`, `speed_turns`, `healing_hp`, `harming_damage`, `level2_multiplier`, `strong_per_fight` (reinforced potions per duel or dungeon run), `boss_top` and `boss_potions` (how many of a boss's top damage dealers get potions, and how many), `random_weights` (how often each kind comes from drops, bosses and the villager) and the reference values `value` / `value_ii`.
 
 Moderation is tuned with `balance.moderation`: `warn_expire_days` (0 = warnings never expire) and `warn_mutes`, e.g. `{"3": "1h", "5": "1d", "7": "7d"}` (automatic mute when a member reaches that many warnings).
 
-The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sell_discount`, `buy_bonus`, `goods` (what he can sell), `buys` (blocks he buys and how many), `book_iii_price`, `potion_ii_price`, `exclusive_book_chance` (the exclusive offer is a book this often, else a potion) and `book_weights` (level I / II of the books he sells). Reinforced potions use `balance.potions.level2_multiplier` and `value_ii`.
+The villager is tuned with `balance.villager`: `arrive_hour`, `leave_hour`, `sell_discount`, `buy_bonus`, `goods` (what he can sell), `buys` (blocks he buys and how many), `book_iii_price`, `potion_ii_price`, `exclusive_mending_chance` and `mending_price` (the exclusive offer is a Mending book this often, checked first), `exclusive_book_chance` (else a level III book this often, or a potion) and `book_weights` (level I / II of the books he sells). Reinforced potions use `balance.potions.level2_multiplier` and `value_ii`.
 
 The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `min_players`, `max_players`, the schedule (`opens_day`/`opens_hour`, `closes_day`/`closes_hour`, `start_day`/`start_hour`, days 0 = Monday … 6 = Sunday), `round_minutes`, `prize_split` (`[60, 25, 15]`) and `xp_per_win`.
 

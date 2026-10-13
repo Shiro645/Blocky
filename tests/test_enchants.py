@@ -92,6 +92,9 @@ class ApplyTests(EnchantTestCase):
 
     async def test_combine(self):
         await self.run_game(enchants.give_book, ALICE, "fortune", 2, 2)
+        with self.assertRaisesRegex(GameError, "need an anvil"):
+            await self.run_game(enchants.combine, ALICE, "fortune:2")
+        await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
         res = await self.run_game(enchants.combine, ALICE, "fortune:2")
         self.assertEqual(res["level"], 3)
         self.assertEqual(await self.run_game(enchants.books, ALICE), [("fortune", 3, 1)])
@@ -219,3 +222,47 @@ class TradeTests(EnchantTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MendingTests(EnchantTestCase):
+    async def test_the_book(self):
+        self.assertEqual(enchants.label("mending", 1), "Mending")
+        self.assertNotIn("mending", enchants.RANDOM_BOOKS)  # never from drops, challenges or a normal boss book
+        rng = random.Random(3)
+        self.assertNotIn("mending", {enchants.random_book(rng)[0] for _ in range(300)})
+        self.assertEqual(shop.item_value("book", "mending:1"), 600)  # the most valuable book
+        await self.run_game(enchants.give_book, ALICE, "mending", 1, 2)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
+        with self.assertRaisesRegex(GameError, "only one level"):
+            await self.run_game(enchants.combine, ALICE, "mending:1")
+        with self.assertRaises(GameError):
+            enchants.parse_book("mending:2")
+
+    async def test_xp_repairs_the_gear_first(self):
+        sword = await self.piece(ALICE, "sword", mending=1)
+        await self.run_game(gear.equip, ALICE, sword)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=240 WHERE gear_id=?;", (sword,)))
+        user = await self.run_game(players.add_xp, ALICE, 12)  # 5 XP repair the 10 missing, 7 XP are left
+        self.assertEqual(((await self.equipped(ALICE))["sword"]["durability"], user["xp"]), (250, 7))
+        self.assertEqual(await self.run_game(players.get_stat, ALICE, "durability_mended"), 10)
+        user = await self.run_game(players.add_xp, ALICE, 5)  # nothing to repair: all the XP goes to the player
+        self.assertEqual(user["xp"], 12)
+        # Only equipped pieces, and never the staff's XP.
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=100 WHERE gear_id=?;", (sword,)))
+        user = await self.run_game(players.add_xp, ALICE, 10, False)
+        self.assertEqual(((await self.equipped(ALICE))["sword"]["durability"], user["xp"]), (100, 22))
+        await self.run_game(gear.unequip, ALICE, "sword")
+        self.assertEqual((await self.run_game(players.add_xp, ALICE, 3))["xp"], 25)
+
+    async def test_the_villager_and_the_boss_give_it(self):
+        from game import villager
+        settings.load({"villager": {"exclusive_mending_chance": 1.0}, "enchants": {"boss_mending_chance": 1.0}})
+        offer = await self.run_game(villager._exclusive_offer)
+        self.assertEqual((offer["asset"], offer["price"]), ("book:mending:1", 600))
+        await self.run_game(events.spawn_boss, "Test", 1000)
+        await self.run_game(events.attack_boss, ALICE)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
+        self.advance(120)
+        rewards = (await self.run_game(events.attack_boss, ALICE))["defeat"]["rewards"]
+        self.assertEqual(rewards[0]["book"], "Mending")
+        self.assertIn(("mending", 1, 1), await self.run_game(enchants.books, ALICE))

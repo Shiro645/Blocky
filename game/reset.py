@@ -10,7 +10,7 @@ from game.db import Ctx
 
 PARTS: dict[str, str] = {
     "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans
-    "gear": "Gear and enchantments",
+    "gear": "Gear, enchantments and the anvil",
     "levels": "Levels, XP and talents",
     "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak
 }
@@ -57,6 +57,7 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
     if "gear" in parts:
         ctx.execute(f"DELETE FROM gear_enchants WHERE gear_id IN (SELECT gear_id FROM gear{where});", args)
         out["gear"] = ctx.execute(f"DELETE FROM gear{where};", args).rowcount
+        ctx.execute(f"UPDATE users SET anvil=0{where};", args)
 
     if "levels" in parts:
         ctx.execute(

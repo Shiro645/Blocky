@@ -60,7 +60,10 @@ class OfferTests(VillagerTestCase):
             self.assertFalse(sell["asset"].endswith(":3"))  # level III books are exclusive
             self.assertEqual(buy["price"], round(buy["value"] * 1.5))
             self.assertTrue(buy["asset"].startswith("block:"))
-            self.assertTrue(exclusive["asset"].endswith(":3") or exclusive["asset"].endswith(":2"))
+            self.assertTrue(exclusive["asset"] == "book:mending:1" or exclusive["asset"].endswith(":3")
+                            or exclusive["asset"].endswith(":2"))
+            if exclusive["asset"] == "book:mending:1":
+                self.assertEqual(exclusive["price"], 600)
             await self.run_game(villager.leave_now)
 
     async def test_buying_an_offer_once(self):
@@ -95,7 +98,7 @@ class OfferTests(VillagerTestCase):
         await self.run_game(villager.take, ALICE, visit["visit_id"], 2)
         kind, *rest = exclusive["asset"].split(":")
         if kind == "book":
-            self.assertEqual(await self.run_game(enchants.books, ALICE), [(rest[0], 3, 1)])
+            self.assertEqual(await self.run_game(enchants.books, ALICE), [(rest[0], int(rest[1]), 1)])
         else:
             self.assertEqual(await self.run_game(potions.owned, ALICE), {f"{rest[0]}:2": 1})
 
