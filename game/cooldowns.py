@@ -20,7 +20,7 @@ TIMERS: dict[str, str] = {
     "dummy": "Training dummy",
     "boss": "Boss attack",
     "duel": "Duels",
-    "games": "Lucky Block & roulette",
+    "games": "Lucky Block & the wheel",
     "mining": "Mining",
     "species": "Changing species",
     "daily": "Daily reward",

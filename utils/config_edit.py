@@ -67,7 +67,7 @@ CATEGORIES = {
     "pve_monsters": "🧟 Dungeon monsters",
     "bosses": "🐉 Bosses",
     "tournament": "🏟️ Tournament",
-    "chance": "🟨 Lucky Block & roulette",
+    "chance": "🟨 Lucky Block & wheel",
     "minigames": "🧩 Blockdle & quiz",
     "rob": "🦹 Robberies",
     "drops": "🎁 Drops",
@@ -188,7 +188,7 @@ FIELDS: list[Field] = [
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
-          help="/luckyblock, /roulette, /blockdle, /rob, /pve start and /dummy hit only work there (and in the guide "
+          help="/luckyblock, /wheel, /blockdle, /rob, /pve start and /dummy hit only work there (and in the guide "
                "channels), and the quiz is posted there (not set = they work anywhere, but no automatic quiz)."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
           help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
@@ -467,21 +467,26 @@ FIELDS: list[Field] = [
        item="goods"),
     # ---- mini-games ----
     _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
-       "Lucky Block and the roulette (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
-    _b("games.roulette_enabled", "chance", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
-       "replaces it).", kind="bool"),
+       "Lucky Block and the wheel (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
+    _b("games.roulette_enabled", "chance", "Wheel open", "Off: /wheel says it's closed.", kind="bool"),
+    *[_b(f"games.roulette_bets.{key}", "chance", f"Wheel: bets on {name}", "On: players can bet on it.", kind="bool",
+         min=None)
+      for key, name in (("red", "Redstone"), ("black", "Obsidian"), ("green", "Diamond block"), ("even", "even"),
+                        ("odd", "odd"), ("low", "1-18"), ("high", "19-36"), ("dozens", "dozens"),
+                        ("number", "a number"))],
     *[f for key, name in (('creeper', 'Creeper'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
         _b(f"games.lucky_block.{key}.weight", "chance", f"Lucky Block: {name} weight",
            "How often it falls out, compared with the others (0 = never).", max=100_000),
         _b(f"games.lucky_block.{key}.payout", "chance", f"Lucky Block: {name} pays (×bet)",
            "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
     )],
-    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and roulette.", min=1),
-    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and roulette.", min=1),
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
     _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
-       "Lucky Block and roulette.", max=3600),
-    _b("games.roulette_zeros", "chance", "Roulette: green slots", "The green slots make the bank win a little "
-       "on average.", kind="choice", min=None, choices=(("0 only (the bank keeps 2.7%)", 1), ("0 and 00 (the bank keeps 5.3%)", 2))),
+       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
+    _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
+       "win a little on average.", kind="choice", min=None,
+       choices=(("1: 0 only (the bank keeps 2.7%)", 1), ("2: 0 and 00 (the bank keeps 5.3%)", 2))),
     *[_b(f"games.blockdle_rewards.{i}", "minigames", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
          "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
     _b("games.blockdle_xp", "minigames", "Blockdle: XP for finding the block"),

@@ -1,4 +1,4 @@
-"""What every game of chance shares (Lucky Block, roulette): the bet limits and the daily cap.
+"""What every game of chance shares (Lucky Block, the wheel): the bet limits and the daily cap.
 
 The daily cap counts what a player won minus what they lost at these games today
 (`games.daily_win_cap`, 0 = no cap): once it's reached they can't play again before

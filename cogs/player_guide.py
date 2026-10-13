@@ -153,7 +153,7 @@ def guide_pages() -> list[discord.Embed]:
             "and `/achievements`.\n"
             f"**Events.** Drops (the first to click wins), the wandering villager every day from "
             f"{int(v['arrive_hour'])}:00 to {int(v['leave_hour'])}:00 (`/villager`), bosses.\n"
-            "**Mini-games.** `/roulette`, `/blockdle` (guess the block of the day), the Minecraft quiz and `/rob` "
+            "**Mini-games.** `/luckyblock`, `/wheel`, `/blockdle` (guess the block of the day), the Minecraft quiz and `/rob` "
             "(risky!).\n"
             "**Minecraft.** `/ip` to join the server, `/link` to link your Minecraft account."
         )),
