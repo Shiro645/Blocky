@@ -70,7 +70,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear. `/sell` sells your blocks: "
         "all of them, one kind (`block`) or a number of them (`amount`) (the Trader talent and the Villager species "
         "pay more). Rare blocks are worth much more than "
-        "cobblestone.\n"
+        "cobblestone. `/sell gear` sells a piece of gear back for part of its value, less when it's worn.\n"
         "**The market**: `/market` sells sticks and ingots, what you need to craft, at fixed prices. The market "
         "channel shows them too, above the auctions.\n"
         "**Daily reward**: `/daily` once a day. Coming back every day grows your **streak**: a bigger reward each "

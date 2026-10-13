@@ -152,6 +152,47 @@ def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
     return enchants.attach(ctx, [dict(r) for r in rows])
 
 
+def owned_piece(ctx: Ctx, user_id: int, gear_id: int) -> dict:
+    row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
+    if row is None:
+        raise GameError("You don't own this piece of gear.")
+    return enchants.attach(ctx, [dict(row)])[0]
+
+
+def gear_value(piece: dict) -> float:
+    """What a piece is worth new: the resources of its craft and the books applied to it."""
+    books = sum(item_value("book", enchants.book_material(name, level)) for name, level in piece["enchants"].items())
+    return craft_cost(piece["item"], piece["material"]) + books
+
+
+def gear_offer(ctx: Ctx, user_id: int, piece: dict) -> dict:
+    """What /sell pays for a piece: market.gear_sell_rate of its value, times the durability it has left
+    (Villagers get their bonus on top)."""
+    value = gear_value(piece)
+    left = piece["durability"] / piece["max_durability"] if piece["max_durability"] else 0.0
+    base = max(1, int(round(value * float(settings.get()["market"]["gear_sell_rate"]) * left)))
+    bonus = int(round(base * species.bonus(ctx, user_id, "villager")))
+    return {"value": int(round(value)), "left": left, "base": base, "bonus": bonus, "price": base + bonus}
+
+
+def gear_offers(ctx: Ctx, user_id: int) -> list[tuple[dict, dict]]:
+    """Every piece of the player with what /sell pays for it."""
+    return [(piece, gear_offer(ctx, user_id, piece)) for piece in get_gear(ctx, user_id)]
+
+
+def sell_gear(ctx: Ctx, user_id: int, gear_id: int, price: int | None = None) -> dict:
+    """Sell a piece of gear back (taken off first when it is worn). `price`: what the player agreed to pay
+    for it, refused when the piece changed since."""
+    piece = owned_piece(ctx, user_id, gear_id)
+    offer = gear_offer(ctx, user_id, piece)
+    if price is not None and offer["price"] != price:
+        raise GameError(f"The price changed: it now sells for **{offer['price']:,}** emeralds. Use `/sell` again.")
+    ctx.execute("DELETE FROM gear WHERE gear_id=?;", (gear_id,))
+    # Not earned: the piece was paid with emeralds or resources that already counted.
+    players.give_emeralds(ctx, user_id, offer["price"])
+    return {**offer, "piece": piece, "balance": players.get_emeralds(ctx, user_id)}
+
+
 def per_ingot(piece: dict) -> float:
     """Durability one ingot gives back to this piece (less after each repair it already had)."""
     r = settings.get()["repair"]
@@ -169,10 +210,7 @@ def repair(ctx: Ctx, user_id: int, gear_id: int, ingots: int | None = None) -> d
     """Repair a piece of gear on the anvil with ingots of its material (`ingots` = how many to put in,
     None = as many as needed, or all the player has). It keeps its enchantments, and each repair makes the
     next one cost more."""
-    row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
-    if row is None:
-        raise GameError("You don't own this piece of gear.")
-    piece = enchants.attach(ctx, [dict(row)])[0]
+    piece = owned_piece(ctx, user_id, gear_id)
     name = f"{piece['material']} {piece['item']}"
     needed = ingots_needed(piece)
     if needed == 0:

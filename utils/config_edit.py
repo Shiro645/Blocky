@@ -277,6 +277,9 @@ FIELDS: list[Field] = [
     _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
     *[_b(f"market.ingots.{m}", "market", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
          "for crafting values, fortunes and fair prices.", min=1) for m in MATERIALS],
+    _pct("market.gear_sell_rate", "market", "/sell gear: share of its value",
+         "A piece sells for this share of its value (craft + books), times its durability left: at 80%, a piece "
+         "worth 100 with half its durability sells for 40."),
     _b("pay.min_amount", "trading", "/pay: minimum amount", min=1),
     _b("auction.tax_percent", "trading", "Auction tax (%)", "Taken from the seller's price.", max=100),
     _b("auction.max_listings", "trading", "Auction: listings per player", min=1, max=100),

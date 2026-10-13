@@ -31,6 +31,7 @@ DEFAULTS: dict[str, Any] = {
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
         "ingots": {"gold": 5, "iron": 10, "diamond": 60, "netherite": 300},
+        "gear_sell_rate": 0.8,  # /sell gear: this share of its value (craft + books), times its durability left
     },
     "talents": {
         "points_every_levels": 5,
