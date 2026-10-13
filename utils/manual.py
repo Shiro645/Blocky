@@ -7,6 +7,7 @@ command tree itself (see cogs/help_command.py), so they never go stale.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -300,6 +301,18 @@ def _duel(s: Settings) -> list[str]:
         f"Turns: **{duration(d['turn_seconds'])}** to play, then the bot attacks for you; after "
         f"**{num(d['afk_turns'])}** missed turns the rest is played automatically",
         f"XP: won **{num(d['xp_win'])}** · lost **{num(d['xp_loss'])}**",
+    ]
+
+
+def _repair(s: Settings) -> list[str]:
+    r = s["repair"]
+    per, penalty = float(r["durability_per_ingot"]), float(r["penalty_per_repair"])
+    fulls = [math.ceil(1 / (per / (1 + penalty * n)) - 1e-9) for n in range(4)]
+    return [
+        f"1 ingot = **{pct(per)}** of the piece's durability at its first repair; each repair it already had adds "
+        f"**{pct(penalty)}** to the ingots needed",
+        "Ingots for a full repair: " + " → ".join(f"**{n}**" for n in fulls) + " → …",
+        f"Anvil: **{num(r['anvil_iron'])}** iron ingots · **{pct(r['anvil_damage_chance'])}** chance to wear at each use",
     ]
 
 
@@ -612,10 +625,12 @@ PAGES: list[Page] = [
         "drops or from other players). If that slot is empty, the new piece is equipped right away.\n"
         "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time "
         "(except the shield: at 0 it stays, unusable until repaired).\n"
-        "The **shield** is made of iron only (6 ingots).\n"
+        "The **shield** is made of iron only (6 ingots). The **anvil** (iron only) is what you repair gear and "
+        "combine books on; it wears out a little with each use. For both, leave out the material.\n"
         "Everyone in the channel sees what you crafted.",
-        lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s), "Recipes and prices: /craftlist"],
-        examples=("/craft item:pickaxe material:iron",),
+        lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s),
+                   f"Anvil: **{num(s['repair']['anvil_iron'])}** iron ingots", "Recipes and prices: /craftlist"],
+        examples=("/craft item:pickaxe material:iron", "/craft item:anvil"),
         related=("craftlist", "market", "equip_best", "repair"),
     ),
     Page(
@@ -661,13 +676,14 @@ PAGES: list[Page] = [
     ),
     Page(
         "repair", "gear",
-        "Repairs a piece of gear to full durability for emeralds. The price depends on the durability "
-        "missing, and the piece keeps its enchantments. The suggestions show the cost of each piece.",
-        lambda s: [
-            f"A piece with no durability left costs **{num(s['repair']['cost_percent'])}%** of its crafting value "
-            "(ingots + sticks at the market prices); less if it's only partly worn"
-        ],
-        examples=("/repair piece:iron sword",),
+        "Repairs a piece of gear on your **anvil** (`/craft item:anvil`) with ingots of its material: gold, iron, "
+        "diamond or netherite (iron for the shield). Like in Minecraft, put as many ingots as you want: each one "
+        "gives back part of the durability, and the piece keeps its enchantments. Leave `ingots` empty to use as "
+        "many as needed (or all you have). The suggestions show the ingots for a full repair.\n"
+        "**Each repair makes the next one cost more**, and the anvil wears out a little with each use "
+        "(new → chipped → damaged → broken).",
+        _repair,
+        examples=("/repair piece:iron sword", "/repair piece:diamond chestplate ingots:2"),
         related=("gear", "craft"),
     ),
     Page(
@@ -681,8 +697,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "enchant combine", "gear",
-        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III). "
-        "Level III is the maximum. It's free.",
+        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III), on your anvil "
+        "(`/craft item:anvil`; it wears out a little with each use). Level III is the maximum. It's free.",
         examples=("/enchant combine book:Fortune I",),
         related=("enchant apply", "enchant info"),
     ),

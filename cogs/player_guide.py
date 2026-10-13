@@ -115,10 +115,11 @@ def guide_pages() -> list[discord.Embed]:
             "• **Sword**: more damage. **Armor**: less damage taken.\n"
             f"• **Shield** (iron): in a duel, **Attack + block** blocks the opponent's next attack, "
             f"{s['gear']['shield_blocks_per_fight']} time(s) per duel.\n"
-            "Gear wears out when used: `/repair` it before it breaks.\n\n"
+            "Gear wears out when used: `/repair` it before it breaks, with ingots of its material on an **anvil** "
+            f"(`/craft item:anvil`, {s['repair']['anvil_iron']} iron ingots).\n\n"
             "**Enchanting.** Mining sometimes finds lapis, and enchanted books drop from events and bosses: "
             "`/enchant apply` puts a book on a piece (Efficiency, Fortune, Unbreaking, Sharpness, Looting, "
-            "Protection), `/enchant combine` merges two books into a stronger one."
+            "Protection), `/enchant combine` merges two books into a stronger one (on your anvil)."
         )),
         ("🧬 3. Species and profile", (
             "Pick a **species** with `/species choose` for a small bonus. Your first choice is free; changing later "

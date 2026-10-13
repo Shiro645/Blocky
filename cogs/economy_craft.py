@@ -4,12 +4,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import enchants, gear, settings, shop
+from game import anvil, enchants, gear, settings, shop
 from game.catalog import GEAR_ITEMS, MATERIALS, RECIPES, gear_effect, materials_for
 from game.db import Ctx
 from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
+CRAFT_CHOICES = ITEM_CHOICES + [app_commands.Choice(name="anvil (to repair and combine books)", value="anvil")]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
 
 
@@ -17,11 +18,18 @@ class EconomyCraftCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="craft", description="Craft tools and armor using ingots and sticks.")
-    @app_commands.describe(item="What to craft", material="Which material (you need its ingots)")
-    @app_commands.choices(item=ITEM_CHOICES, material=MATERIAL_CHOICES)
-    async def craft(self, interaction: discord.Interaction, item: str, material: str):
+    @app_commands.command(name="craft", description="Craft tools, armor, a shield or an anvil with ingots and sticks.")
+    @app_commands.describe(item="What to craft", material="Which material (you need its ingots; not for the shield or the anvil)")
+    @app_commands.choices(item=CRAFT_CHOICES, material=MATERIAL_CHOICES)
+    async def craft(self, interaction: discord.Interaction, item: str, material: str | None = None):
         res = await self.bot.db.run(shop.craft, interaction.user.id, item, material)
+        if res.get("anvil"):
+            return await interaction.response.send_message(
+                f"✅ Crafted an **anvil**! Cost: {mat('iron')} {res['ingots']} iron ingots.\n"
+                "Use it to `/repair` your gear with ingots and to `/enchant combine` books. It wears out a little "
+                "with each use."
+            )
+        material = res["material"]
 
         cost = []
         if res["ingots"]:
@@ -47,6 +55,8 @@ class EconomyCraftCog(commands.Cog):
             only = materials_for(item)
             note = f" *({', '.join(only)} only)*" if only != MATERIALS else ""
             lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost) + note)
+        iron = int(settings.get()["repair"]["anvil_iron"])
+        lines.append(f"🔨 **anvil** → {iron} ingot(s) *(iron only; needed to /repair and to combine books)*")
 
         embed = discord.Embed(title="Crafting Recipes", description="\n".join(lines))
         embed.set_footer(text="Materials: " + ", ".join(MATERIALS))
@@ -80,25 +90,35 @@ class EconomyCraftCog(commands.Cog):
         pieces = await self.bot.db.run(shop.get_gear, interaction.user.id)
         choices = []
         for g in pieces:
-            cost = shop.repair_cost(g)
-            if not cost:
+            needed = shop.ingots_needed(g)
+            if not needed:
                 continue
-            name = f"{g['material']} {g['item']} ({g['durability']}/{g['max_durability']}) — {cost} emeralds"
+            name = (f"{g['material']} {g['item']} ({g['durability']}/{g['max_durability']}) — full repair: "
+                    f"{needed} {g['material']} ingot{'s' if needed > 1 else ''}")
             if g["enchants"]:
                 name += f" — {enchants.labels(g['enchants'])}"
             if current.lower() in name.lower():
                 choices.append(app_commands.Choice(name=name[:100], value=g["gear_id"]))
         return choices[:25]
 
-    @app_commands.command(name="repair", description="Repair a piece of gear for emeralds (it keeps its enchantments).")
-    @app_commands.describe(piece="The piece to repair (the cost is shown)")
+    @app_commands.command(name="repair", description="Repair a piece of gear on your anvil with ingots of its material.")
+    @app_commands.describe(piece="The piece to repair (the ingots for a full repair are shown)",
+                           ingots="How many ingots to put in (empty = as many as needed, or all you have)")
     @app_commands.autocomplete(piece=repair_autocomplete)
-    async def repair(self, interaction: discord.Interaction, piece: int):
-        res = await self.bot.db.run(shop.repair, interaction.user.id, piece)
-        await interaction.response.send_message(
-            f"🔧 {gear_label(res['piece'])} repaired for **{em(res['cost'])}**. Balance: {em(res['balance'])}.",
-            ephemeral=True,
-        )
+    async def repair(self, interaction: discord.Interaction, piece: int,
+                     ingots: app_commands.Range[int, 1, 1000] | None = None):
+        res = await self.bot.db.run(shop.repair, interaction.user.id, piece, ingots)
+        p = res["piece"]
+        lines = [f"🔨 {gear_label(p)}: **+{res['repaired']:,}** durability for {mat(res['material'])} "
+                 f"**{res['ingots']}** {res['material']} ingot{'s' if res['ingots'] > 1 else ''}."]
+        if res["left"]:
+            lines.append(f"Still **{res['left']}** ingot{'s' if res['left'] > 1 else ''} to repair it fully.")
+        lines.append(f"Repaired **{p['repairs']}** time{'s' if p['repairs'] > 1 else ''}: a full repair now takes "
+                     f"**{res['next_full']}** ingots.")
+        wear = anvil.wear_text(res["anvil"])
+        if wear:
+            lines.append(wear)
+        await interaction.response.send_message("\n".join(lines), ephemeral=True)
 
     @app_commands.command(name="equip_best", description="Fill every empty slot with your best piece of gear.")
     async def equip_best(self, interaction: discord.Interaction):
@@ -119,9 +139,9 @@ class EconomyCraftCog(commands.Cog):
     @app_commands.command(name="gear", description="Show your equipment and what each piece does.")
     async def gear_cmd(self, interaction: discord.Interaction):
         def load(ctx: Ctx, user_id: int):
-            return gear.get_equipped(ctx, user_id), shop.get_gear(ctx, user_id)
+            return gear.get_equipped(ctx, user_id), shop.get_gear(ctx, user_id), anvil.state(ctx, user_id)
 
-        equipped, owned = await self.bot.db.run(load, interaction.user.id)
+        equipped, owned, anvil_state = await self.bot.db.run(load, interaction.user.id)
         lines = []
         for slot in GEAR_ITEMS:
             g = equipped.get(slot)
@@ -144,7 +164,9 @@ class EconomyCraftCog(commands.Cog):
         spare = [g for g in owned if not g["equipped"]]
         if spare:
             embed.add_field(name="Spare gear", value=join_lines([gear_label(g) for g in spare]), inline=False)
-        embed.set_footer(text="Gear wears out when used and breaks at 0 durability.")
+        embed.add_field(name="🔨 Anvil", value=f"**{anvil.label(anvil_state)}**" if anvil_state
+                        else "None: `/craft item:anvil` to repair your gear", inline=False)
+        embed.set_footer(text="Gear wears out when used and breaks at 0 durability: /repair it with ingots on your anvil.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 

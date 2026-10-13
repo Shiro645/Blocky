@@ -45,7 +45,7 @@ CATEGORIES = {
     "moderation": "🔨 Moderation",
     "mining": "⛏️ Mining & block values",
     "mining_odds": "📊 Mining odds",
-    "market": "🛒 Market, daily & repair",
+    "market": "🛒 Market & daily",
     "trading": "🤝 Trading & auction",
     "loans": "💳 Loans",
     "villager": "🧑‍🌾 Villager",
@@ -59,7 +59,7 @@ CATEGORIES = {
     "teams": "🛡️ Teams",
     "duels": "🤺 Duels & dummy",
     "potions": "🧪 Potions",
-    "tools": "🛠️ Tools & durability",
+    "tools": "🛠️ Tools, durability & repair",
     "combat_gear": "🗡️ Swords, armor & shield",
     "enchant_books": "📕 Enchanting: books & lapis",
     "enchant_effects": "✨ Enchanting: effects",
@@ -276,9 +276,7 @@ FIELDS: list[Field] = [
     _b("market.stick_pack.price", "market", "Sticks: price of a pack", min=1),
     _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
     *[_b(f"market.ingots.{m}", "market", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
-         "for /repair costs, fortunes and fair prices.", min=1) for m in MATERIALS],
-    _b("repair.cost_percent", "market", "/repair: cost (% of crafting value)",
-       "For a piece with no durability left; less when it's only partly worn.", max=1000),
+         "for crafting values, fortunes and fair prices.", min=1) for m in MATERIALS],
     _b("pay.min_amount", "trading", "/pay: minimum amount", min=1),
     _b("auction.tax_percent", "trading", "Auction tax (%)", "Taken from the seller's price.", max=100),
     _b("auction.max_listings", "trading", "Auction: listings per player", min=1, max=100),
@@ -294,6 +292,14 @@ FIELDS: list[Field] = [
        min=1, max=14),
     _b("daily.xp", "market", "Daily: XP"),
     # ---- tools ----
+    _pct("repair.durability_per_ingot", "tools", "/repair: durability per ingot",
+         "What one ingot of its material gives back to a piece, at its first repair (25% = 4 ingots).", max=1),
+    _pct("repair.penalty_per_repair", "tools", "/repair: costlier after each repair",
+         "25% = each repair the piece already had adds 25% to the ingots needed (4, 5, 6, 7 ingots…).", max=10),
+    _b("repair.anvil_iron", "tools", "Anvil: iron ingots to craft it", "The anvil is needed to repair and to "
+       "combine books.", min=1, max=1000),
+    _pct("repair.anvil_damage_chance", "tools", "Anvil: chance to wear at each use",
+         "New → chipped → damaged → broken (12% = about 25 uses)."),
     *[_b(f"gear.tier.{m}", "tools", f"{m.capitalize()} tier", "Tool bonuses are multiplied by the tier.", min=1, max=20)
       for m in MATERIALS],
     *[_b(f"gear.durability.{m}", "tools", f"{m.capitalize()} durability", "Uses before a piece breaks.", min=1, max=1_000_000)

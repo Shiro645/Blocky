@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import enchants, shop
+from game import anvil, enchants, shop
 from game.db import Ctx
 from game.enchants import ENCHANTS, MAX_LEVEL, ROMAN
 from utils.ui import book_icon, gear_label, join_lines, lapis_icon
@@ -69,9 +69,9 @@ class EnchantCog(commands.Cog):
     @app_commands.autocomplete(book=book_autocomplete)
     async def combine(self, interaction: discord.Interaction, book: str):
         res = await self.bot.db.run(enchants.combine, interaction.user.id, book)
-        await interaction.response.send_message(
-            f"{book_icon()} 2 books combined into a **{enchants.label(res['name'], res['level'])}** book!", ephemeral=True
-        )
+        text = f"{book_icon()} 2 books combined into a **{enchants.label(res['name'], res['level'])}** book on your anvil!"
+        wear = anvil.wear_text(res["anvil"])
+        await interaction.response.send_message(text + (f"\n{wear}" if wear else ""), ephemeral=True)
 
     @enchant.command(name="info", description="Your books and lapis, and what each enchantment does.")
     async def info(self, interaction: discord.Interaction):
@@ -82,7 +82,7 @@ class EnchantCog(commands.Cog):
             description=(
                 f"{lapis_icon()} You have **{data['lapis']} lapis lazuli** (found while mining).\n"
                 f"Applying a book costs **{costs} lapis** for level I / II / III and replaces a lower level. "
-                "Two identical books combine into the next level with `/enchant combine`.\n"
+                "Two identical books combine into the next level with `/enchant combine` (on an anvil).\n"
                 "Books come from drops, bosses (top damage), completing every weekly challenge, "
                 "and other players (`/trade`, `/auction`)."
             ),

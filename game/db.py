@@ -562,6 +562,13 @@ MIGRATIONS: list[str] = [
     ALTER TABLE duels ADD COLUMN channel_id INTEGER;
     ALTER TABLE duels ADD COLUMN message_id INTEGER;
     """,
+    # 28: repairs with ingots on an anvil: how many times a piece was repaired (each repair costs more), the
+    # player's anvil (0 = none, 3 = new, 2 = chipped, 1 = damaged), and the repairs of gear listed at the auction
+    """
+    ALTER TABLE gear ADD COLUMN repairs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE auctions ADD COLUMN repairs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN anvil INTEGER NOT NULL DEFAULT 0;
+    """,
 ]
 
 

@@ -12,7 +12,7 @@ import random
 import re
 from dataclasses import dataclass
 
-from game import players, settings, species
+from game import anvil, players, settings, species
 from game.catalog import ARMOR, GEAR_ITEMS
 from game.db import Ctx
 from game.errors import GameError
@@ -244,6 +244,7 @@ def combine(ctx: Ctx, user_id: int, book: str) -> dict:
     have = players.item_amount(ctx, user_id, "book", book_material(name, level))
     if have < 2:
         raise GameError(f"You need 2 **{label(name, level)}** books to combine them (you have {have}).")
+    anvil.require(ctx, user_id, "combine books")
     players.take_item(ctx, user_id, "book", book_material(name, level), 2)
     give_book(ctx, user_id, name, level + 1)
-    return {"name": name, "level": level + 1}
+    return {"name": name, "level": level + 1, "anvil": anvil.use(ctx, user_id)}

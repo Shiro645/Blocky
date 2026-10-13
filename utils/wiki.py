@@ -102,8 +102,11 @@ SECTIONS: tuple[Section, ...] = (
         "opponent's whole next attack, a few times per duel. Nobody sees it coming: the duel only says how much it "
         "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
-        "enchantments. Watch it in `/gear` and `/repair` a piece before it breaks: it costs part of its crafting "
-        "value and keeps its enchantments. A shield at 0 doesn't break: it stays unusable until repaired.",
+        "enchantments. Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
+        "(`/craft item:anvil`, iron), with ingots of its material: each ingot gives back part of its durability, "
+        "and each repair makes the next one cost more ingots, like in Minecraft. The piece keeps its enchantments, "
+        "and the anvil wears out a little with each use. A shield at 0 doesn't break: it stays unusable until "
+        "repaired.",
         ("craftlist", "gear", "repair"),
     ),
     Section(
@@ -113,7 +116,7 @@ SECTIONS: tuple[Section, ...] = (
         "villager (level III) and other players.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
-        "two identical books into one of the next level (I + I = II, II + II = III). `/enchant info` lists your "
+        "two identical books into one of the next level (I + I = II, II + II = III), on your anvil. `/enchant info` lists your "
         "books, your lapis and every effect.\n"
         "Enchantments stay on the piece when you trade or sell it, and are lost if it breaks: repair it in time! "
         "The Mage species makes every effect stronger.",

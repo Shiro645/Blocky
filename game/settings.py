@@ -80,8 +80,16 @@ DEFAULTS: dict[str, Any] = {
         "shield_durability": 100,
         "shield_wear_per_block": 10,
     },
-    # /repair: a piece with no durability left costs this % of its crafting value to repair.
-    "repair": {"cost_percent": 60},
+    # /repair, on an anvil (crafted with anvil_iron iron ingots), with ingots of the piece's material:
+    # one ingot gives back durability_per_ingot of its durability, divided by (1 + penalty_per_repair x the
+    # repairs it already had): 4 ingots for a first full repair, then 5, 6, 7… Each use of the
+    # anvil (repair, combining books) has anvil_damage_chance to wear it: new → chipped → damaged → broken.
+    "repair": {
+        "durability_per_ingot": 0.25,
+        "penalty_per_repair": 0.25,
+        "anvil_iron": 22,
+        "anvil_damage_chance": 0.12,
+    },
     "daily": {
         "base_reward": 30,
         "streak_bonus_per_day": 10,
@@ -633,6 +641,8 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for key in ("book_weights", "boss_book_weights"):
         if sum(float(w) for w in ench[key]) <= 0:
             out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    if float(merged["repair"]["durability_per_ingot"]) <= 0:
+        out.append(("`balance.repair.durability_per_ingot` must be above 0.", [("repair", "durability_per_ingot")]))
     if sum(float(w) for w in merged["potions"]["random_weights"].values()) <= 0:
         out.append(("`balance.potions.random_weights`: at least one potion needs a weight above 0.",
                     [("potions", "random_weights", k) for k in merged["potions"]["random_weights"]]))

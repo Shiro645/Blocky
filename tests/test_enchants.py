@@ -92,6 +92,9 @@ class ApplyTests(EnchantTestCase):
 
     async def test_combine(self):
         await self.run_game(enchants.give_book, ALICE, "fortune", 2, 2)
+        with self.assertRaisesRegex(GameError, "need an anvil"):
+            await self.run_game(enchants.combine, ALICE, "fortune:2")
+        await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
         res = await self.run_game(enchants.combine, ALICE, "fortune:2")
         self.assertEqual(res["level"], 3)
         self.assertEqual(await self.run_game(enchants.books, ALICE), [("fortune", 3, 1)])

@@ -4,7 +4,7 @@ import asyncio
 import random
 import unittest
 
-from game import gear, mining, players, settings, shop
+from game import anvil, exchange, gear, mining, players, settings, shop
 from game.errors import GameError
 from game.notices import LevelUp
 from tests.helpers import GameTestCase
@@ -191,18 +191,63 @@ class BalanceTests(GameTestCase):
                 seen.add(res["block"])
         self.assertTrue(seen)
 
-    async def test_repair(self):
-        gid = await self.run_game(shop.create_gear, ALICE, "sword", "iron")  # crafting value 20.25
-        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability = max_durability / 2 WHERE gear_id=?;", (gid,)))
-        with self.assertRaisesRegex(GameError, "Not enough emeralds"):
+    async def test_the_anvil(self):
+        with self.assertRaisesRegex(GameError, "22"):
+            await self.run_game(shop.craft, ALICE, "anvil")
+        await self.run_game(players.add_item, ALICE, "ingot", "iron", 30)
+        self.assertEqual((await self.run_game(shop.craft, ALICE, "anvil"))["ingots"], 22)
+        self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "iron"), 8)
+        self.assertEqual(await self.run_game(anvil.state, ALICE), anvil.NEW)
+        with self.assertRaisesRegex(GameError, "already have an anvil"):
+            await self.run_game(shop.craft, ALICE, "anvil")
+        # It wears out: new -> chipped -> damaged -> broken.
+        settings.load({"repair": {"anvil_damage_chance": 1.0}})
+        uses = [await self.run_game(anvil.use, ALICE) for _ in range(3)]
+        self.assertEqual([(u["after"], u["broke"]) for u in uses], [(2, False), (1, False), (0, True)])
+        self.assertIn("broke", anvil.wear_text(uses[-1]))
+
+    async def test_repair_with_ingots_costs_more_each_time(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "iron")  # 250 durability
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=1 WHERE gear_id=?;", (gid,)))
+        with self.assertRaisesRegex(GameError, "need an anvil"):
             await self.run_game(shop.repair, ALICE, gid)
-        await self.run_game(players.give_emeralds, ALICE, 100)
-        res = await self.run_game(shop.repair, ALICE, gid)
-        self.assertEqual(res["cost"], 7)  # 60% of 20.25 for half the durability, rounded up
-        piece = (await self.run_game(shop.get_gear, ALICE))[0]
-        self.assertEqual(piece["durability"], piece["max_durability"])
+        await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
+        with self.assertRaisesRegex(GameError, "you have none"):
+            await self.run_game(shop.repair, ALICE, gid)
+        settings.load({"repair": {"anvil_damage_chance": 0}})
+        await self.run_game(players.add_item, ALICE, "ingot", "iron", 30)
+
+        # 1 ingot = 25%: the player chooses how many to put in.
+        res = await self.run_game(shop.repair, ALICE, gid, 1)
+        self.assertEqual((res["ingots"], res["repaired"], res["piece"]["durability"]), (1, 62, 63))
+        # The second repair: each ingot gives back 25% / 1.25 = 20% (50 durability).
+        self.assertEqual(res["left"], 4)
+        res = await self.run_game(shop.repair, ALICE, gid)  # as many as needed
+        self.assertEqual((res["ingots"], res["piece"]["durability"]), (4, 250))
+        self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "iron"), 25)
         with self.assertRaisesRegex(GameError, "full durability"):
             await self.run_game(shop.repair, ALICE, gid)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=0 WHERE gear_id=?;", (gid,)))
+        piece = (await self.run_game(shop.get_gear, ALICE))[0]
+        self.assertEqual((piece["repairs"], shop.ingots_needed(piece)), (2, 6))  # 4, 5, then 6 for a full repair
+        res = await self.run_game(shop.repair, ALICE, gid, 26)  # more than needed: only what's needed is used
+        self.assertEqual((res["ingots"], res["piece"]["durability"]), (6, 250))
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET durability=0 WHERE gear_id=?;", (gid,)))
+        await self.run_game(players.take_item, ALICE, "ingot", "iron", 17)  # 2 left
+        with self.assertRaisesRegex(GameError, "only have"):
+            await self.run_game(shop.repair, ALICE, gid, 3)
+        res = await self.run_game(shop.repair, ALICE, gid)  # without a number: all they have
+        self.assertEqual((res["ingots"], res["left"]), (2, 6))  # the next ingots count with 4 repairs done
+
+    async def test_the_repair_count_follows_the_piece(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "iron")
+        await self.run_game(lambda ctx: ctx.execute("UPDATE gear SET repairs=3, equipped=0 WHERE gear_id=?;", (gid,)))
+        await self.run_game(exchange.trade, ALICE, BOB, "gear:iron:sword", 1, None, 0)
+        self.assertEqual((await self.run_game(shop.get_gear, BOB))[0]["repairs"], 3)
+        listing = await self.run_game(exchange.list_for_sale, BOB, "gear:iron:sword", 1, 10)
+        await self.run_game(players.give_emeralds, ALICE, 10)
+        await self.run_game(exchange.buy, ALICE, listing["auction_id"])
+        self.assertEqual((await self.run_game(shop.get_gear, ALICE))[0]["repairs"], 3)
 
 
 if __name__ == "__main__":

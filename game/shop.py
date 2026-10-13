@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from game import enchants, gear, players, potions, settings, species
+from game import anvil, enchants, gear, players, potions, settings, species
 from game.catalog import MATERIALS, RECIPES, SHIELD, materials_for
 from game.db import Ctx
 from game.errors import GameError
@@ -102,9 +102,16 @@ def create_gear(ctx: Ctx, user_id: int, item: str, material: str) -> int:
     return int(cur.lastrowid)
 
 
-def craft(ctx: Ctx, user_id: int, item: str, material: str) -> dict:
+def craft(ctx: Ctx, user_id: int, item: str, material: str | None = None) -> dict:
+    """Craft a piece of gear (or the anvil). Without a material, the item's only material is used."""
+    if item == "anvil":
+        return {**anvil.craft(ctx, user_id), "anvil": True}
     if item not in RECIPES:
-        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}.")
+        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}, anvil.")
+    if material is None:
+        if len(materials_for(item)) != 1:
+            raise GameError(f"Choose the `material` of your {item}: {', '.join(materials_for(item))}.")
+        material = materials_for(item)[0]
     if material not in MATERIALS:
         raise GameError(f"Unknown material. Allowed: {', '.join(MATERIALS)}.")
     if material not in materials_for(item):
@@ -132,7 +139,7 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str) -> dict:
     auto_equipped = item not in gear.get_equipped(ctx, user_id)
     if auto_equipped:
         gear.equip(ctx, user_id, gear_id)
-    return {"gear_id": gear_id, "ingots": ingots, "sticks": sticks, "equipped": auto_equipped}
+    return {"gear_id": gear_id, "material": material, "ingots": ingots, "sticks": sticks, "equipped": auto_equipped}
 
 
 def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
@@ -143,26 +150,51 @@ def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
     return enchants.attach(ctx, [dict(r) for r in rows])
 
 
-def repair_cost(piece: dict) -> int:
-    """Emeralds to bring a piece back to full durability (in proportion to what is missing)."""
+def per_ingot(piece: dict) -> float:
+    """Durability one ingot gives back to this piece (less after each repair it already had)."""
+    r = settings.get()["repair"]
+    base = piece["max_durability"] * float(r["durability_per_ingot"])
+    return max(1.0, base / (1 + float(r["penalty_per_repair"]) * int(piece.get("repairs", 0))))
+
+
+def ingots_needed(piece: dict) -> int:
+    """Ingots of its material to bring a piece back to full durability (0 = nothing to repair)."""
     missing = piece["max_durability"] - piece["durability"]
-    if missing <= 0:
-        return 0
-    pct = float(settings.get()["repair"]["cost_percent"]) / 100
-    return max(1, math.ceil(craft_cost(piece["item"], piece["material"]) * pct * missing / piece["max_durability"]))
+    return math.ceil(missing / per_ingot(piece)) if missing > 0 else 0
 
 
-def repair(ctx: Ctx, user_id: int, gear_id: int) -> dict:
-    """Repair a piece of gear for emeralds. It keeps its enchantments."""
+def repair(ctx: Ctx, user_id: int, gear_id: int, ingots: int | None = None) -> dict:
+    """Repair a piece of gear on the anvil with ingots of its material (`ingots` = how many to put in,
+    None = as many as needed, or all the player has). It keeps its enchantments, and each repair makes the
+    next one cost more."""
     row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
     if row is None:
         raise GameError("You don't own this piece of gear.")
     piece = enchants.attach(ctx, [dict(row)])[0]
-    cost = repair_cost(piece)
-    if cost == 0:
-        raise GameError(f"Your {piece['material']} {piece['item']} is already at full durability.")
-    players.spend_emeralds(ctx, user_id, cost)
-    ctx.execute("UPDATE gear SET durability = max_durability WHERE gear_id=?;", (gear_id,))
+    name = f"{piece['material']} {piece['item']}"
+    needed = ingots_needed(piece)
+    if needed == 0:
+        raise GameError(f"Your {name} is already at full durability.")
+    anvil.require(ctx, user_id, "repair gear")
+    material = piece["material"]
+    have = players.item_amount(ctx, user_id, "ingot", material)
+    if ingots is not None and ingots <= 0:
+        raise GameError("Put at least 1 ingot.")
+    use = min(needed, ingots if ingots is not None else have)
+    if use <= 0:
+        raise GameError(f"Repairing your {name} takes **{material} ingots** ({needed} for a full repair): you "
+                        "have none (`/market` sells them).")
+    if have < use:
+        raise GameError(f"You only have **{have}** {material} ingot(s).")
+    missing = piece["max_durability"] - piece["durability"]
+    repaired = missing if use >= needed else min(missing, max(1, int(use * per_ingot(piece))))
+    players.take_item(ctx, user_id, "ingot", material, use)
+    ctx.execute("UPDATE gear SET durability = durability + ?, repairs = repairs + 1 WHERE gear_id=?;",
+                (repaired, gear_id))
     players.bump_stat(ctx, user_id, "items_repaired")
-    piece["durability"] = piece["max_durability"]
-    return {"piece": piece, "cost": cost, "balance": players.get_emeralds(ctx, user_id)}
+    wear = anvil.use(ctx, user_id)
+    piece["durability"] += repaired
+    piece["repairs"] = int(piece.get("repairs", 0)) + 1
+    return {"piece": piece, "ingots": use, "material": material, "repaired": repaired,
+            "left": ingots_needed(piece), "next_full": math.ceil(piece["max_durability"] / per_ingot(piece)),
+            "anvil": wear}
