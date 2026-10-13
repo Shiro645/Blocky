@@ -237,13 +237,17 @@ def _enchant_effects(s: Settings) -> list[str]:
         "sharpness": f"+{levels('sharpness_damage')} maximum damage",
         "looting": f"+{levels('looting_boss_bonus', pct)} boss reward",
         "protection": f"+{levels('protection_points')} armor points",
+        "mending": f"the XP you gain repairs the equipped piece first: **{num(e['mending_durability_per_xp'])}** "
+        "durability per XP, and only the XP left goes to you. One level; the rarest book (the villager's exclusive "
+        f"offer, or now and then a boss's top damage dealer: {pct(e['boss_mending_chance'])})",
     }
     lines = []
     for ench in enchants.ENCHANTS.values():
         items = "any gear" if len(ench.items) > 4 else ", ".join(ench.items)
         if ench.key == "protection":
             items = "armor"
-        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]} (I / II / III)")
+        levels_text = " (I / II / III)" if ench.max_level > 1 else ""
+        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}{levels_text}")
     return lines
 
 

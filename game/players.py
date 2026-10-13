@@ -262,7 +262,12 @@ def _spent_talent_points(user: dict) -> int:
     return sum(user[f"{b}_points"] for b in TALENT_BRANCHES)
 
 
-def add_xp(ctx: Ctx, user_id: int, amount: int) -> dict:
+def add_xp(ctx: Ctx, user_id: int, amount: int, mending: bool = True) -> dict:
+    """XP earned by playing. With Mending gear, it repairs that gear first (`mending=False`: the staff's XP)."""
+    if mending and amount > 0:
+        from game import gear  # here: gear depends on this module
+
+        amount = gear.mend(ctx, user_id, amount)
     user = get_user(ctx, user_id)
     if amount <= 0:
         return user
@@ -285,7 +290,7 @@ def set_xp(ctx: Ctx, user_id: int, xp: int) -> dict:
     """Staff: set the XP inside the current level (levels up if it overflows)."""
     ensure_user(ctx, user_id)
     ctx.execute("UPDATE users SET xp=0 WHERE user_id=?;", (user_id,))
-    return add_xp(ctx, user_id, max(0, xp))
+    return add_xp(ctx, user_id, max(0, xp), mending=False)
 
 
 def set_level(ctx: Ctx, user_id: int, level: int) -> dict:

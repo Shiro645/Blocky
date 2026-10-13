@@ -2,7 +2,9 @@
 
 Books and lapis are stackable items (items table): ("book", "<enchant>:<level>")
 and ("lapis", "none"). Applying a book costs lapis and replaces a lower level
-of the same enchantment. Two identical books combine into the next level.
+of the same enchantment. Two identical books combine into the next level, on an anvil.
+Mending has a single level and is rare: never a random book (drops, challenges), only
+the villager's exclusive offer and, sometimes, a boss's top damage dealer.
 Enchantments belong to the piece of gear: they follow it in trades and
 auctions, and disappear when it breaks.
 """
@@ -26,7 +28,9 @@ class Enchant:
     key: str
     name: str
     items: tuple[str, ...]
-    setting: str  # list of the effect for level I / II / III in settings "enchants"
+    setting: str  # the effect in settings "enchants": a list for level I / II / III, or one value (one level)
+    max_level: int = MAX_LEVEL
+    rare: bool = False  # never a random book
 
 
 ENCHANTS: dict[str, Enchant] = {
@@ -38,8 +42,10 @@ ENCHANTS: dict[str, Enchant] = {
         Enchant("sharpness", "Sharpness", ("sword",), "sharpness_damage"),
         Enchant("looting", "Looting", ("sword",), "looting_boss_bonus"),
         Enchant("protection", "Protection", ARMOR, "protection_points"),
+        Enchant("mending", "Mending", GEAR_ITEMS, "mending_durability_per_xp", max_level=1, rare=True),
     )
 }
+RANDOM_BOOKS = tuple(sorted(k for k, e in ENCHANTS.items() if not e.rare))  # what a random book can be
 
 _PART = re.compile(r"^([a-z]+)([1-9])$")
 
@@ -48,9 +54,11 @@ def _cfg() -> dict:
     return settings.get()["enchants"]
 
 
-def _per_level(values: list, level: int) -> float:
+def _per_level(values: list | float, level: int) -> float:
     if level <= 0:
         return 0.0
+    if not isinstance(values, list):
+        return float(values)  # a single-level enchantment
     return float(values[min(level, len(values)) - 1])
 
 
@@ -80,6 +88,8 @@ def apply_cost(level: int) -> int:
 
 
 def label(name: str, level: int) -> str:
+    if ENCHANTS[name].max_level == 1:
+        return ENCHANTS[name].name
     return f"{ENCHANTS[name].name} {ROMAN.get(level, level)}"
 
 
@@ -99,6 +109,8 @@ def effect_text(name: str, level: int) -> str:
         return f"+{v:g} maximum damage"
     if name == "looting":
         return f"+{v:.0%} boss reward"
+    if name == "mending":
+        return f"the XP you gain repairs it first ({v:g} durability per XP)"
     return f"+{v:g} armor points"
 
 
@@ -117,7 +129,7 @@ def book_material(name: str, level: int) -> str:
 def parse_book(material: str) -> tuple[str, int]:
     """'sharpness:2' -> ('sharpness', 2)"""
     name, _, level = material.partition(":")
-    if name not in ENCHANTS or not level.isdigit() or not 1 <= int(level) <= MAX_LEVEL:
+    if name not in ENCHANTS or not level.isdigit() or not 1 <= int(level) <= ENCHANTS[name].max_level:
         raise GameError("Unknown book. Pick one from the suggestions.")
     return name, int(level)
 
@@ -131,7 +143,7 @@ def parse_signature(text: str) -> dict[str, int]:
     out: dict[str, int] = {}
     for part in text.split(","):
         m = _PART.match(part)
-        if not m or m[1] not in ENCHANTS or not 1 <= int(m[2]) <= MAX_LEVEL or m[1] in out:
+        if not m or m[1] not in ENCHANTS or not 1 <= int(m[2]) <= ENCHANTS[m[1]].max_level or m[1] in out:
             raise ValueError(f"Invalid enchantments: {text}")
         out[m[1]] = int(m[2])
     return out
@@ -199,7 +211,7 @@ def books(ctx: Ctx, user_id: int) -> list[tuple[str, int, int]]:
 def random_book(rng: random.Random, weights: list | None = None) -> tuple[str, int]:
     weights = [float(w) for w in (weights if weights is not None else _cfg()["book_weights"])][:MAX_LEVEL]
     level = rng.choices(range(1, len(weights) + 1), weights=weights)[0]
-    return rng.choice(sorted(ENCHANTS)), level
+    return rng.choice(RANDOM_BOOKS), level
 
 
 def give_random_book(ctx: Ctx, user_id: int, weights: list | None = None) -> tuple[str, int]:
@@ -239,8 +251,11 @@ def apply(ctx: Ctx, user_id: int, book: str, gear_id: int) -> dict:
 def combine(ctx: Ctx, user_id: int, book: str) -> dict:
     """Two identical books -> one book of the next level."""
     name, level = parse_book(book)
-    if level >= MAX_LEVEL:
-        raise GameError(f"Level {ROMAN[MAX_LEVEL]} is the maximum.")
+    top = ENCHANTS[name].max_level
+    if top == 1:
+        raise GameError(f"**{ENCHANTS[name].name}** has only one level: it can't be combined.")
+    if level >= top:
+        raise GameError(f"Level {ROMAN[top]} is the maximum.")
     have = players.item_amount(ctx, user_id, "book", book_material(name, level))
     if have < 2:
         raise GameError(f"You need 2 **{label(name, level)}** books to combine them (you have {have}).")

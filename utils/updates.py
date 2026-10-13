@@ -104,4 +104,23 @@ UPDATES: tuple[Update, ...] = (
              "challenges. Bosses now show the potion each top fighter won."),
         ),
     ),
+    Update(
+        "2026-10-anvil-mending", "2026-10-13", "The anvil and Mending",
+        "Repairs now work like in Minecraft: on an **anvil**, with ingots. And a new, very rare book: **Mending**.",
+        (
+            ("🔨 The anvil",
+             "Craft it with `/craft item:anvil` (22 iron ingots). You need it to `/repair` your gear and to "
+             "`/enchant combine` books. It wears out a little with each use (new → chipped → damaged → broken)."),
+            ("🔧 Repairs with ingots",
+             "`/repair` now takes ingots of the piece's material instead of emeralds (iron for the shield). 1 ingot "
+             "gives back a quarter of its durability, and you choose how many to put in. Each repair makes the next "
+             "one cost more: 4, 5, 6, 7… ingots for a full repair."),
+            ("📕 Mending",
+             "The rarest book: only sold by the wandering villager (exclusive offer), or now and then won by a "
+             "boss's top damage dealer. On any piece, the XP you gain repairs it first, and only the XP left goes "
+             "to you."),
+            ("🎨 Profiles",
+             "`/profile` now shows your card first, with the details under it."),
+        ),
+    ),
 )

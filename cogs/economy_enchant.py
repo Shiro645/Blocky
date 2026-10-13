@@ -84,14 +84,17 @@ class EnchantCog(commands.Cog):
                 f"Applying a book costs **{costs} lapis** for level I / II / III and replaces a lower level. "
                 "Two identical books combine into the next level with `/enchant combine` (on an anvil).\n"
                 "Books come from drops, bosses (top damage), completing every weekly challenge, "
-                "and other players (`/trade`, `/auction`)."
+                "the wandering villager and other players (`/trade`, `/auction`)."
             ),
             color=discord.Color.purple(),
         )
         books = [f"{book_icon()} {enchants.label(n, lvl)} × {amount}" for n, lvl, amount in data["books"]]
         embed.add_field(name="Your books", value=join_lines(books, empty="No books yet."), inline=False)
         for e in ENCHANTS.values():
-            effects = " · ".join(f"{ROMAN[lvl]}: {enchants.effect_text(e.key, lvl)}" for lvl in range(1, MAX_LEVEL + 1))
+            if e.max_level == 1:
+                effects = enchants.effect_text(e.key, 1) + " · the rarest book: only from the villager or a boss"
+            else:
+                effects = " · ".join(f"{ROMAN[lvl]}: {enchants.effect_text(e.key, lvl)}" for lvl in range(1, e.max_level + 1))
             on = "all gear" if len(e.items) > 5 else ", ".join(e.items)
             embed.add_field(name=f"{e.name} ({on})", value=effects[:1024], inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)

@@ -119,7 +119,7 @@ def guide_pages() -> list[discord.Embed]:
             f"(`/craft item:anvil`, {s['repair']['anvil_iron']} iron ingots).\n\n"
             "**Enchanting.** Mining sometimes finds lapis, and enchanted books drop from events and bosses: "
             "`/enchant apply` puts a book on a piece (Efficiency, Fortune, Unbreaking, Sharpness, Looting, "
-            "Protection), `/enchant combine` merges two books into a stronger one (on your anvil)."
+            "Protection, and the rare Mending), `/enchant combine` merges two books into a stronger one (on your anvil)."
         )),
         ("🧬 3. Species and profile", (
             "Pick a **species** with `/species choose` for a small bonus. Your first choice is free; changing later "

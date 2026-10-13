@@ -223,7 +223,7 @@ def catalog() -> list[str]:
     """Every asset staff can give. Gear comes without enchantments (a full key such as
     "gear:diamond:sword:sharpness3" gives an enchanted piece)."""
     keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis"]
-    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.MAX_LEVEL + 1)]
+    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.ENCHANTS[e].max_level + 1)]
     keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
     keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS if m in materials_for(i)]
     return keys

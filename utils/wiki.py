@@ -113,7 +113,10 @@ SECTIONS: tuple[Section, ...] = (
         "enchanting", "✨ Enchanting",
         "**Lapis lazuli** is found while mining and in drops. **Enchanted books** (levels I to III) come from "
         "drops, bosses (the top damage dealers get a strong one), completing every weekly challenge, the wandering "
-        "villager (level III) and other players.\n\n"
+        "villager (level III) and other players.\n"
+        "**Mending** is the rarest book (one level): only the villager's exclusive offer, or now and then the top "
+        "damage dealer of a boss. On any piece, the XP you gain repairs your equipped Mending gear first, and only the "
+        "XP left goes to you.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
         "two identical books into one of the next level (I + I = II, II + II = III), on your anvil. `/enchant info` lists your "

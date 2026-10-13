@@ -138,3 +138,32 @@ def wear_shield(ctx: Ctx, piece: dict, blocks: int) -> bool:
 def damage_reduction(equipped: dict[str, dict]) -> float:
     g = settings.get()["gear"]
     return min(g["max_damage_reduction"], armor_points(equipped) * g["damage_reduction_per_armor_point"])
+
+
+def mend(ctx: Ctx, user_id: int, xp: int) -> int:
+    """Mending: XP the player gains repairs their equipped, worn pieces with Mending first (a random piece at a
+    time, enchants.mending_durability_per_xp per XP). Returns the XP left for the player."""
+    per_xp = float(settings.get()["enchants"]["mending_durability_per_xp"]) * enchants.boost_of(ctx, user_id)
+    if xp <= 0 or per_xp <= 0:
+        return xp
+    rows = ctx.all(
+        """
+        SELECT g.gear_id, g.durability, g.max_durability FROM gear g
+        JOIN gear_enchants e ON e.gear_id = g.gear_id AND e.enchant = 'mending'
+        WHERE g.user_id=? AND g.equipped=1 AND g.durability < g.max_durability ORDER BY g.gear_id;
+        """,
+        (user_id,),
+    )
+    pieces = [dict(r) for r in rows]
+    ctx.rng.shuffle(pieces)
+    mended = 0
+    for piece in pieces:
+        fix = min(piece["max_durability"] - piece["durability"], int(xp * per_xp))
+        if fix <= 0:
+            break
+        xp -= min(xp, math.ceil(fix / per_xp))
+        ctx.execute("UPDATE gear SET durability = durability + ? WHERE gear_id=?;", (fix, piece["gear_id"]))
+        mended += fix
+    if mended:
+        players.bump_stat(ctx, user_id, "durability_mended", mended)
+    return xp

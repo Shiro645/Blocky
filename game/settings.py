@@ -199,6 +199,11 @@ DEFAULTS: dict[str, Any] = {
         "sharpness_damage": [1, 2, 3],
         "looting_boss_bonus": [0.10, 0.20, 0.30],
         "protection_points": [1, 2, 3],  # armor points per piece
+        # Mending (one level, any gear): the XP a player gains repairs their equipped Mending pieces first,
+        # this much durability per XP; only the XP left goes to the player.
+        "mending_durability_per_xp": 2,
+        "mending_value": 600,  # the most valuable book (fortune, fair prices, the villager's price)
+        "boss_mending_chance": 0.05,  # the top damage dealer's book is Mending this often
         # Reference values in emeralds (fortune, fair auction prices).
         "lapis_value": 10,
         "book_values": [50, 150, 400],
@@ -225,6 +230,8 @@ DEFAULTS: dict[str, Any] = {
         "book_iii_price": 450,
         "potion_ii_price": 120,
         "exclusive_book_chance": 0.5,
+        "exclusive_mending_chance": 0.1,  # ...but first, this often, the exclusive offer is a Mending book
+        "mending_price": 600,
         # A "book" in his goods: weights of a level I and a level II book.
         "book_weights": [70, 30],
     },

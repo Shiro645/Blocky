@@ -79,7 +79,9 @@ def item_value(item: str, material: str) -> float:
         return float(e["lapis_value"])
     if item == "potion":
         return potions.value(material)
-    _, level = enchants.parse_book(material)
+    name, level = enchants.parse_book(material)
+    if enchants.ENCHANTS[name].rare:
+        return float(e["mending_value"])
     return float(e["book_values"][level - 1])
 
 
