@@ -1,9 +1,9 @@
 """Lucky Block: bet emeralds, break the block, see what falls out.
 
 What can fall out, how often (weight) and what it pays (times the bet, the bet
-included) are settings (games.lucky_block). With the defaults a block gives back
-about 90% of the bets on average, mostly through small loot: a creeper loses everything,
-iron gives the bet back, and netherite (1 in 500) pays x10. Bets, the daily cap and the waiting time are
+included) are settings (games.lucky_block). With the defaults each outcome is rarer than
+the one before, from the creeper (loses everything) to netherite (1 in 500, x10), and a
+block gives back about 84% of the bets on average. Bets, the daily cap and the waiting time are
 shared with the roulette (game/gambling.py, games.*).
 """
 from __future__ import annotations
