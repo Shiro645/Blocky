@@ -124,8 +124,13 @@ class RegistryTests(unittest.TestCase):
                 if field.kind == "choice":
                     self.assertIn(ce.default_value(field), [v for _, v in field.choices])
         self.assertEqual(len(ce.CATEGORIES), len(set(ce.CATEGORIES.values())))
-        # More than 25 categories are paged in /config (cogs/admin_config.category_pages).
-        self.assertTrue(all(len(label) <= 100 and not key.startswith("page:") for key, label in ce.CATEGORIES.items()))
+        self.assertTrue(all(len(label) <= 100 and key != "back" for key, label in ce.CATEGORIES.items()))
+        # Every category is in exactly one section, and each section fits in one menu (with "All sections").
+        listed = [c for _, categories in ce.SECTIONS.values() for c in categories]
+        self.assertEqual(sorted(listed), sorted(ce.CATEGORIES))
+        self.assertTrue(all(len(categories) <= 24 for _, categories in ce.SECTIONS.values()))
+        emojis = [label.split(" ", 1)[0] for label in ce.CATEGORIES.values()]
+        self.assertEqual(len(emojis), len(set(emojis)))  # no two categories with the same emoji
 
     def test_a_value_inside_a_list(self):
         cost = ce.FIELDS_BY_KEY["enchants.apply_cost.1"]

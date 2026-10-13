@@ -26,37 +26,53 @@ PROTECTED = (
     ("database_path",),
 )
 
+# /config: a section, then one of its categories.
+SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
+    "economy": ("💰 Economy", ("mining", "mining_odds", "market", "trading", "loans", "villager")),
+    "progress": ("⭐ Progress", ("xp", "seasons", "achievements", "species", "profiles", "titles", "guide", "teams")),
+    "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
+                             "pve_monsters", "bosses", "tournament")),
+    "games": ("🎉 Games & events", ("chance", "minigames", "rob", "drops")),
+}
+
 CATEGORIES = {
     "channels": "📢 Channels",
     "roles": "🎭 Roles",
     "level_roles": "🎖️ Level roles",
     "minecraft": "🌍 Minecraft texts",
-    "server": "🕒 Time zone, backups & moderation",
+    "server": "🕒 Time zone & backups",
+    "moderation": "🔨 Moderation",
     "mining": "⛏️ Mining & block values",
-    "mining_odds": "🎲 Mining odds",
-    "xp": "📈 XP & talents",
-    "economy": "🛒 Market, daily & trading",
-    "tools": "🛠️ Tools & durability",
-    "combat_gear": "🗡️ Swords & armor",
-    "duels": "⚔️ Duels",
-    "potions": "🧪 Potions",
-    "enchant_books": "📕 Enchanting: books & lapis",
-    "enchant_effects": "✨ Enchanting: effects",
-    "drops": "🎁 Drops",
-    "bosses": "🐉 Bosses",
+    "mining_odds": "📊 Mining odds",
+    "market": "🛒 Market, daily & repair",
+    "trading": "🤝 Trading & auction",
+    "loans": "💳 Loans",
+    "villager": "🧑‍🌾 Villager",
+    "xp": "📈 XP, levels & talents",
     "seasons": "🏆 Seasons & challenges",
     "achievements": "🏅 Achievements",
-    "teams": "🛡️ Teams",
-    "tournament": "🏟️ Tournament",
-    "villager": "🧑‍🌾 Villager",
-    "games": "🎲 Mini-games",
-    "rob": "🦹 Robberies",
-    "loans": "💳 Loans",
     "species": "🧬 Species",
-    "pve": "⚔️ PVE dungeon",
     "profiles": "🎨 Profiles",
+    "titles": "🏷️ Titles & earned frames",
     "guide": "📘 Guide",
+    "teams": "🛡️ Teams",
+    "duels": "🤺 Duels & dummy",
+    "potions": "🧪 Potions",
+    "tools": "🛠️ Tools & durability",
+    "combat_gear": "🗡️ Swords, armor & shield",
+    "enchant_books": "📕 Enchanting: books & lapis",
+    "enchant_effects": "✨ Enchanting: effects",
+    "pve": "🏰 Dungeon",
+    "pve_monsters": "🧟 Dungeon monsters",
+    "bosses": "🐉 Bosses",
+    "tournament": "🏟️ Tournament",
+    "chance": "🟨 Lucky Block & roulette",
+    "minigames": "🧩 Blockdle & quiz",
+    "rob": "🦹 Robberies",
+    "drops": "🎁 Drops",
 }
+SECTION_OF = {category: section for section, (_, categories) in SECTIONS.items() for category in categories}
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 ROMAN = ("I", "II", "III")
@@ -218,9 +234,9 @@ FIELDS: list[Field] = [
        "E.g. Europe/Paris.", "timezone", None),
     _b("backups.hour", "server", "Nightly backup: hour", "Hour (0-23) of the daily copy of the database.", max=23),
     _b("backups.keep", "server", "Nightly backups kept", "How many nightly copies are kept.", min=1, max=365),
-    _b("moderation.warn_expire_days", "server", "Warnings count for (days)",
+    _b("moderation.warn_expire_days", "moderation", "Warnings count for (days)",
        "After this many days a warning stops counting for automatic mutes (0 = forever).", max=3650),
-    _b("moderation.warn_mutes", "server", "Automatic mutes", "How many active warnings mute a member, and for how long.",
+    _b("moderation.warn_mutes", "moderation", "Automatic mutes", "How many active warnings mute a member, and for how long.",
        "map", None, max_items=10),
     # ---- mining ----
     _b("mining.cooldown_seconds", "mining", "Mining cooldown (seconds)", "Time between two mining rewards (0 = none).", max=3600),
@@ -257,26 +273,26 @@ FIELDS: list[Field] = [
     _b("talents.lucky_rare_weight", "xp", "Lucky: rare block weight/point",
        "Added to obsidian and to bedrock on 1-block piles."),
     # ---- economy ----
-    _b("market.stick_pack.price", "economy", "Sticks: price of a pack", min=1),
-    _b("market.stick_pack.amount", "economy", "Sticks: sticks per pack", min=1),
-    *[_b(f"market.ingots.{m}", "economy", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
+    _b("market.stick_pack.price", "market", "Sticks: price of a pack", min=1),
+    _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
+    *[_b(f"market.ingots.{m}", "market", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
          "for /repair costs, fortunes and fair prices.", min=1) for m in MATERIALS],
-    _b("repair.cost_percent", "economy", "/repair: cost (% of crafting value)",
+    _b("repair.cost_percent", "market", "/repair: cost (% of crafting value)",
        "For a piece with no durability left; less when it's only partly worn.", max=1000),
-    _b("pay.min_amount", "economy", "/pay: minimum amount", min=1),
-    _b("auction.tax_percent", "economy", "Auction tax (%)", "Taken from the seller's price.", max=100),
-    _b("auction.max_listings", "economy", "Auction: listings per player", min=1, max=100),
-    _b("auction.duration_days", "economy", "Auction: days before a listing ends", min=1, max=60),
-    _b("daily.base_reward", "economy", "Daily: reward on day 1"),
-    _b("daily.streak_bonus_per_day", "economy", "Daily: bonus per day in a row"),
-    _b("daily.streak_cap_days", "economy", "Daily: days the streak grows", "The reward stops growing after this.", min=1, max=365),
-    _b("daily.weekly_bonus_item", "economy", "Daily: bonus ingot", "Given every few days in a row (see below).",
+    _b("pay.min_amount", "trading", "/pay: minimum amount", min=1),
+    _b("auction.tax_percent", "trading", "Auction tax (%)", "Taken from the seller's price.", max=100),
+    _b("auction.max_listings", "trading", "Auction: listings per player", min=1, max=100),
+    _b("auction.duration_days", "trading", "Auction: days before a listing ends", min=1, max=60),
+    _b("daily.base_reward", "market", "Daily: reward on day 1"),
+    _b("daily.streak_bonus_per_day", "market", "Daily: bonus per day in a row"),
+    _b("daily.streak_cap_days", "market", "Daily: days the streak grows", "The reward stops growing after this.", min=1, max=365),
+    _b("daily.weekly_bonus_item", "market", "Daily: bonus ingot", "Given every few days in a row (see below).",
        kind="choice", min=None, choices=tuple((m, m) for m in MATERIALS)),
-    _b("daily.bonus_every_days", "economy", "Daily: bonus ingot every … days",
+    _b("daily.bonus_every_days", "market", "Daily: bonus ingot every … days",
        "7 = on day 7, 14, 21… of a streak.", min=1, max=365),
-    _b("trade.offer_minutes", "economy", "/trade: minutes to answer", "A proposal ends after this.", kind="float",
+    _b("trade.offer_minutes", "trading", "/trade: minutes to answer", "A proposal ends after this.", kind="float",
        min=1, max=14),
-    _b("daily.xp", "economy", "Daily: XP"),
+    _b("daily.xp", "market", "Daily: XP"),
     # ---- tools ----
     *[_b(f"gear.tier.{m}", "tools", f"{m.capitalize()} tier", "Tool bonuses are multiplied by the tier.", min=1, max=20)
       for m in MATERIALS],
@@ -435,36 +451,36 @@ FIELDS: list[Field] = [
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
-    _b("games.daily_win_cap", "games", "Daily limit at games of chance", "Once a player won this much today at the "
+    _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
        "Lucky Block and the roulette (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
-    _b("games.roulette_enabled", "games", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
+    _b("games.roulette_enabled", "chance", "Roulette open", "Off: /roulette says it's closed (the Lucky Block "
        "replaces it).", kind="bool"),
     *[f for key, name in (('creeper', 'Creeper'), ('cobblestone', 'Cobblestone'), ('iron', 'Iron'), ('gold', 'Gold'), ('diamond', 'Diamonds'), ('emerald', 'Emeralds'), ('netherite', 'Netherite')) for f in (
-        _b(f"games.lucky_block.{key}.weight", "games", f"Lucky Block: {name} weight",
+        _b(f"games.lucky_block.{key}.weight", "chance", f"Lucky Block: {name} weight",
            "How often it falls out, compared with the others (0 = never).", max=100_000),
-        _b(f"games.lucky_block.{key}.payout", "games", f"Lucky Block: {name} pays (×bet)",
+        _b(f"games.lucky_block.{key}.payout", "chance", f"Lucky Block: {name} pays (×bet)",
            "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
     )],
-    _b("games.min_bet", "games", "Games of chance: minimum bet", "Lucky Block and roulette.", min=1),
-    _b("games.max_bet", "games", "Games of chance: maximum bet", "Lucky Block and roulette.", min=1),
-    _b("games.cooldown_seconds", "games", "Games of chance: seconds between 2 games",
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and roulette.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and roulette.", min=1),
+    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
        "Lucky Block and roulette.", max=3600),
-    _b("games.roulette_zeros", "games", "Roulette: green slots", "The green slots make the bank win a little "
+    _b("games.roulette_zeros", "chance", "Roulette: green slots", "The green slots make the bank win a little "
        "on average.", kind="choice", min=None, choices=(("0 only (the bank keeps 2.7%)", 1), ("0 and 00 (the bank keeps 5.3%)", 2))),
-    *[_b(f"games.blockdle_rewards.{i}", "games", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
+    *[_b(f"games.blockdle_rewards.{i}", "minigames", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
          "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
-    _b("games.blockdle_xp", "games", "Blockdle: XP for finding the block"),
-    _b("games.blockdle_no_repeat_days", "games", "Blockdle: days before a block comes back",
+    _b("games.blockdle_xp", "minigames", "Blockdle: XP for finding the block"),
+    _b("games.blockdle_no_repeat_days", "minigames", "Blockdle: days before a block comes back",
        "A block of the day isn't picked again for this many days (when there are enough blocks).", max=180),
-    _b("games.quiz_every_minutes", "games", "Quiz: a question every X minutes",
+    _b("games.quiz_every_minutes", "minigames", "Quiz: a question every X minutes",
        "Posted in a game channel. 0 = only with /event quiz.", max=10_080),
-    _pct("games.quiz_every_jitter", "games", "Quiz: give or take (%)",
+    _pct("games.quiz_every_jitter", "minigames", "Quiz: give or take (%)",
          "25% = a question every 45 to 75 minutes when it's every 60.", max=0.9),
-    _b("games.quiz_no_repeat", "games", "Quiz: questions not asked again soon",
+    _b("games.quiz_no_repeat", "minigames", "Quiz: questions not asked again soon",
        "The last N questions asked aren't picked again (when there are enough).", max=100),
-    _b("games.quiz_seconds", "games", "Quiz: seconds to answer", min=10, max=600),
-    _b("games.quiz_reward", "games", "Quiz: emeralds for the right answer"),
-    _b("games.quiz_xp", "games", "Quiz: XP for the right answer"),
+    _b("games.quiz_seconds", "minigames", "Quiz: seconds to answer", min=10, max=600),
+    _b("games.quiz_reward", "minigames", "Quiz: emeralds for the right answer"),
+    _b("games.quiz_xp", "minigames", "Quiz: XP for the right answer"),
     # ---- robberies ----
     _b("rob.risky_min", "rob", "Risky robbery: minimum loot", "The victim is pinged. Never more than they have."),
     _b("rob.risky_max", "rob", "Risky robbery: maximum loot"),
@@ -484,10 +500,10 @@ FIELDS: list[Field] = [
     *[_b(f"profiles.frame_prices.{key}", "profiles", f"Frame price: {name}", "The rarer frames are earned, not sold.")
       for key, name in (("stone", "Stone"), ("gold", "Gold"), ("redstone", "Redstone"), ("lapis", "Lapis"),
                         ("diamond", "Diamond"), ("emerald", "Emerald"))],
-    *[_b(f"profiles.frame_goals.{key}", "profiles", f"Frame to earn: {frame.name}"[:45],
+    *[_b(f"profiles.frame_goals.{key}", "titles", f"Frame to earn: {frame.name}"[:45],
          f"Earned when: {_with_n(frame.text)}.", min=1, max=10_000_000)
       for key, frame in _profile_frames() if frame.what],
-    *[_b(f"profiles.title_goals.{key}", "profiles", f"Title: {title.name}"[:45],
+    *[_b(f"profiles.title_goals.{key}", "titles", f"Title: {title.name}"[:45],
          f"Earned when: {_with_n(title.text)}.", min=1, max=10_000_000)
       for key, title in _profile_titles()],
     # ---- guide ----
@@ -511,11 +527,11 @@ FIELDS: list[Field] = [
        "this.", kind="float", max=10),
     *[f for key, name in (("zombie", "Zombie"), ("skeleton", "Skeleton"), ("spider", "Spider"),
                           ("creeper", "Creeper"), ("ravager", "Ravager")) for f in (
-        _b(f"pve.monsters.{key}.hp", "pve", f"{name}: health", "At Normal difficulty, wave 1.", kind="float",
+        _b(f"pve.monsters.{key}.hp", "pve_monsters", f"{name}: health", "At Normal difficulty, wave 1.", kind="float",
            min=0.1, max=1000),
-        _b(f"pve.monsters.{key}.min_damage", "pve", f"{name}: smallest hit", "At Normal difficulty, wave 1, "
+        _b(f"pve.monsters.{key}.min_damage", "pve_monsters", f"{name}: smallest hit", "At Normal difficulty, wave 1, "
            "before armor.", kind="float", max=100),
-        _b(f"pve.monsters.{key}.max_damage", "pve", f"{name}: biggest hit", "At Normal difficulty, wave 1, "
+        _b(f"pve.monsters.{key}.max_damage", "pve_monsters", f"{name}: biggest hit", "At Normal difficulty, wave 1, "
            "before armor.", kind="float", max=100),
     )],
     _pct("pve.wave_growth", "pve", "Monsters stronger each wave", "Health and damage.", max=2),

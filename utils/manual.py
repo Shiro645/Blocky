@@ -1051,7 +1051,7 @@ PAGES: list[Page] = [
         "roulette", "games",
         "Spins the roulette for you alone. Bet on red or black, even or odd, 1-18 or 19-36, a dozen, or a number "
         "(add the `number` option). The wheel has the numbers 1 to 36 and green slots (0, and 00): the bank wins a "
-        "little on average. The staff can close it (`/config` → Mini-games).",
+        "little on average. The staff can close it (`/config` → Games & events → Lucky Block & roulette).",
         _roulette,
         examples=("/roulette bet:Red amount:50", "/roulette bet:A number amount:10 number:17"),
         related=("luckyblock", "blockdle guess"),
@@ -1535,9 +1535,8 @@ PAGES: list[Page] = [
     Page(
         "config", "staff_server",
         "Opens the settings panel: **almost every setting of the bot** (not the server and Minecraft connection, "
-        "the staff role or the database: only config.json changes those), in categories (channels, roles, mining and its "
-        "odds, XP and talents, market, gear, duels, potions, enchanting, drops, bosses, seasons, challenges, "
-        "achievements, teams, tournament, villager…). Each setting shows what it does, its value and its default, "
+        "the staff role or the database: only config.json changes those). Pick a section (Server, Economy, Progress, "
+        "Combat, Games & events), then a category. Each setting shows what it does, its value and its default, "
         "with buttons to change it or to reset it. Lists, automatic mutes, the drop table and the villager's goods "
         "have their own editors.\n"
         "Changes are saved in config.json (a copy of the old file is kept) and apply at once. Settings in the file "
