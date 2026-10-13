@@ -165,12 +165,13 @@ def _defeat(ctx: Ctx, boss: dict) -> dict:
         players.earn_emeralds(ctx, r["user_id"], share + looting)
         players.add_xp(ctx, r["user_id"], int(b["xp_reward"]))
         players.bump_stat(ctx, r["user_id"], "bosses_defeated")
-        reward = {**r, "reward": share + looting, "looting": looting, "book": None, "potion": None}
+        reward = {**r, "reward": share + looting, "looting": looting, "book": None, "potion": None, "potion_key": None}
         if i == 0:
             book = enchants.give_random_book(ctx, r["user_id"], settings.get()["enchants"]["boss_book_weights"])
             reward["book"] = enchants.label(*book)
         if i < int(settings.get()["potions"]["boss_top"]):
-            reward["potion"] = potions.label(potions.give_random(ctx, r["user_id"])[0])
+            reward["potion_key"] = potions.give_random(ctx, r["user_id"])[0]
+            reward["potion"] = potions.label(reward["potion_key"])
         rewards.append(reward)
     return {"rewards": rewards, "xp": int(b["xp_reward"])}
 

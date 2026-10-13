@@ -477,8 +477,8 @@ FIELDS: list[Field] = [
     _b("species.change_days", "species", "Days between two changes", kind="float", max=365),
     _pct("species.villager_trade", "species", "Villager: better prices",
          "/sell gives more, the market and the wandering villager's goods cost less, he pays more for blocks."),
-    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Duels, tournaments and bosses."),
-    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels."),
+    _pct("species.dwarf_damage", "species", "Dwarf: more damage", "Every fight: duels, tournaments, bosses, the dungeon, the dummy."),
+    _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels and the dungeon."),
     _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
     _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
     # ---- loans ----

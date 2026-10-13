@@ -97,8 +97,8 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 - `/species choose <species>` — Pick a species for a small bonus. The first choice is free; changing costs 1,000 emeralds (you confirm first) and is possible once every 7 days.
   - 🧑‍🌾 **Villager** — 5% better prices: `/sell` gives 5% more, the market and the wandering villager's goods cost 5% less, and he pays 5% more for blocks.
-  - 🪓 **Dwarf** — +5% damage in duels, tournaments and against bosses.
-  - 🧪 **Witch** — +10% potion effects in duels.
+  - 🪓 **Dwarf** — +5% damage in every fight: duels, tournaments, bosses, the dungeon and the training dummy.
+  - 🧪 **Witch** — +10% potion effects in duels and the dungeon.
   - 🔮 **Mage** — +10% enchantment effects (Efficiency, Fortune, Unbreaking, Sharpness, Looting, Protection). A Fortune that isn't a whole number gives the rest as a chance of one more.
   - ⚒️ **Miner** — 5% shorter mining cooldown (even below the minimum cooldown).
 - `/species list` — Every species, its bonus, how many players chose it, yours and when you can change (private).

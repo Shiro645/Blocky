@@ -191,12 +191,11 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     # A Harming potion drunk before the wave hits every monster.
     for hero in fighting:
         if hero.harming:
-            for m in monsters:
+            alive = [m for m in monsters if m.alive]
+            for m in alive:
                 m.hp -= hero.harming
             log.append(f"☠️ <@{hero.user_id}> throws a Harming potion: -{hero.harming:g} HP to every monster")
-            killed = sum(1 for m in monsters if not m.alive)
-            if killed:
-                kills[hero.user_id] += killed
+            kills[hero.user_id] += sum(1 for m in alive if not m.alive)  # only the ones this potion killed
     # Skeletons shoot first.
     for m in monsters:
         if m.alive and MONSTERS[m.kind].ranged:
@@ -489,6 +488,8 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
     boost = 1.0 + hero.potion_boost
     if kind == "healing" and hero.hp >= hero.max_hp:
         raise GameError("You are already at full health.")
+    if kind != "healing" and getattr(hero, kind):
+        raise GameError(f"You already drank a {potions.POTIONS[kind].name} potion for the next wave.")
     potions.drink(ctx, user_id, key)
     effect = ""
     if kind == "healing":

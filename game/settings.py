@@ -290,8 +290,8 @@ DEFAULTS: dict[str, Any] = {
         "change_cost": 1000,
         "change_days": 7,
         "villager_trade": 0.05,  # /sell +5%, market and villager goods -5%, villager pays +5% for blocks
-        "dwarf_damage": 0.05,  # damage in duels, tournaments and against bosses
-        "witch_potions": 0.10,  # potion effects in duels
+        "dwarf_damage": 0.05,  # damage in every fight (duels, tournaments, bosses, dungeon, dummy)
+        "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
     },
