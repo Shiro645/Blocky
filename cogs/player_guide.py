@@ -97,7 +97,7 @@ def guide_pages() -> list[discord.Embed]:
             "(spam channels give almost nothing). Writing here, in your guide channel, doesn't mine: chat in the "
             "server's channels.\n\n"
             "`/inventory` — your blocks, emeralds, items and gear.\n"
-            f"`/sell` — sells all your blocks: cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
+            f"`/sell` — sells your blocks (all of them, or pick a kind and an amount): cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
             f"deepslate {values['deepslate']}, obsidian {values['obsidian']}, bedrock {values['bedrock']} emeralds each.\n"
             f"`/daily` — {em(daily['base_reward'])} and XP once a day. Come back every day: the streak adds a bonus "
             f"(up to {daily['streak_cap_days']} days) and every {daily['bonus_every_days']}th day in a row gives a "

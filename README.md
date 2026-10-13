@@ -46,7 +46,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown (30 s, at least 10 s with talents and enchantments).
 - **Spam channels** (`channels.spam`, set in `/config`): messages there don't mine blocks, give no XP, no drops and no challenge progress — only a tiny reward (0.01 emerald per message by default, so about 1 emerald an hour of spam), with a cooldown of their own.
 - `/inventory` — Blocks, emeralds, items and gear
-- `/sell` — Sell all your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds)
+- `/sell [block] [amount]` — Sell your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds): all of them, only one kind (`block`), or a number of them (`amount`: more than you have sells all you have; without a kind, the least valuable blocks go first)
 - `/market` — Buy sticks and gold (5) / iron (10) / diamond (60) / netherite (300) ingots
 - `/daily` — Daily reward. Each consecutive day adds a bonus (up to 7 days), every 7th day in a row gives a diamond ingot (`balance.daily.weekly_bonus_item`, `bonus_every_days`), and missing a day resets the streak.
 - Rewards are public: the results of `/daily`, `/sell` and `/craft` are shown in the channel (level-ups and achievements go to the announcements channel). Personal info (`/inventory`, `/gear`, `/xp`…) and errors are only shown to the player.

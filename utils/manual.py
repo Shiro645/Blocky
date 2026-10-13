@@ -576,7 +576,9 @@ PAGES: list[Page] = [
     ),
     Page(
         "sell", "mining",
-        "Sells **all** your blocks at once for emeralds. The Trader talent adds a bonus on top.\n"
+        "Sells your blocks for emeralds: **all** of them, only one **kind** (`block`), or a number of them "
+        "(`amount`; asking for more than you have sells all you have, and without a kind your least valuable "
+        "blocks go first). The Trader talent adds a bonus on top.\n"
         "Blocks already counted for the season when you mined them, so selling only adds the Trader bonus to "
         "your season score. Ingots, gear, books and potions aren't sold here: use /auction or /trade. "
         "The wandering villager sometimes buys a pile of blocks above this price (/villager).\n"
@@ -586,7 +588,7 @@ PAGES: list[Page] = [
             f"Trader talent: **+{pct(s['talents']['trader_bonus_per_point'])}** per point "
             f"(max **+{pct(s['talents']['trader_bonus_per_point'] * s['talents']['caps']['trader'])}**)",
         ],
-        examples=("/sell",),
+        examples=("/sell", "/sell block:bedrock", "/sell block:cobblestone amount:500", "/sell amount:100"),
         related=("inventory", "talents", "villager", "auction sell"),
     ),
     Page(

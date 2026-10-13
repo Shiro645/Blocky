@@ -105,7 +105,7 @@ UPDATES: tuple[Update, ...] = (
         ),
     ),
     Update(
-        "2026-10-anvil-mending", "2026-10-13", "The anvil and Mending",
+        "2026-10-anvil-mending", "2026-10-13", "The anvil, Mending and selling",
         "Repairs now work like in Minecraft: on an **anvil**, with ingots. And a new, very rare book: **Mending**.",
         (
             ("🔨 The anvil",
@@ -119,6 +119,9 @@ UPDATES: tuple[Update, ...] = (
              "The rarest book: only sold by the wandering villager (exclusive offer), or now and then won by a "
              "boss's top damage dealer. On any piece, the XP you gain repairs it first, and only the XP left goes "
              "to you."),
+            ("💰 Selling",
+             "`/sell` can now sell just one kind of block (`block`) and/or a number of them (`amount`). Asking for "
+             "more than you have sells all you have; with only an amount, your least valuable blocks go first."),
             ("🎨 Profiles",
              "`/profile` now shows your card first, with the details under it."),
         ),

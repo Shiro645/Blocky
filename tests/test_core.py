@@ -64,6 +64,22 @@ class LegacyDatabaseTests(unittest.IsolatedAsyncioTestCase):
 
 
 class EconomyTests(GameTestCase):
+    async def test_sell_one_kind_or_an_amount(self):
+        await self.run_game(players.add_blocks, ALICE, "cobblestone", 10)
+        await self.run_game(players.add_blocks, ALICE, "gravel", 5)
+        await self.run_game(players.add_blocks, ALICE, "bedrock", 2)
+        res = await self.run_game(players.sell_blocks, ALICE, "bedrock")  # only that kind
+        self.assertEqual((res["sold"], res["left"]), ({"bedrock": 2}, {"cobblestone": 10, "gravel": 5}))
+        res = await self.run_game(players.sell_blocks, ALICE, "cobblestone", 4)
+        self.assertEqual((res["sold"], res["left"]["cobblestone"]), ({"cobblestone": 4}, 6))
+        res = await self.run_game(players.sell_blocks, ALICE, "cobblestone", 99)  # more than they have: all of it
+        self.assertEqual(res["sold"], {"cobblestone": 6})
+        await self.run_game(players.add_blocks, ALICE, "cobblestone", 3)
+        res = await self.run_game(players.sell_blocks, ALICE, None, 5)  # without a kind: the cheapest first
+        self.assertEqual((res["sold"], res["left"]), ({"cobblestone": 3, "gravel": 2}, {"gravel": 3}))
+        with self.assertRaisesRegex(GameError, "no \\*\\*bedrock"):
+            await self.run_game(players.sell_blocks, ALICE, "bedrock")
+
     async def test_sell_all_blocks_with_trader_bonus(self):
         def setup(ctx):
             players.add_blocks(ctx, ALICE, "cobblestone", 10)  # 10
