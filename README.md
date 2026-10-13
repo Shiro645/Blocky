@@ -104,9 +104,10 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
   - 🧪 **Witch** — +10% potion effects in duels and the dungeon.
   - 🔮 **Mage** — +10% enchantment effects (Efficiency, Fortune, Unbreaking, Sharpness, Looting, Protection). A Fortune that isn't a whole number gives the rest as a chance of one more.
   - ⚒️ **Miner** — 5% shorter mining cooldown (even below the minimum cooldown).
+  - 🎲 **Gambler** — +50% maximum bet at the Lucky Block and the wheel (300 instead of 200).
 - `/species list` — Every species, its bonus, how many players chose it, yours and when you can change (private).
 - Your species is shown in `/profile` and as an emoji before your name in `/leaderboard`, `/season` and `/team info`.
-- **Species roles** — `roles.species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner` (`/config` → Roles): the bot gives each player the role of their species and takes the others back. Checked at every start and when a member rejoins; changing a role in `/config` moves it.
+- **Species roles** — `roles.species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`, `species_gambler` (`/config` → Roles): the bot gives each player the role of their species and takes the others back. Checked at every start and when a member rejoins; changing a role in `/config` moves it.
 - All values in `/config` → 🧬 Species (`balance.species`). `/reset` doesn't change species.
 
 ### 🤝 Trading
@@ -161,7 +162,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 They work in the game channels set in `/config` (`channels.games`) and in the guide channels, or anywhere when there are none. `/rob`, `/pve start` and `/dummy hit` follow the same rule.
 
 - `/luckyblock <amount>` — Bet emeralds and break a **Lucky Block**: 💥 a creeper loses the bet, 🪨 cobblestone gives half back, ⚙️ iron the bet back, then 🟨 gold ×1.5, 💎 diamonds ×2.5, 🟩 emeralds ×4 and, 1 time in 500, ⬛ netherite ×10. Each outcome is rarer than the one before (creeper 27%, cobblestone 25%, iron 23%, gold 18%, diamonds 5%, emeralds 1.8%, netherite 0.2%). It only pays emeralds (never items), gives back about 84% of the bets on average, and every outcome's weight and payout are in `/config` → Games & events → Lucky Block & roulette (`balance.games.lucky_block`).
-- **Games of chance** (Lucky Block and the wheel): bets of `balance.games.min_bet`–`max_bet` (1–200), `cooldown_seconds` between two games of the same game, and a **daily limit** (`daily_win_cap`, 1,500): once a player won that much today at these games (winnings minus losses), they play again tomorrow. Winnings don't count for the seasons.
+- **Games of chance** (Lucky Block and the wheel): bets of `balance.games.min_bet`–`max_bet` (1–200; more for the 🎲 Gambler species), `cooldown_seconds` between two games of the same game, and a **daily limit** (`daily_win_cap`, 1,500): once a player won that much today at these games (winnings minus losses), they play again tomorrow. Winnings don't count for the seasons.
 - `/wheel <bet> <amount>` — **The wheel**, a Minecraft roulette (`balance.games.roulette_enabled`). Its numbers are those of a real roulette: the red ones are 🟥 **Redstone**, the black ones ⬛ **Obsidian**, the green 0 a 💎 **Diamond block** (a European roulette; `roulette_zeros: 2` adds the 00 of an American one). For now players bet on **Redstone or Obsidian (×2)** or **a number (0–36, ×36)**: `bet:A number` then the `number` option (type it to find it), or the number typed straight in `bet`; the other bets stay in the game but are closed, and each one can be opened in `/config` (`balance.games.roulette_bets`: `green` = Diamond block ×18, `even`/`odd`, `low`/`high` ×2, `dozens` ×3, `number` ×36). The Diamond block makes the bank keep about 2.7% of the bets on average (5.3% with the 00). The bet is picked in the suggestions, and the wheel spins for a second or two before stopping. Winnings don't count for the seasons.
 - `/blockdle guess <block>` — Guess the Minecraft block of the day, the same for everyone (like Wordle / MCdle). After each guess you see how your block compares with the block of the day on 6 properties: tool, hardness, blast resistance, transparent, craftable and version added (🟩 same, 🟥 different, 🔼/🔽 higher or lower). Unlimited private guesses; the fewer you need, the bigger the reward, and the channel is told when you find it. `/blockdle today` shows your guesses, `/blockdle top` today's best (and yesterday's block). 190 blocks, with their real values from Minecraft 1.21.1.
 - **Minecraft quiz** — Every hour or so a question appears in a game channel with 4 answers; the first player to click the right one wins emeralds and XP (one try each). Staff can ask one now with `/event quiz`.
@@ -274,7 +275,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `roles.updates_ping` | Role pinged when a new feature is announced (0 = no ping) |
 | `roles.blocky_player` | Blocky player role: only its members get a guide channel (give it with an onboarding question in *Channels & Roles*; 0 = no guide channels) |
 | `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
-| `roles.species_villager` … `species_miner` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`) |
+| `roles.species_villager` … `species_gambler` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`, `species_gambler`) |
 | `roles.event_ping` | Role pinged when a boss appears, the wandering villager arrives or a tournament opens (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
 | `minecraft.public_ip_text` | Text shown by `/ip` |
@@ -353,7 +354,7 @@ The tournament is tuned with `balance.tournament`: `entry_fee`, `house_bonus`, `
 
 The PVE dungeon is tuned with `balance.pve`: `hp` (players' health, not restored between waves), `max_players`, `cooldown_minutes`, `lobby_minutes`, `decision_minutes`, `max_potions`, `wave_growth` (e.g. `0.1` = monsters +10% each wave), `clear_bonus` (e.g. `0.5`), `xp_per_wave`, `wave_rewards` (5 values, multiplied by the difficulty's reward), `group_monsters` (share of a wave each extra player adds, `1` = a whole wave), `min_hit_after_armor`, `monsters` (each monster's `hp`, `min_damage` and `max_damage` at Normal) and `difficulties` (`easy`, `normal`, `hard`, `hardcore`, `nightmare`, each with `entry`, `strength` = monsters' health and damage, Normal = 1, and `reward`).
 
-Species are tuned with `balance.species`: `change_cost`, `change_days`, and the bonus of each one: `villager_trade` (e.g. `0.05`), `dwarf_damage`, `witch_potions`, `mage_enchants`, `miner_speed`.
+Species are tuned with `balance.species`: `change_cost`, `change_days`, and the bonus of each one: `villager_trade` (e.g. `0.05`), `dwarf_damage`, `witch_potions`, `mage_enchants`, `miner_speed`, `gambler_max_bet`.
 
 Loans are tuned with `balance.loans`: `min_amount`, `max_amount`, `max_interest` (e.g. `0.2` = 20%), `min_days`, `max_days`, `max_loans_out` (unpaid loans per lender), `offer_minutes`, `late_penalty` (e.g. `0.1`) and `garnish` (share of a late borrower's income that goes to the lender, e.g. `0.5`).
 

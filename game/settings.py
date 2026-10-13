@@ -340,6 +340,7 @@ DEFAULTS: dict[str, Any] = {
         "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
+        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, the wheel)
     },
     # Loans between players (/loan). The lender picks the interest and the duration within these limits.
     "loans": {

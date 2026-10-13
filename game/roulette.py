@@ -124,7 +124,7 @@ def spin(ctx: Ctx, user_id: int, bet: str, amount: int, number: str | None = Non
         number = None
     if not is_open():
         raise GameError("🎡 The wheel is closed for now: try `/luckyblock`!")
-    check_bet(amount)
+    check_bet(amount, ctx, user_id)
     gambling.check_day(ctx, user_id)
     players.spend_emeralds(ctx, user_id, amount)
     slot = ctx.rng.choice(slots())

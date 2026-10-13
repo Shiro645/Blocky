@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import random
 
-from game import duel, enchants, gear, leaderboard, mining, players, settings, shop, species, villager
+from game import (duel, enchants, gambling, gear, leaderboard, luckyblock, mining, players, roulette, settings,
+                  shop, species, villager)
 from game.errors import GameError
 from tests.helpers import DAY, GameTestCase
 
@@ -109,6 +110,21 @@ class BonusTests(GameTestCase):
         b = await self.run_game(mining.mine, BOB)
         self.assertEqual(a["cooldown"], round(b["cooldown"] * 0.95))
         self.assertLess(a["cooldown"], b["cooldown"])
+
+    async def test_gambler_bets_more(self):
+        await self.run_game(species.choose, ALICE, "gambler")
+        for user in (ALICE, BOB):
+            await self.run_game(players.give_emeralds, user, 5000)
+        self.assertEqual(await self.run_game(gambling.max_bet, ALICE), 300)
+        self.assertEqual(await self.run_game(gambling.max_bet, BOB), 200)
+        await self.run_game(luckyblock.open_block, ALICE, 300)
+        await self.run_game(roulette.spin, ALICE, "red", 300)
+        with self.assertRaisesRegex(GameError, "300"):
+            await self.run_game(roulette.spin, ALICE, "red", 301)
+        with self.assertRaisesRegex(GameError, "200"):
+            await self.run_game(luckyblock.open_block, BOB, 300)
+        with self.assertRaisesRegex(GameError, "200"):
+            await self.run_game(roulette.spin, BOB, "red", 201)
 
     async def test_no_species_no_bonus(self):
         for key in species.SPECIES:

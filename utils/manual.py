@@ -428,8 +428,11 @@ def _moderation(s: Settings) -> list[str]:
 def _games(s: Settings) -> list[str]:
     g = s["games"]
     cap = int(g["daily_win_cap"])
+    gambler = int(round(int(g["max_bet"]) * (1 + float(s["species"]["gambler_max_bet"]))))
+    more = f" (🎲 Gamblers: up to **{num(gambler)}**)" if gambler > int(g["max_bet"]) else ""
     return [
-        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds · **{duration(g['cooldown_seconds'])}** between two games",
+        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds{more} · "
+        f"**{duration(g['cooldown_seconds'])}** between two games",
         (f"Daily limit: once you won **{num(cap)}** emeralds today at games of chance (winnings minus losses), "
          "you play again tomorrow" if cap else "No daily limit"),
         "Played in the game channels set by the staff (anywhere when there are none)",

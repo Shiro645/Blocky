@@ -224,7 +224,7 @@ FIELDS: list[Field] = [
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
             help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
       for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
-                        ("miner", "Miner"))],
+                        ("miner", "Miner"), ("gambler", "Gambler"))],
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -579,6 +579,8 @@ FIELDS: list[Field] = [
     _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels and the dungeon."),
     _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
     _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
+    _pct("species.gambler_max_bet", "species", "Gambler: higher maximum bet",
+         "At the Lucky Block and the wheel: 50% = 300 when the others can bet 200.", max=10),
     # ---- loans ----
     _b("loans.min_amount", "loans", "Smallest loan", min=1),
     _b("loans.max_amount", "loans", "Biggest loan", min=1),

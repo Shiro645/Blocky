@@ -15,8 +15,18 @@ def _cfg() -> dict:
     return settings.get()["games"]
 
 
-def check_bet(amount: int) -> None:
-    lo, hi = int(_cfg()["min_bet"]), int(_cfg()["max_bet"])
+def max_bet(ctx: Ctx | None = None, user_id: int | None = None) -> int:
+    """The highest bet, for this player (Gamblers bet higher: species.gambler_max_bet)."""
+    top = int(_cfg()["max_bet"])
+    if ctx is not None and user_id is not None:
+        from game import species  # here: species imports a lot of the game
+
+        top = int(round(top * (1 + species.bonus(ctx, user_id, "gambler"))))
+    return top
+
+
+def check_bet(amount: int, ctx: Ctx | None = None, user_id: int | None = None) -> None:
+    lo, hi = int(_cfg()["min_bet"]), max_bet(ctx, user_id)
     if not lo <= amount <= hi:
         raise GameError(f"Bets go from **{lo:,}** to **{hi:,}** emeralds.")
 

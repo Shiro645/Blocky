@@ -268,6 +268,7 @@ SECTIONS: tuple[Section, ...] = (
         "(the red and black numbers) and double your bet if the wheel stops on it, or on one number (0 to 36) for "
         "36 times your bet. The 💎 **Diamond block** (the 0) makes every Redstone or Obsidian bet "
         "lose.\n"
+        "The 🎲 **Gambler** species can bet more at both games.\n"
         "**Blockdle**: guess the Minecraft block of the day with `/blockdle guess`. After each guess you see how "
         "your block compares on 6 properties (tool, hardness, blast resistance, transparent, craftable, version). "
         "The fewer guesses, the bigger the reward. `/blockdle today` and `/blockdle top`.\n"
