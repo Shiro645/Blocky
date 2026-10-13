@@ -319,12 +319,12 @@ DEFAULTS: dict[str, Any] = {
         "daily_win_cap": 1500,
         # Lucky Block (/luckyblock): how often each thing falls out (weights) and what it pays (times the bet,
         # the bet included). The defaults give back about 90% of the bets on average, mostly through small
-        # loot: netherite stays rare (1 in 500) and pays x10 at most.
+        # loot; the better the loot, the rarer it is: netherite stays rare (1 in 500) and pays x10 at most.
         "lucky_block": {
-            "creeper": {"weight": 310, "payout": 0.0},
-            "cobblestone": {"weight": 160, "payout": 0.5},
-            "iron": {"weight": 210, "payout": 1.0},
-            "gold": {"weight": 240, "payout": 1.5},
+            "creeper": {"weight": 205, "payout": 0.0},
+            "cobblestone": {"weight": 300, "payout": 0.5},
+            "iron": {"weight": 240, "payout": 1.0},
+            "gold": {"weight": 175, "payout": 1.5},
             "diamond": {"weight": 58, "payout": 2.5},
             "emerald": {"weight": 20, "payout": 4.0},
             "netherite": {"weight": 2, "payout": 10.0},

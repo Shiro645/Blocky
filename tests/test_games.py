@@ -200,7 +200,10 @@ class LuckyBlockGame(GameTestCase):
     def test_the_table(self):
         chances = luckyblock.chances()
         self.assertAlmostEqual(sum(c for _, c, _ in chances), 1)
-        self.assertAlmostEqual(luckyblock.return_rate(), 0.895)
+        self.assertAlmostEqual(luckyblock.return_rate(), 0.8975)
+        # The better the loot, the rarer it is.
+        loot = sorted((p, c) for _, c, p in chances if p > 0)
+        self.assertEqual([c for _, c in loot], sorted((c for _, c in loot), reverse=True))
         netherite = next((c, p) for o, c, p in chances if o.key == "netherite")
         self.assertEqual(netherite, (0.002, 10.0))  # stays rare, and not too strong
         settings.load({"games": {"lucky_block": {"netherite": {"weight": 0}}}})
