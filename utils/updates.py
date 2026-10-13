@@ -149,4 +149,15 @@ UPDATES: tuple[Update, ...] = (
         "The wheel is now a European roulette: the numbers go from **0 to 36**, and the 0 is the only 💎 Diamond "
         "block (no more 00). Bet on a number with `bet:A number` and the `number` option, or type it in `bet`.",
     ),
+    Update(
+        "2026-10-gambler", "2026-10-14", "A new species: the Gambler",
+        "🎲 **Gambler**: a new species for the players who like taking risks. Gamblers can bet **50% more** at the "
+        "Lucky Block and the wheel (300 emeralds instead of 200). Pick it with `/species choose`.",
+    ),
+    Update(
+        "2026-10-sell-gear", "2026-10-14", "Sell your gear",
+        "`/sell gear:<piece>` now sells a piece of gear back for **80%** of its value (its craft and the books on "
+        "it), times the durability it has left: a sword at 80% durability sells for 64% of its value. The "
+        "suggestions show each price, and you confirm before it's sold.",
+    ),
 )

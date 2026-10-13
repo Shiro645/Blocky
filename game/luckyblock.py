@@ -54,7 +54,7 @@ def return_rate() -> float:
 
 
 def open_block(ctx: Ctx, user_id: int, amount: int) -> dict:
-    gambling.check_bet(amount)
+    gambling.check_bet(amount, ctx, user_id)
     gambling.check_day(ctx, user_id)
     players.spend_emeralds(ctx, user_id, amount)
     rows = [(o, w, p) for o, w, p in table() if w > 0]

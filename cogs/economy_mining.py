@@ -6,11 +6,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import mining, players, shop
+from game import enchants, mining, players, settings, shop
 from game.catalog import BLOCK_TYPES
 from game.db import Ctx
+from game.errors import GameError
 from utils.config import channel_ids
-from utils.ui import EMOJI, block_icon, em, gear_label, item_label, join_lines
+from utils.ui import EMOJI, ConfirmView, block_icon, em, gear_label, item_label, join_lines
 
 
 def _inventory(ctx: Ctx, user_id: int) -> dict:
@@ -91,12 +92,32 @@ class EconomyMiningCog(commands.Cog):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="sell", description="Sell your blocks for emeralds: all of them, one kind, or an amount.")
+    async def gear_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[int]]:
+        """The player's pieces with what each one sells for."""
+        offers = await self.bot.db.run(shop.gear_offers, interaction.user.id)
+        choices = []
+        for g, offer in offers:
+            name = f"{g['material']} {g['item']} ({g['durability']}/{g['max_durability']}) → {offer['price']:,} emeralds"
+            if g["enchants"]:
+                name += f" — {enchants.labels(g['enchants'])}"
+            if g["equipped"]:
+                name += " — equipped"
+            if current.lower() in name.lower():
+                choices.append(app_commands.Choice(name=name[:100], value=g["gear_id"]))
+        return choices[:25]
+
+    @app_commands.command(name="sell", description="Sell your blocks (all, one kind or an amount) or a piece of gear.")
     @app_commands.describe(block="Only this kind of block (empty = every kind)",
-                           amount="How many (empty = all; more than you have = all you have)")
+                           amount="How many (empty = all; more than you have = all you have)",
+                           gear="Or a piece of gear: sold for part of its value, less when it's worn")
     @app_commands.choices(block=[app_commands.Choice(name=b, value=b) for b in BLOCK_TYPES])
+    @app_commands.autocomplete(gear=gear_autocomplete)
     async def sell(self, interaction: discord.Interaction, block: str | None = None,
-                   amount: app_commands.Range[int, 1] | None = None):
+                   amount: app_commands.Range[int, 1] | None = None, gear: int | None = None):
+        if gear is not None:
+            if block is not None or amount is not None:
+                raise GameError("Sell either blocks or a piece of gear, not both at once.")
+            return await self.sell_gear(interaction, gear)
         res = await self.bot.db.run(players.sell_blocks, interaction.user.id, block, amount)
 
         lines = [
@@ -115,6 +136,33 @@ class EconomyMiningCog(commands.Cog):
                             inline=False)
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=embed)  # public: rewards are shown to everyone
+
+    async def sell_gear(self, interaction: discord.Interaction, gear_id: int) -> None:
+        """Show the price of the piece; the player confirms before it is sold."""
+        user = interaction.user
+        piece = await self.bot.db.run(shop.owned_piece, user.id, gear_id)
+        offer = await self.bot.db.run(shop.gear_offer, user.id, piece)
+        rate = float(settings.get()["market"]["gear_sell_rate"])
+        lines = [f"Sell {gear_label(piece)} for **{em(offer['price'])}**?",
+                 f"Worth {em(offer['value'])} new (craft{' + books' if piece['enchants'] else ''}) × "
+                 f"**{rate:.0%}** × **{offer['left']:.0%}** durability left"
+                 + (f" + {em(offer['bonus'])} (Villager)" if offer["bonus"] else "") + "."]
+        if piece["equipped"]:
+            lines.append(f"⚠️ You're wearing it: your **{piece['item']}** slot will be empty.")
+        if piece["enchants"]:
+            lines.append("Its enchantments go with it.")
+
+        async def do(confirm: discord.Interaction) -> None:
+            res = await self.bot.db.run(shop.sell_gear, user.id, gear_id, offer["price"])
+            await confirm.response.edit_message(content="Done.", view=None)
+            embed = discord.Embed(title="Sale complete",
+                                  description=f"{gear_label(res['piece'])} → +{em(res['price'])}",
+                                  color=discord.Color.green())
+            embed.add_field(name="New balance", value=em(res["balance"]))
+            embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
+            await confirm.followup.send(embed=embed)  # public, like the block sales
+
+        await interaction.response.send_message("\n".join(lines), view=ConfirmView(user.id, "Sell", do), ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

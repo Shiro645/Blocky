@@ -428,8 +428,11 @@ def _moderation(s: Settings) -> list[str]:
 def _games(s: Settings) -> list[str]:
     g = s["games"]
     cap = int(g["daily_win_cap"])
+    gambler = int(round(int(g["max_bet"]) * (1 + float(s["species"]["gambler_max_bet"]))))
+    more = f" (🎲 Gamblers: up to **{num(gambler)}**)" if gambler > int(g["max_bet"]) else ""
     return [
-        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds · **{duration(g['cooldown_seconds'])}** between two games",
+        f"Bets: **{num(g['min_bet'])}** to **{num(g['max_bet'])}** emeralds{more} · "
+        f"**{duration(g['cooldown_seconds'])}** between two games",
         (f"Daily limit: once you won **{num(cap)}** emeralds today at games of chance (winnings minus losses), "
          "you play again tomorrow" if cap else "No daily limit"),
         "Played in the game channels set by the staff (anywhere when there are none)",
@@ -583,16 +586,23 @@ PAGES: list[Page] = [
         "Sells your blocks for emeralds: **all** of them, only one **kind** (`block`), or a number of them "
         "(`amount`; asking for more than you have sells all you have, and without a kind your least valuable "
         "blocks go first). The Trader talent adds a bonus on top.\n"
+        "**A piece of gear** (`gear`): pick it in the suggestions, which show its price. It sells for part of its "
+        "value new (its craft and the books applied to it), times the durability it has left, and you confirm "
+        "first. A piece you wear is taken off; its enchantments go with it.\n"
         "Blocks already counted for the season when you mined them, so selling only adds the Trader bonus to "
-        "your season score. Ingots, gear, books and potions aren't sold here: use /auction or /trade. "
-        "The wandering villager sometimes buys a pile of blocks above this price (/villager).\n"
+        "your season score; selling gear doesn't count. Ingots, books and potions aren't sold here: use /auction "
+        "or /trade. The wandering villager sometimes buys a pile of blocks above this price (/villager).\n"
         "Everyone in the channel sees your sale.",
         lambda s: [
             _block_values(s),
             f"Trader talent: **+{pct(s['talents']['trader_bonus_per_point'])}** per point "
             f"(max **+{pct(s['talents']['trader_bonus_per_point'] * s['talents']['caps']['trader'])}**)",
+            f"Gear: **{pct(s['market']['gear_sell_rate'])}** of its value × its durability left (e.g. at "
+            f"**80%** durability: **{pct(s['market']['gear_sell_rate'] * 0.8)}** of its value) · Villagers get "
+            f"**+{pct(s['species']['villager_trade'])}**",
         ],
-        examples=("/sell", "/sell block:bedrock", "/sell block:cobblestone amount:500", "/sell amount:100"),
+        examples=("/sell", "/sell block:bedrock", "/sell block:cobblestone amount:500", "/sell amount:100",
+                  "/sell gear:diamond sword"),
         related=("inventory", "talents", "villager", "auction sell"),
     ),
     Page(

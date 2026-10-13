@@ -31,6 +31,7 @@ DEFAULTS: dict[str, Any] = {
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
         "ingots": {"gold": 5, "iron": 10, "diamond": 60, "netherite": 300},
+        "gear_sell_rate": 0.8,  # /sell gear: this share of its value (craft + books), times its durability left
     },
     "talents": {
         "points_every_levels": 5,
@@ -340,6 +341,7 @@ DEFAULTS: dict[str, Any] = {
         "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
+        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, the wheel)
     },
     # Loans between players (/loan). The lender picks the interest and the duration within these limits.
     "loans": {

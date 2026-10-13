@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from game import gear, mining, players, shop
+from game import enchants, gear, mining, players, shop, species
 from game.errors import GameError
 from game.notices import GearBroken
 from tests.helpers import GameTestCase
@@ -97,6 +97,49 @@ class MiningWithToolsTests(GameTestCase):
         self.assertEqual(mining.upgrade_block("deepslate"), "obsidian")
         self.assertEqual(mining.upgrade_block("obsidian"), "bedrock")
         self.assertEqual(mining.upgrade_block("bedrock"), "bedrock")
+
+
+def _wear(ctx, gear_id: int, durability: int) -> None:
+    ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (durability, gear_id))
+
+
+class SellGearTests(GameTestCase):
+    async def test_price_is_a_share_of_the_value_times_the_durability_left(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        piece = await self.run_game(shop.owned_piece, ALICE, gid)
+        offer = await self.run_game(shop.gear_offer, ALICE, piece)
+        self.assertEqual((offer["value"], offer["price"]), (600, 480))  # 2 netherite + 1 stick, × 80%
+        await self.run_game(_wear, gid, piece["max_durability"] // 2)
+        piece = await self.run_game(shop.owned_piece, ALICE, gid)
+        self.assertEqual((await self.run_game(shop.gear_offer, ALICE, piece))["price"], 240)
+
+    async def test_books_count_and_go_with_the_piece(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        await self.run_game(enchants.set_enchants, gid, {"sharpness": 2})
+        await self.run_game(gear.equip, ALICE, gid)
+        res = await self.run_game(shop.sell_gear, ALICE, gid)
+        self.assertEqual(res["price"], 600)  # (600.25 + 150) × 80%
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 600)
+        self.assertEqual(await self.run_game(shop.get_gear, ALICE), [])
+        self.assertNotIn("sword", await self.run_game(gear.get_equipped, ALICE))
+        self.assertEqual(await self.run_game(enchants.of_gear, [gid]), {})
+
+    async def test_villagers_get_their_bonus(self):
+        await self.run_game(species.choose, ALICE, "villager")
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        res = await self.run_game(shop.sell_gear, ALICE, gid)
+        self.assertEqual((res["base"], res["bonus"], res["price"]), (480, 24, 504))
+
+    async def test_refused_when_not_owned_or_the_price_changed(self):
+        gid = await self.run_game(shop.create_gear, BOB, "sword", "iron")
+        with self.assertRaises(GameError):
+            await self.run_game(shop.sell_gear, ALICE, gid)
+        with self.assertRaisesRegex(GameError, "price changed"):
+            await self.run_game(shop.sell_gear, BOB, gid, 999)
+        self.assertEqual(len(await self.run_game(shop.get_gear, BOB)), 1)
+        await self.run_game(shop.sell_gear, BOB, gid, 16)  # 20.25 × 80%
+        with self.assertRaises(GameError):
+            await self.run_game(shop.sell_gear, BOB, gid)  # already sold
 
 
 if __name__ == "__main__":

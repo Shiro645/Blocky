@@ -7,6 +7,7 @@
 - 🧪 Witch: stronger potions in duels and in the dungeon.
 - 🔮 Mage: stronger enchantments.
 - ⚒️ Miner: a shorter mining cooldown.
+- 🎲 Gambler: a higher maximum bet at the games of chance (Lucky Block, the wheel).
 
 The first choice is free. Changing costs `change_cost` emeralds and is possible
 once every `change_days` days. The staff can set anyone's species.
@@ -38,6 +39,7 @@ SPECIES: dict[str, Species] = {
     "witch": Species("witch", "Witch", "🧪", "witch_potions", "+{} potion effects in duels and the dungeon"),
     "mage": Species("mage", "Mage", "🔮", "mage_enchants", "+{} enchantment effects"),
     "miner": Species("miner", "Miner", "⚒️", "miner_speed", "{} shorter mining cooldown"),
+    "gambler": Species("gambler", "Gambler", "🎲", "gambler_max_bet", "+{} maximum bet at the Lucky Block and the wheel"),
 }
 
 

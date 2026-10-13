@@ -224,7 +224,7 @@ FIELDS: list[Field] = [
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
             help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
       for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
-                        ("miner", "Miner"))],
+                        ("miner", "Miner"), ("gambler", "Gambler"))],
     Field("mc_ip_text", "minecraft", "/ip text", ("minecraft", "public_ip_text"), "text",
           help="What /ip shows to join the server."),
     Field("mc_modpack_text", "minecraft", "/modpacks text", ("minecraft", "modpack_text"), "text",
@@ -277,6 +277,9 @@ FIELDS: list[Field] = [
     _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
     *[_b(f"market.ingots.{m}", "market", f"{m.capitalize()} ingot price", "Price at /market. Also their value "
          "for crafting values, fortunes and fair prices.", min=1) for m in MATERIALS],
+    _pct("market.gear_sell_rate", "market", "/sell gear: share of its value",
+         "A piece sells for this share of its value (craft + books), times its durability left: at 80%, a piece "
+         "worth 100 with half its durability sells for 40."),
     _b("pay.min_amount", "trading", "/pay: minimum amount", min=1),
     _b("auction.tax_percent", "trading", "Auction tax (%)", "Taken from the seller's price.", max=100),
     _b("auction.max_listings", "trading", "Auction: listings per player", min=1, max=100),
@@ -466,9 +469,17 @@ FIELDS: list[Field] = [
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
+    # shared by the Lucky Block and the wheel first: they're the ones changed most
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
+    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
+       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
     _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
        "Lucky Block and the wheel (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
     _b("games.roulette_enabled", "chance", "Wheel open", "Off: /wheel says it's closed.", kind="bool"),
+    _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
+       "win a little on average.", kind="choice", min=None,
+       choices=(("1: 0 only (the bank keeps 2.7%)", 1), ("2: 0 and 00 (the bank keeps 5.3%)", 2))),
     *[_b(f"games.roulette_bets.{key}", "chance", f"Wheel: bets on {name}", "On: players can bet on it.", kind="bool",
          min=None)
       for key, name in (("red", "Redstone"), ("black", "Obsidian"), ("green", "Diamond block"), ("even", "even"),
@@ -480,13 +491,6 @@ FIELDS: list[Field] = [
         _b(f"games.lucky_block.{key}.payout", "chance", f"Lucky Block: {name} pays (×bet)",
            "Times the bet, the bet included: 0 = lost, 1 = the bet back.", kind="float", max=1000),
     )],
-    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
-    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
-    _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
-       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
-    _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
-       "win a little on average.", kind="choice", min=None,
-       choices=(("1: 0 only (the bank keeps 2.7%)", 1), ("2: 0 and 00 (the bank keeps 5.3%)", 2))),
     *[_b(f"games.blockdle_rewards.{i}", "minigames", f"Blockdle reward: {i + 1}{'+' if i == 9 else ''} guess{'es' if i else ''}",
          "Emeralds for finding the block of the day in this many guesses.") for i in range(10)],
     _b("games.blockdle_xp", "minigames", "Blockdle: XP for finding the block"),
@@ -578,6 +582,8 @@ FIELDS: list[Field] = [
     _pct("species.witch_potions", "species", "Witch: stronger potions", "Potion effects in duels and the dungeon."),
     _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
     _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
+    _pct("species.gambler_max_bet", "species", "Gambler: higher maximum bet",
+         "At the Lucky Block and the wheel: 50% = 300 when the others can bet 200.", max=10),
     # ---- loans ----
     _b("loans.min_amount", "loans", "Smallest loan", min=1),
     _b("loans.max_amount", "loans", "Biggest loan", min=1),
