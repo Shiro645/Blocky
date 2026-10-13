@@ -106,6 +106,21 @@ def _pct(dotted: str, category: str, label: str, help: str = "", max: float = 1.
     return _b(dotted, category, label, help, "percent", 0, max)
 
 
+def _profile_frames():
+    from game import profiles  # here: profiles imports a lot of the game
+    return profiles.FRAMES.items()
+
+
+def _profile_titles():
+    from game import profiles
+    return profiles.TITLES.items()
+
+
+def _with_n(text) -> str:
+    """'Mine N blocks': what an earned title or frame asks, with N for the setting."""
+    return text(0).replace(" 0 ", " N ").replace(" 0", " N")
+
+
 WEIGHT_HELP = "Chances = this weight ÷ the total of the weights of the pile. 0 = never."
 DAY_CHOICES = tuple((day, i) for i, day in enumerate(DAYS))
 PILES = (("odds_6_blocks", "6 blocks"), ("odds_4_5_blocks", "4-5 blocks"), ("odds_2_3_blocks", "2-3 blocks"),
@@ -253,8 +268,12 @@ FIELDS: list[Field] = [
     _b("daily.base_reward", "economy", "Daily: reward on day 1"),
     _b("daily.streak_bonus_per_day", "economy", "Daily: bonus per day in a row"),
     _b("daily.streak_cap_days", "economy", "Daily: days the streak grows", "The reward stops growing after this.", min=1, max=365),
-    _b("daily.weekly_bonus_item", "economy", "Daily: ingot every 7th day", kind="choice", min=None,
-       choices=tuple((m, m) for m in MATERIALS)),
+    _b("daily.weekly_bonus_item", "economy", "Daily: bonus ingot", "Given every few days in a row (see below).",
+       kind="choice", min=None, choices=tuple((m, m) for m in MATERIALS)),
+    _b("daily.bonus_every_days", "economy", "Daily: bonus ingot every … days",
+       "7 = on day 7, 14, 21… of a streak.", min=1, max=365),
+    _b("trade.offer_minutes", "economy", "/trade: minutes to answer", "A proposal ends after this.", kind="float",
+       min=1, max=14),
     _b("daily.xp", "economy", "Daily: XP"),
     # ---- tools ----
     *[_b(f"gear.tier.{m}", "tools", f"{m.capitalize()} tier", "Tool bonuses are multiplied by the tier.", min=1, max=20)
@@ -396,6 +415,10 @@ FIELDS: list[Field] = [
     _pct("villager.buy_bonus", "villager", "Bonus when he buys blocks", "50% = he pays 50% more than /sell.", max=5),
     _b("villager.book_iii_price", "villager", "Price of a level III book", min=1),
     _b("villager.potion_ii_price", "villager", "Price of a reinforced potion", min=1),
+    _pct("villager.exclusive_book_chance", "villager", "Exclusive offer: chance of a book",
+         "The exclusive offer is a level III book this often, else a reinforced potion."),
+    *[_b(f"villager.book_weights.{i}", "villager", f"Book in his goods: weight of level {ROMAN[i]}",
+         "Chances = this weight ÷ the total of both weights. 0 = never.", kind="float") for i in range(2)],
     *[_b(f"villager.buys.{b}", "villager", f"He buys {b} by (0 = never)", "How many blocks he buys at once.", max=100_000)
       for b in BLOCK_TYPES],
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
@@ -443,6 +466,12 @@ FIELDS: list[Field] = [
     *[_b(f"profiles.frame_prices.{key}", "profiles", f"Frame price: {name}", "The rarer frames are earned, not sold.")
       for key, name in (("stone", "Stone"), ("gold", "Gold"), ("redstone", "Redstone"), ("lapis", "Lapis"),
                         ("diamond", "Diamond"), ("emerald", "Emerald"))],
+    *[_b(f"profiles.frame_goals.{key}", "profiles", f"Frame to earn: {frame.name}"[:45],
+         f"Earned when: {_with_n(frame.text)}.", min=1, max=10_000_000)
+      for key, frame in _profile_frames() if frame.what],
+    *[_b(f"profiles.title_goals.{key}", "profiles", f"Title: {title.name}"[:45],
+         f"Earned when: {_with_n(title.text)}.", min=1, max=10_000_000)
+      for key, title in _profile_titles()],
     # ---- guide ----
     _b("guide.reward", "guide", "Checklist reward", "Emeralds for doing every step of the guide, paid once per player."),
     _b("guide.delete_after_days", "guide", "Days before a finished guide is deleted",

@@ -85,10 +85,12 @@ DEFAULTS: dict[str, Any] = {
         "base_reward": 30,
         "streak_bonus_per_day": 10,
         "streak_cap_days": 7,
-        "weekly_bonus_item": "diamond",  # ingot given every 7th consecutive day
+        "weekly_bonus_item": "diamond",  # ingot given every bonus_every_days consecutive days
+        "bonus_every_days": 7,
         "xp": 25,
     },
     "pay": {"min_amount": 1},
+    "trade": {"offer_minutes": 5},  # a /trade proposal waits this long for an answer
     "auction": {"tax_percent": 5, "max_listings": 10, "duration_days": 7},
     "duel": {
         "min_stake": 10,
@@ -204,9 +206,12 @@ DEFAULTS: dict[str, Any] = {
         ],
         # Blocks he can buy, and how many at once.
         "buys": {"gravel": 64, "deepslate": 48, "obsidian": 24, "bedrock": 16},
-        # Exclusive offer: a level III book or a reinforced potion (II).
+        # Exclusive offer: a level III book (exclusive_book_chance) or else a reinforced potion (II).
         "book_iii_price": 450,
         "potion_ii_price": 120,
+        "exclusive_book_chance": 0.5,
+        # A "book" in his goods: weights of a level I and a level II book.
+        "book_weights": [70, 30],
     },
     "tournament": {
         "entry_fee": 50,
@@ -271,6 +276,14 @@ DEFAULTS: dict[str, Any] = {
         "banner_cost": 200,  # each change of a team banner (paid by the leader)
         # Frames sold for emeralds (the others are earned, see game/profiles.py).
         "frame_prices": {"stone": 200, "gold": 500, "redstone": 800, "lapis": 1000, "diamond": 2000, "emerald": 3000},
+        # What it takes to earn the other frames and the titles (game/profiles.py says what is counted).
+        "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1},
+        "title_goals": {
+            "miner": 1000, "quarry_master": 50000, "bedrock_hunter": 100, "blacksmith": 50, "duelist": 25,
+            "gladiator": 100, "boss_slayer": 10, "season_champion": 1, "arena_champion": 1, "team_champion": 1,
+            "dungeon_crawler": 1, "nightmare_survivor": 1, "tycoon": 100000, "banker": 10000, "merchant": 50,
+            "heavy_hitter": 150, "veteran": 50, "legend": 100,
+        },
     },
     # The guide: a private channel for every new player (in channels.guide_category) with
     # a checklist of first steps. The reward is paid once per player, ever.
@@ -599,6 +612,9 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for key in ("book_weights", "boss_book_weights"):
         if sum(float(w) for w in ench[key]) <= 0:
             out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    if sum(float(w) for w in merged["villager"]["book_weights"]) <= 0:
+        out.append(("`balance.villager.book_weights`: at least one level needs a weight above 0.",
+                    [("villager", "book_weights")]))
     if sum(float(o["weight"]) for o in g["lucky_block"].values()) <= 0:
         out.append(("`balance.games.lucky_block`: at least one outcome needs a weight above 0.",
                     [("games", "lucky_block", k, "weight") for k in g["lucky_block"]]))

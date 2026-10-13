@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from game import assets, daily, exchange, players, shop
+from game import assets, daily, exchange, players, settings, shop
 from game.errors import GameError
 from tests.helpers import DAY, GameTestCase
 
@@ -33,6 +33,13 @@ class DailyTests(GameTestCase):
         self.assertEqual(res["streak"], 8)
         self.assertEqual(res["emeralds"], 30 + 10 * 6)  # capped at 7 days
         self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "diamond"), 1)
+
+    async def test_the_bonus_ingot_follows_its_setting(self):
+        settings.load({"daily": {"bonus_every_days": 3}})
+        for day in range(1, 7):
+            await self.run_game(daily.claim, ALICE)
+            self.advance(DAY)
+        self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "diamond"), 2)  # days 3 and 6
 
     async def test_daily_counts_as_earned(self):
         await self.run_game(daily.claim, ALICE)

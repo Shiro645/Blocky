@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from typing import Callable
 
 from game import players, progress, settings, teams
 from game.db import Ctx
@@ -34,14 +35,33 @@ DEFAULT_COLOR = (88, 101, 242)  # Discord blurple, free
 HEX_RE = re.compile(r"^#?([0-9a-fA-F]{6})$")
 
 
+def _goal(kind: str, key: str) -> int:
+    return int(settings.get()["profiles"][f"{kind}_goals"][key])
+
+
+def _plural(n: int, one: str, many: str) -> str:
+    """'1 block', '5 blocks'; a singular with its article stays as is: 'a boss'."""
+    if n == 1:
+        return one if one.startswith(("a ", "an ")) else f"1 {one}"
+    return f"{n:,} {many}"
+
+
 @dataclass(frozen=True)
 class Frame:
     key: str
     name: str
     colors: tuple[tuple[int, int, int], ...]  # base, light, dark
     style: str  # how render draws the pattern: ore, bricks, stripes, checker, flames, stars
-    unlock: str = ""  # earned frames: "stat:<name>:<n>"; sold frames: "" (price in settings)
-    how: str = ""  # how to earn it, shown to players
+    what: str = ""  # earned frames: "stat:<name>" (the goal is in settings profiles.frame_goals); sold: ""
+    text: Callable[[int], str] | None = None  # how to earn it, for a goal
+
+    @property
+    def unlock(self) -> str:
+        return f"{self.what}:{_goal('frame', self.key)}" if self.what else ""
+
+    @property
+    def how(self) -> str:
+        return self.text(_goal("frame", self.key)) if self.text else ""
 
 
 FRAMES: dict[str, Frame] = {f.key: f for f in (
@@ -52,13 +72,13 @@ FRAMES: dict[str, Frame] = {f.key: f for f in (
     Frame("diamond", "Diamond", ((40, 170, 190), (120, 230, 240), (20, 100, 120)), "ore"),
     Frame("emerald", "Emerald", ((20, 160, 70), (90, 230, 130), (10, 100, 40)), "checker"),
     Frame("netherite", "Netherite", ((60, 52, 58), (110, 95, 100), (35, 30, 34)), "bricks",
-          "stat:tournaments_won:1", "Win a weekend tournament"),
+          "stat:tournaments_won", lambda n: f"Win {_plural(n, 'a weekend tournament', 'weekend tournaments')}"),
     Frame("ender", "Ender", ((25, 15, 45), (190, 110, 240), (60, 30, 100)), "stars",
-          "stat:pve_clears_nightmare:1", "Clear the Nightmare dungeon"),
+          "stat:pve_clears_nightmare", lambda n: f"Clear the Nightmare dungeon{'' if n == 1 else f' {n:,} times'}"),
     Frame("nether", "Nether Flames", ((120, 30, 10), (255, 160, 30), (200, 60, 10)), "flames",
-          "stat:bosses_defeated:25", "Help defeat 25 bosses"),
+          "stat:bosses_defeated", lambda n: f"Help defeat {_plural(n, 'a boss', 'bosses')}"),
     Frame("champion", "Champion", ((200, 160, 40), (255, 240, 170), (120, 80, 10)), "stripes",
-          "stat:seasons_won:1", "Win a weekly season"),
+          "stat:seasons_won", lambda n: f"Win {_plural(n, 'a weekly season', 'weekly seasons')}"),
 )}
 
 
@@ -66,29 +86,42 @@ FRAMES: dict[str, Frame] = {f.key: f for f in (
 class Title:
     key: str
     name: str
-    unlock: str  # "stat:<name>:<n>", "level:<n>" or "dummy:<n>" (best dummy series)
-    how: str
+    what: str  # "stat:<name>", "level" or "dummy" (best dummy series); the goal is in profiles.title_goals
+    text: Callable[[int], str]  # how to earn it, for a goal
+
+    @property
+    def unlock(self) -> str:
+        return f"{self.what}:{_goal('title', self.key)}"
+
+    @property
+    def how(self) -> str:
+        return self.text(_goal("title", self.key))
 
 
 TITLES: dict[str, Title] = {t.key: t for t in (
-    Title("miner", "Miner", "stat:blocks_mined:1000", "Mine 1,000 blocks"),
-    Title("quarry_master", "Quarry Master", "stat:blocks_mined:50000", "Mine 50,000 blocks"),
-    Title("bedrock_hunter", "Bedrock Hunter", "stat:bedrock_found:100", "Find 100 bedrock"),
-    Title("blacksmith", "Blacksmith", "stat:items_crafted:50", "Craft 50 pieces of gear"),
-    Title("duelist", "Duelist", "stat:duels_won:25", "Win 25 duels"),
-    Title("gladiator", "Gladiator", "stat:duels_won:100", "Win 100 duels"),
-    Title("boss_slayer", "Boss Slayer", "stat:bosses_defeated:10", "Help defeat 10 bosses"),
-    Title("season_champion", "Season Champion", "stat:seasons_won:1", "Win a weekly season"),
-    Title("arena_champion", "Arena Champion", "stat:tournaments_won:1", "Win a weekend tournament"),
-    Title("team_champion", "Team Champion", "stat:team_seasons_won:1", "Win a team season"),
-    Title("dungeon_crawler", "Dungeon Crawler", "stat:pve_clears_hard:1", "Clear the Hard dungeon"),
-    Title("nightmare_survivor", "Nightmare Survivor", "stat:pve_clears_nightmare:1", "Clear the Nightmare dungeon"),
-    Title("tycoon", "Tycoon", "stat:emeralds_earned:100000", "Earn 100,000 emeralds"),
-    Title("banker", "Banker", "stat:emeralds_lent:10000", "Lend 10,000 emeralds"),
-    Title("merchant", "Merchant", "stat:trades_completed:50", "Complete 50 trades"),
-    Title("heavy_hitter", "Heavy Hitter", "dummy:150", "Deal 150 damage in one /dummy hit series"),
-    Title("veteran", "Veteran", "level:50", "Reach level 50"),
-    Title("legend", "Legend", "level:100", "Reach level 100"),
+    Title("miner", "Miner", "stat:blocks_mined", lambda n: f"Mine {_plural(n, 'block', 'blocks')}"),
+    Title("quarry_master", "Quarry Master", "stat:blocks_mined", lambda n: f"Mine {_plural(n, 'block', 'blocks')}"),
+    Title("bedrock_hunter", "Bedrock Hunter", "stat:bedrock_found", lambda n: f"Find {n:,} bedrock"),
+    Title("blacksmith", "Blacksmith", "stat:items_crafted", lambda n: f"Craft {_plural(n, 'piece', 'pieces')} of gear"),
+    Title("duelist", "Duelist", "stat:duels_won", lambda n: f"Win {_plural(n, 'duel', 'duels')}"),
+    Title("gladiator", "Gladiator", "stat:duels_won", lambda n: f"Win {_plural(n, 'duel', 'duels')}"),
+    Title("boss_slayer", "Boss Slayer", "stat:bosses_defeated", lambda n: f"Help defeat {_plural(n, 'a boss', 'bosses')}"),
+    Title("season_champion", "Season Champion", "stat:seasons_won",
+          lambda n: f"Win {_plural(n, 'a weekly season', 'weekly seasons')}"),
+    Title("arena_champion", "Arena Champion", "stat:tournaments_won",
+          lambda n: f"Win {_plural(n, 'a weekend tournament', 'weekend tournaments')}"),
+    Title("team_champion", "Team Champion", "stat:team_seasons_won",
+          lambda n: f"Win {_plural(n, 'a team season', 'team seasons')}"),
+    Title("dungeon_crawler", "Dungeon Crawler", "stat:pve_clears_hard",
+          lambda n: f"Clear the Hard dungeon{'' if n == 1 else f' {n:,} times'}"),
+    Title("nightmare_survivor", "Nightmare Survivor", "stat:pve_clears_nightmare",
+          lambda n: f"Clear the Nightmare dungeon{'' if n == 1 else f' {n:,} times'}"),
+    Title("tycoon", "Tycoon", "stat:emeralds_earned", lambda n: f"Earn {_plural(n, 'emerald', 'emeralds')}"),
+    Title("banker", "Banker", "stat:emeralds_lent", lambda n: f"Lend {_plural(n, 'emerald', 'emeralds')}"),
+    Title("merchant", "Merchant", "stat:trades_completed", lambda n: f"Complete {_plural(n, 'trade', 'trades')}"),
+    Title("heavy_hitter", "Heavy Hitter", "dummy", lambda n: f"Deal {n:,} damage in one /dummy hit series"),
+    Title("veteran", "Veteran", "level", lambda n: f"Reach level {n:,}"),
+    Title("legend", "Legend", "level", lambda n: f"Reach level {n:,}"),
 )}
 
 # Team banner patterns (Minecraft names), drawn by utils/profile_card.py.

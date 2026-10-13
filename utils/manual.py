@@ -197,7 +197,8 @@ def _daily(s: Settings) -> list[str]:
         f"XP: **{num(d['xp'])}**",
     ]
     if d.get("weekly_bonus_item"):
-        lines.append(f"Every 7th day in a row: **1 {d['weekly_bonus_item']} ingot**")
+        every = int(d["bonus_every_days"])
+        lines.append(f"Every {'day' if every <= 1 else f'{every}th day'} in a row: **1 {d['weekly_bonus_item']} ingot**")
     lines.append(f"The day changes at midnight ({s['timezone']})")
     return lines
 
@@ -577,7 +578,7 @@ PAGES: list[Page] = [
     Page(
         "daily", "basics",
         "Claims your daily reward, once per day. Claiming on consecutive days grows your **streak**: a bigger "
-        "reward each day up to the cap, and an ingot every 7th day in a row. Missing a day resets the streak.\n"
+        "reward each day up to the cap, and a bonus ingot every few days in a row. Missing a day resets the streak.\n"
         "Everyone in the channel sees your reward.",
         _daily,
         examples=("/daily",),
@@ -787,7 +788,8 @@ PAGES: list[Page] = [
         "or declines with the buttons; nothing moves until they accept, and both sides are checked again then. "
         "Leave `get` empty to make a **gift** (a gift doesn't count as a trade for achievements and challenges).\n"
         "You can trade emeralds, blocks, sticks, ingots, lapis, books, potions and gear (one piece at a time, "
-        "it keeps its enchantments and durability). The proposal expires after 5 minutes.",
+        "it keeps its enchantments and durability).",
+        lambda s: [f"A proposal waits **{duration(float(s['trade']['offer_minutes']) * 60)}** for an answer"],
         examples=(
             "/trade member:@Steve give:diamond ingot give_amount:3 get:emeralds get_amount:200",
             "/trade member:@Alex give:emeralds give_amount:50 → a gift",

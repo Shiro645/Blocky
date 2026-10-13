@@ -4,17 +4,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, exchange, loans
+from game import assets, exchange, loans, settings
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.ui import BaseView, asset_icon, em
 
-TRADE_TIMEOUT = 300
-
-
 class TradeView(BaseView):
     def __init__(self, bot: commands.Bot, a: discord.abc.User, b: discord.abc.User, give: str, give_amount: int, get: str | None, get_amount: int):
-        super().__init__(allowed_ids={a.id, b.id}, timeout=TRADE_TIMEOUT)
+        super().__init__(allowed_ids={a.id, b.id}, timeout=float(settings.get()["trade"]["offer_minutes"]) * 60)
         self.bot = bot
         self.a, self.b = a, b
         self.give, self.give_amount = give, give_amount
@@ -113,7 +110,7 @@ class ExchangeCog(commands.Cog):
         view = TradeView(self.bot, interaction.user, member, give, give_amount, get, get_amount if get else 0)
         embed = discord.Embed(
             title="🤝 Trade proposal",
-            description=f"{view.describe()}\n\n{member.mention}, do you accept? (expires in {TRADE_TIMEOUT // 60} min)",
+            description=f"{view.describe()}\n\n{member.mention}, do you accept? (expires in {float(settings.get()['trade']['offer_minutes']):g} min)",
             color=discord.Color.blurple(),
         )
         await interaction.response.send_message(

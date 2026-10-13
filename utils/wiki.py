@@ -73,7 +73,7 @@ SECTIONS: tuple[Section, ...] = (
         "**The market**: `/market` sells sticks and ingots, what you need to craft, at fixed prices. The market "
         "channel shows them too, above the auctions.\n"
         "**Daily reward**: `/daily` once a day. Coming back every day grows your **streak**: a bigger reward each "
-        "day up to the cap, and an ingot every 7th day in a row. Miss a day and the streak starts over.",
+        "day up to the cap, and a bonus ingot every few days in a row. Miss a day and the streak starts over.",
         ("mining", "sell", "market", "daily"),
     ),
     Section(
