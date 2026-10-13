@@ -203,9 +203,9 @@ Everything shows on the profile card of `/profile`. Each change shows a preview 
 
 ### 🔐 Staff commands
 
-Restricted to the staff role (or members with the *Manage Server* permission). **Every staff command is logged in the staff channel** (who, which command, which options).
+Restricted to the **staff role** (`staff.role_id`): even an administrator without it isn't staff for Blocky. Only when no staff role is set (or it was deleted), the administrators are staff, so the server is never locked out. **Every staff command is logged in the staff channel** (who, which command, which options).
 
-**Players don't see the staff commands.** Discord can hide a command behind a permission, not behind a role, so at startup the bot picks a permission the staff role has and `@everyone` doesn't (*Timeout Members* first, then *Kick*, *Ban*, *Manage Messages*…): only members with it see the staff commands. If the staff role has none of these permissions, the commands stay visible (the logs say so) — still only the staff can use them. You can fine-tune it per role in *Server Settings → Integrations → Blocky*.
+**Players don't see the staff commands.** Discord can hide a command behind a permission, not behind a role, so at startup the bot picks a permission that **only the staff role has** (no other role, `@everyone` included; other bots' roles and admin roles aside, admins see every command anyway): *Timeout Members* first, then *Kick*, *Ban*, *Manage Messages*, *Manage Nicknames*, *View Audit Log*… Only members with it see the staff commands. If no permission belongs to the staff role only, the commands are hidden behind *Administrator* and the bot says so in the staff channel: give the staff role a permission no other role has (e.g. *Timeout Members*), or allow the staff role in *Server Settings → Integrations → Blocky*.
 
 - Moderation (the member gets a DM with the reason; everything is logged in the staff channel):
   - `/warn <member> <reason>` — warnings count for 30 days; 3 warnings = automatic 1h mute, 5 = 1 day, 7 = 7 days. `/unwarn <#>` removes one, `/clearwarns` removes them all.
