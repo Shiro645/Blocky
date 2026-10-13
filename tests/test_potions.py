@@ -66,7 +66,7 @@ class FightEngineTests(unittest.TestCase):
         fight = duel.Fight(random.Random(1), *fighters(attack=0.1))
         me = fight.current
         for i in range(3):
-            fight.play(random.Random(i), "healing")
+            fight.play(random.Random(i), "speed")
             fight.play(random.Random(i))
         self.assertEqual(fight.current, me)
         with self.assertRaisesRegex(GameError, "already drank"):
@@ -147,6 +147,12 @@ class FightEngineTests(unittest.TestCase):
             fight.play(random.Random(8), "strength", block=True)
         self.assertEqual(a.potions_used, 0)  # refused before the potion
 
+    def test_no_healing_at_full_health(self):
+        fight = duel.Fight(random.Random(1), *fighters())
+        with self.assertRaisesRegex(GameError, "full health"):
+            fight.drink("healing")
+        self.assertEqual(fight.current.potions_used, 0)
+
     def test_second_player_starts_with_bonus_hp(self):
         settings.load({"duel": {"second_player_bonus_hp": 2}})
         fight = duel.Fight(random.Random(1), *fighters())
@@ -154,7 +160,7 @@ class FightEngineTests(unittest.TestCase):
 
     def test_one_reinforced_potion_per_duel(self):
         fight = duel.Fight(random.Random(1), *fighters(attack=0.1))
-        fight.play(random.Random(1), "healing:2")
+        fight.play(random.Random(1), "speed:2")
         fight.play(random.Random(2))
         with self.assertRaisesRegex(GameError, "one reinforced"):
             fight.drink("strength:2")
@@ -199,6 +205,17 @@ class DuelFlowTests(GameTestCase):
         self.assertEqual(len(refunded), 1)
         self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 100)
         self.assertEqual(await self.run_game(players.get_emeralds, BOB), 100)
+
+    async def test_potions_drunk_in_an_interrupted_duel_come_back(self):
+        await self.run_game(potions.give, ALICE, "strength", 2)
+        setup = await self.run_game(duel.start, ALICE, BOB, 40, None, 300, 400)
+        await self.run_game(duel.drink, setup["duel_id"], ALICE, "strength")
+        self.assertEqual(await self.run_game(potions.owned, ALICE), {"strength": 1})
+        refunded = await self.run_game(duel.refund_interrupted)
+        self.assertEqual((refunded[0]["channel_id"], refunded[0]["message_id"]), (300, 400))  # the message to fix
+        self.assertEqual(await self.run_game(potions.owned, ALICE), {"strength": 2})
+        self.assertEqual(await self.run_game(players.get_stat, ALICE, "potions_drunk"), 0)
+        self.assertEqual(await self.run_game(duel.refund_interrupted), [])
 
     async def test_start_lists_the_potions(self):
         await self.run_game(potions.give, ALICE, "strength", 2)

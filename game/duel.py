@@ -15,6 +15,7 @@ game/potions.py); tournament matches are simulated in one go, without potions.
 """
 from __future__ import annotations
 
+import json
 import random
 from dataclasses import dataclass, field
 
@@ -121,6 +122,8 @@ class Fight:
             raise GameError(f"You already drank {potions.max_per_duel()} potions in this duel.")
         if potions.parse(key)[1] >= 2 and self.current.strong_potion_used:
             raise GameError("Only one reinforced (II) potion per duel.")
+        if potions.parse(key)[0] == "healing" and self.current.hp >= self.current.max_hp:
+            raise GameError("You are already at full health.")
 
     @property
     def can_drink(self) -> bool:
@@ -256,8 +259,11 @@ def check_stake(ctx: Ctx, user_id: int, stake: int) -> None:
 
 
 # ---------------- a duel from start to finish ----------------
-def start(ctx: Ctx, challenger_id: int, opponent_id: int, stake: int, rng: random.Random | None = None) -> dict:
-    """Take both stakes and set up the fight. The stakes are held until `finish`."""
+def start(ctx: Ctx, challenger_id: int, opponent_id: int, stake: int, rng: random.Random | None = None,
+          channel_id: int | None = None, message_id: int | None = None) -> dict:
+    """Take both stakes and set up the fight. The stakes are held until `finish`.
+
+    The message showing the fight is kept so a restart can tell the players their duel was undone."""
     if challenger_id == opponent_id:
         raise GameError("You can't duel yourself.")
     check_stake(ctx, challenger_id, stake)
@@ -265,8 +271,9 @@ def start(ctx: Ctx, challenger_id: int, opponent_id: int, stake: int, rng: rando
     players.spend_emeralds(ctx, challenger_id, stake)
     players.spend_emeralds(ctx, opponent_id, stake)
     cur = ctx.execute(
-        "INSERT INTO duels(challenger_id, opponent_id, stake, started_at) VALUES(?, ?, ?, ?);",
-        (challenger_id, opponent_id, stake, int(ctx.now)),
+        "INSERT INTO duels(challenger_id, opponent_id, stake, started_at, channel_id, message_id) "
+        "VALUES(?, ?, ?, ?, ?, ?);",
+        (challenger_id, opponent_id, stake, int(ctx.now), channel_id, message_id),
     )
     a, _ = make_fighter(ctx, challenger_id)
     b, _ = make_fighter(ctx, opponent_id)
@@ -320,12 +327,25 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
     }
 
 
+def drink(ctx: Ctx, duel_id: int, user_id: int, key: str) -> None:
+    """A potion drunk in a running duel: taken from the inventory, and noted to be given back if a restart
+    cuts the duel."""
+    potions.drink(ctx, user_id, key)
+    row = ctx.one("SELECT potions FROM duels WHERE duel_id=?;", (duel_id,))
+    if row is not None:
+        drunk = json.loads(row["potions"]) + [[user_id, key]]
+        ctx.execute("UPDATE duels SET potions=? WHERE duel_id=?;", (json.dumps(drunk), duel_id))
+
+
 def refund_interrupted(ctx: Ctx) -> list[dict]:
-    """Duels cut by a restart: both players get their stake back."""
+    """Duels cut by a restart: both players get their stake and the potions they drank back."""
     rows = [dict(r) for r in ctx.all("SELECT * FROM duels;")]
     for r in rows:
         players.give_emeralds(ctx, r["challenger_id"], r["stake"])
         players.give_emeralds(ctx, r["opponent_id"], r["stake"])
+        for user_id, key in json.loads(r["potions"]):
+            potions.give(ctx, user_id, key)
+            players.bump_stat(ctx, user_id, "potions_drunk", -1)
     ctx.execute("DELETE FROM duels;")
     return rows
 

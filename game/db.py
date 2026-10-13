@@ -556,6 +556,12 @@ MIGRATIONS: list[str] = [
     );
     INSERT OR IGNORE INTO rewards_paid(user_id, kind, key) SELECT user_id, 'achievement', code FROM achievements;
     """,
+    # 27: what a running duel needs to be undone after a restart: the potions drunk and its message
+    """
+    ALTER TABLE duels ADD COLUMN potions TEXT NOT NULL DEFAULT '[]';  -- JSON [[user_id, potion key], ...]
+    ALTER TABLE duels ADD COLUMN channel_id INTEGER;
+    ALTER TABLE duels ADD COLUMN message_id INTEGER;
+    """,
 ]
 
 
