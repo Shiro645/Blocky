@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, backups, players, profiles, reset, settings, species
+from game import assets, backups, cooldowns, players, profiles, reset, settings, species
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.checks import staff_only
@@ -229,6 +229,37 @@ class StaffEconomyCog(commands.Cog):
         what = {"bio": "bio", "title": "title", "all": "bio and title"}[part]
         await self.answer(interaction, f"✅ {member.mention}'s {what} was removed.", member,
                           f"🧹 The staff removed your profile {what}", reason)
+
+    @player.command(name="cooldowns", description="STAFF: Reset a member's waiting times (rob, dungeon, daily…).")
+    @app_commands.describe(member="Whose waiting times", timer="Which one (empty = all of them)",
+                           reason="Why (sent to the member)")
+    @app_commands.choices(timer=[app_commands.Choice(name=label, value=key) for key, label in cooldowns.TIMERS.items()])
+    @staff_only()
+    async def reset_cooldowns(self, interaction: discord.Interaction, member: discord.Member, timer: str | None = None,
+                              reason: app_commands.Range[str, 1, 300] | None = None):
+        if member.bot:
+            raise GameError("Bots don't play.")
+        timers = [timer] if timer else list(cooldowns.TIMERS)
+        done = await self.bot.db.run(cooldowns.reset, member.id, timers)
+        self.clear_in_memory(member.id, done)
+        if not done:
+            raise GameError(f"{member.mention} had nothing to wait for there.")
+        names = ", ".join(cooldowns.TIMERS[t] for t in done)
+        await self.answer(interaction, f"⏱️ {member.mention}'s waiting times were reset: **{names}**.", member,
+                          f"⏱️ The staff reset your waiting times: **{names}**. You can play again right away", reason)
+        await self.log("⏱️ Waiting times reset", member, interaction.user, names, reason)
+
+    def clear_in_memory(self, user_id: int, timers: list[str]) -> None:
+        """The short waits the cogs keep in memory."""
+        if "duel" in timers and (cog := self.bot.get_cog("DuelCog")) is not None:
+            cog.cooldown_until.pop(user_id, None)  # type: ignore[attr-defined]
+        if "games" in timers:
+            for name in ("LuckyBlockCog", "RouletteCog"):
+                if (cog := self.bot.get_cog(name)) is not None:
+                    cog._next.pop(user_id, None)  # type: ignore[attr-defined]
+        if "mining" in timers and (cog := self.bot.get_cog("EconomyMiningCog")) is not None:
+            cog._next_mine.pop(user_id, None)  # type: ignore[attr-defined]
+            cog._next_spam.pop(user_id, None)  # type: ignore[attr-defined]
 
     @player.command(name="sync_roles", description="STAFF: Give every member the level role matching their level.")
     @staff_only()

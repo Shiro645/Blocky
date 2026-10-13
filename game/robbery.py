@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 
-from game import players, settings
+from game import cooldowns, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -49,13 +49,13 @@ def start(ctx: Ctx, thief_id: int, victim_id: int, mode: str) -> dict:
     now = int(ctx.now)
     last = ctx.one("SELECT MAX(started_at) AS t FROM robberies WHERE thief_id=?;", (thief_id,))["t"]
     ready = (last or 0) + float(c["cooldown_hours"]) * HOUR
-    if last is not None and now < ready:
+    if last is not None and now < ready and not cooldowns.cleared(ctx, thief_id, "rob", last):
         raise GameError(f"Lie low for a while: you can rob again in **{_wait(ready - now)}**.")
     if ctx.one("SELECT 1 FROM robberies WHERE victim_id=? AND status='active';", (victim_id,)):
         raise GameError(f"Someone is already robbing <@{victim_id}>.")
     robbed = ctx.one("SELECT MAX(ends_at) AS t FROM robberies WHERE victim_id=? AND status='done';", (victim_id,))["t"]
     safe_until = (robbed or 0) + float(c["victim_protection_hours"]) * HOUR
-    if robbed is not None and now < safe_until:
+    if robbed is not None and now < safe_until and not cooldowns.cleared(ctx, victim_id, "rob_protection", robbed):
         raise GameError(f"<@{victim_id}> was robbed recently and is protected for **{_wait(safe_until - now)}**.")
     if players.get_emeralds(ctx, victim_id) <= 0:
         raise GameError(f"<@{victim_id}> has no emeralds to steal.")

@@ -30,23 +30,30 @@ class RouletteRules(unittest.TestCase):
         for zeros, rate in ((2, 36 / 38), (1, 36 / 37)):
             settings.load({"games": {"roulette_zeros": zeros}})
             self.assertAlmostEqual(roulette.return_rate(), rate)
-            for bet, (_, payout) in roulette.BETS.items():
+            for bet in roulette.BETS:
                 number = "17" if bet == "number" else None
                 won = sum(roulette.wins(bet, number, s) for s in roulette.slots())
                 with self.subTest(bet=bet, zeros=zeros):
-                    self.assertAlmostEqual(payout * won / len(roulette.slots()), rate)
+                    self.assertAlmostEqual(roulette.payout(bet) * won / len(roulette.slots()), rate)
 
-    def test_green_loses_everything_but_its_number(self):
+    def test_diamond_blocks_lose_everything_but_their_bets(self):
         for bet in roulette.BETS:
-            self.assertFalse(roulette.wins(bet, "1", "0"))
+            self.assertEqual(roulette.wins(bet, "1", "0"), bet == "green")
         self.assertTrue(roulette.wins("number", "00", "00"))
+        self.assertEqual((roulette.slot_label("0"), roulette.slot_label("1"), roulette.slot_label("2")),
+                         ("💎 Diamond block 0", "🟥 Redstone 1", "⬛ Obsidian 2"))
+
+    def test_only_the_open_bets(self):
+        self.assertEqual(roulette.open_bets(), ["red", "black"])  # Redstone and Obsidian for now
+        settings.load({"games": {"roulette_bets": {"dozens": True, "green": True}}})
+        self.assertEqual(roulette.open_bets(), ["red", "black", "green", "dozen1", "dozen2", "dozen3"])
 
 
 class RouletteGame(GameTestCase):
     overrides = {"games": {"roulette_enabled": True}}
 
-    async def test_closed_by_default(self):
-        settings.load(None)
+    async def test_the_staff_can_close_it(self):
+        settings.load({"games": {"roulette_enabled": False}})
         await self.run_game(players.give_emeralds, ALICE, 100)
         with self.assertRaisesRegex(GameError, "closed"):
             await self.run_game(roulette.spin, ALICE, "red", 10)
@@ -66,6 +73,9 @@ class RouletteGame(GameTestCase):
         await self.run_game(players.give_emeralds, ALICE, 5000)
         with self.assertRaisesRegex(GameError, "Bets go"):
             await self.run_game(roulette.spin, ALICE, "red", 201)
+        with self.assertRaisesRegex(GameError, "can't bet on that"):
+            await self.run_game(roulette.spin, ALICE, "even", 10)
+        settings.load({"games": {"roulette_bets": {"number": True}}})
         with self.assertRaisesRegex(GameError, "Pick the number"):
             await self.run_game(roulette.spin, ALICE, "number", 10, "37")
         with self.assertRaisesRegex(GameError, "Not enough"):

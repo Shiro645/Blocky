@@ -446,11 +446,14 @@ def _luckyblock(s: Settings) -> list[str]:
 def _roulette(s: Settings) -> list[str]:
     zeros = "0 and 00" if s["games"]["roulette_zeros"] == 2 else "0"
     rate = 36 / (36 + int(s["games"]["roulette_zeros"]))
-    closed = [] if s["games"]["roulette_enabled"] else ["🔒 **Closed right now**: the Lucky Block replaces it"]
+    closed = [] if s["games"]["roulette_enabled"] else ["🔒 **Closed right now**"]
+    names = {"red": "🟥 Redstone", "black": "⬛ Obsidian", "green": "💎 Diamond block", "even": "even", "odd": "odd",
+             "low": "1-18", "high": "19-36", "dozens": "a dozen", "number": "a number"}
+    pays = {"green": 36 // int(s["games"]["roulette_zeros"]), "dozens": 3, "number": 36}
+    bets = [f"{name} **×{pays.get(key, 2)}**" for key, name in names.items() if s["games"]["roulette_bets"].get(key)]
     return closed + [
-        "Red, black, even, odd, 1-18, 19-36: **×2** · a dozen: **×3** · a number: **×36** (your bet included)",
-        f"Green slots: **{zeros}**: every bet loses on them (except a bet on that number). On average a bet gives "
-        f"back **{pct(rate)}**",
+        "You can bet on: " + (" · ".join(bets) or "nothing right now") + " (your bet included)",
+        f"Diamond blocks: **{zeros}**: every other bet loses on them. On average a bet gives back **{pct(rate)}**",
     ] + _games(s) + ["Winnings don't count for the seasons"]
 
 
@@ -1070,12 +1073,13 @@ PAGES: list[Page] = [
         related=("blockdle guess", "quiz"),
     ),
     Page(
-        "roulette", "games",
-        "Spins the roulette for you alone. Bet on red or black, even or odd, 1-18 or 19-36, a dozen, or a number "
-        "(add the `number` option). The wheel has the numbers 1 to 36 and green slots (0, and 00): the bank wins a "
-        "little on average. The staff can close it (`/config` → Games & events → Lucky Block & roulette).",
+        "wheel", "games",
+        "Spins the Minecraft wheel (a roulette) for you alone. Its numbers are those of a real roulette: the red "
+        "ones are 🟥 **Redstone**, the black ones ⬛ **Obsidian**, and the green ones (0 and 00) 💎 **Diamond "
+        "blocks**: when the wheel stops on one, every Redstone or Obsidian bet loses. Pick your bet in the "
+        "suggestions. The staff chooses which bets are open (`/config` → Games & events → Lucky Block & wheel).",
         _roulette,
-        examples=("/roulette bet:Red amount:50", "/roulette bet:A number amount:10 number:17"),
+        examples=("/wheel bet:🟥 Redstone amount:50", "/wheel bet:⬛ Obsidian amount:20"),
         related=("luckyblock", "blockdle guess"),
     ),
     Page(
@@ -1136,14 +1140,14 @@ PAGES: list[Page] = [
         "they get a DM.",
         _rob,
         examples=("/rob member:@Steve mode:Risky: they get pinged, big loot", "/rob member:@Steve mode:Discreet: no ping, small loot"),
-        related=("roulette", "pay"),
+        related=("wheel", "pay"),
     ),
     Page(
         "quiz", "events",
         "Now and then a Minecraft question appears in a game channel with 4 answers. The first player to click the "
         "right one wins emeralds and XP. One try per player: a wrong answer leaves the others a chance.",
         _quiz,
-        related=("roulette", "blockdle guess"),
+        related=("wheel", "blockdle guess"),
         title="❓ Minecraft quiz",
     ),
     # ---- teams ----
@@ -1510,6 +1514,16 @@ PAGES: list[Page] = [
         "Gives every member the level role matching their level (after changing the level roles in /config).",
         examples=("/player sync_roles",),
         related=("config", "player level"),
+    ),
+    Page(
+        "player cooldowns", "staff_players",
+        "Resets a member's waiting times so they can play again right away: one of them, or all of them when "
+        "`timer` is empty. Robbing again, the protection after being robbed, the dungeon, the training dummy, a "
+        "boss attack, duels, the Lucky Block and roulette, mining, changing species, and the daily reward (today's "
+        "claim is undone: claiming again gives today's reward once more, the streak doesn't grow twice). The "
+        "member gets a DM and the staff channel keeps a trace.",
+        examples=("/player cooldowns member:@Steve", "/player cooldowns member:@Steve timer:Robbing again"),
+        related=("rob", "daily", "pve start"),
     ),
     # ---- staff: events ----
     Page(

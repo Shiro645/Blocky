@@ -357,7 +357,7 @@ DEFAULTS: dict[str, Any] = {
     },
     # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
     "games": {
-        # Games of chance (Lucky Block, roulette): bets, waiting time, and what a player may win in a day
+        # Games of chance (Lucky Block, the wheel): bets, waiting time, and what a player may win in a day
         # (winnings minus losses at these games; then they can't play before tomorrow, 0 = no cap).
         "min_bet": 1,
         "max_bet": 200,
@@ -375,7 +375,12 @@ DEFAULTS: dict[str, Any] = {
             "emerald": {"weight": 18, "payout": 4.0},
             "netherite": {"weight": 2, "payout": 10.0},
         },
-        "roulette_enabled": False,  # closed: the Lucky Block replaces it (the staff can open it again)
+        "roulette_enabled": True,  # the wheel (/wheel), a Minecraft roulette
+        # What players may bet on at the wheel: Redstone (red) and Obsidian (black) for now.
+        "roulette_bets": {
+            "red": True, "black": True, "green": False, "even": False, "odd": False, "low": False, "high": False,
+            "dozens": False, "number": False,
+        },
         # Green slots of the roulette: 2 (0 and 00) = the bank keeps 5.3% of the bets on average, 1 (0 only) = 2.7%.
         "roulette_zeros": 2,
         # Blockdle: emeralds for finding the block of the day in 1, 2, 3… guesses (the last value for more guesses).

@@ -126,4 +126,17 @@ UPDATES: tuple[Update, ...] = (
              "`/profile` now shows your card first, with the details under it."),
         ),
     ),
+    Update(
+        "2026-10-wheel", "2026-10-14", "The wheel is open",
+        "The roulette is back, Minecraft style: **`/wheel <bet> <amount>`**.",
+        (
+            ("🎡 How it works",
+             "The wheel has the numbers of a real roulette: the red ones are 🟥 **Redstone**, the black ones ⬛ "
+             "**Obsidian**. Bet on one of them: if the wheel stops on it, you get **twice your bet**. The 💎 "
+             "**Diamond blocks** (0 and 00) make every bet lose."),
+            ("📏 The rules",
+             "Same bets and the same daily limit as the Lucky Block (they add up). Pick your bet in the suggestions. "
+             "`/help command:wheel` shows everything."),
+        ),
+    ),
 )
