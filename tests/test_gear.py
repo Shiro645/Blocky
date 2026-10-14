@@ -104,29 +104,36 @@ def _wear(ctx, gear_id: int, durability: int) -> None:
 
 
 class ArmorWearTests(GameTestCase):
-    async def test_one_durability_every_n_hits(self):
-        self.assertEqual(await self.run_game(gear.armor_wear, 7), 7)  # duels: every hit
-        self.assertEqual(await self.run_game(gear.armor_wear, 0, 2), 0)
-        self.assertEqual(await self.run_game(gear.armor_wear, 2, 2), 1)
-        self.assertEqual(await self.run_game(gear.armor_wear, 40, 2), 20)
-        self.assertEqual(await self.run_game(gear.armor_wear, 8, 4), 2)
-        odd = [await self.run_game(gear.armor_wear, 3, 2) for _ in range(200)]
-        self.assertEqual(set(odd), {1, 2})  # the rest is a 50% chance of one more
-        self.assertTrue(70 < odd.count(2) < 130)
-
-    async def test_the_dungeon_wears_armor_slower_than_duels(self):
-        from game import pve
-
+    async def kit(self, items) -> dict[str, int]:
         ids = {}
-        for item in ("sword", "chestplate"):
+        for item in items:
             ids[item] = await self.run_game(shop.create_gear, ALICE, item, "iron")
             await self.run_game(gear.equip, ALICE, ids[item])
+        return ids
+
+    async def end_run(self, attacks: int, hits: int) -> None:
+        from game import pve
+
         hero = await self.run_game(pve.make_hero, ALICE)
-        hero.attacks, hero.hits_taken = 10, 20
+        hero.attacks, hero.hits_taken = attacks, hits
         await self.run_game(pve._end_member, {"run_id": 0}, {"user_id": ALICE, "hero": hero}, "cleared")
+
+    async def test_the_dungeon_wears_one_armor_piece_per_hit(self):
+        from game.catalog import ARMOR
+
+        ids = await self.kit(("sword",) + ARMOR)
+        await self.end_run(10, 40)
         pieces = await self.run_game(gear.get_pieces, ids)
-        self.assertEqual(pieces["sword"]["durability"], 250 - 10)
-        self.assertEqual(pieces["chestplate"]["durability"], 250 - 10)  # 20 hits, 1 every 2
+        self.assertEqual(pieces["sword"]["durability"], 250 - 10)  # the sword: 1 per attack, like in duels
+        lost = [250 - pieces[slot]["durability"] for slot in ARMOR]
+        self.assertEqual(sum(lost), 40)  # 40 hits = 40 durability over the whole armor
+        self.assertTrue(all(n < 40 for n in lost), lost)  # spread over the pieces
+
+    async def test_an_empty_slot_takes_its_hits(self):
+        ids = await self.kit(("chestplate",))
+        await self.end_run(0, 40)
+        lost = 250 - (await self.run_game(gear.get_pieces, ids))["chestplate"]["durability"]
+        self.assertTrue(0 < lost < 25, lost)  # about a quarter, not all 40
 
 
 class SellGearTests(GameTestCase):

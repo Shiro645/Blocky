@@ -183,9 +183,9 @@ UPDATES: tuple[Update, ...] = (
     ),
     Update(
         "2026-10-armor-wear", "2026-10-14", "Armor lasts longer in the dungeon",
-        "In the dungeon, your armor now loses **1 durability every 2 hits** you take (it was 1 per hit, on every "
-        "piece). A full run costs each piece about 22 durability instead of 45: an iron set lasts twice as long "
-        "between repairs. Duels and the sword don't change.",
+        "In the dungeon, each hit you take now wears **only one armor piece** (drawn at random) instead of all "
+        "four. A full run costs your whole armor about 45 durability instead of 180 (about 11 per piece instead "
+        "of 45): an iron set lasts 4 times longer between repairs. Duels and the sword don't change.",
     ),
     Update(
         "2026-10-dungeon-ready", "2026-10-14", "Dungeon: everyone decides",

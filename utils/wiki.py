@@ -104,7 +104,7 @@ SECTIONS: tuple[Section, ...] = (
         "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
         "enchantments. Tools lose 1 each mining reward where they help, the sword 1 per attack, and every armor "
-        "piece 1 per hit you take in a duel (in the dungeon only 1 every 2 hits). Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
+        "piece 1 per hit you take in a duel (in the dungeon, each hit wears only one piece). Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
         "(`/craft item:anvil`, iron), with ingots of its material: each ingot gives back part of its durability, "
         "and each repair makes the next one cost more ingots, like in Minecraft. The piece keeps its enchantments, "
         "and the anvil wears out a little with each use. A shield at 0 doesn't break: it stays unusable until "

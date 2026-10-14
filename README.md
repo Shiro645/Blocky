@@ -68,7 +68,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
   - **Sword**: higher maximum damage per hit (duels, bosses, tournament)
   - **Armor**: damage reduction in duels (1.2% per armor point, 35% at most)
   - **Shield** (iron only): in duels, **Attack + block** blocks the opponent's next attack, twice per duel
-- Gear loses **durability** when used and breaks at 0, so players keep crafting (the shield stays at 0, unusable until repaired). Tools lose 1 per mining reward where they help, the sword 1 per attack (duels, the dungeon, bosses), and every armor piece **1 per hit taken** in duels but only **1 every 2 hits** in the dungeon (`balance.pve.armor_hits_per_durability`, `/config` → Combat → Dungeon). A full dungeon run costs about 22 durability to the sword and 22 to each armor piece.
+- Gear loses **durability** when used and breaks at 0, so players keep crafting (the shield stays at 0, unusable until repaired). Tools lose 1 per mining reward where they help, the sword 1 per attack (duels, the dungeon, bosses), and every armor piece **1 per hit taken** in duels, but in the dungeon each hit wears **only one armor piece** (drawn at random among the 4 slots; an empty slot wears nothing), since monsters hit often and softly. A duel costs the whole armor about 15 durability, a full dungeon run about 45 (≈11 per piece) and the sword about 22.
 
 ### ✨ Enchanting
 

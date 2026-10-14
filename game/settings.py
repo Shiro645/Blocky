@@ -296,9 +296,6 @@ DEFAULTS: dict[str, Any] = {
         "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
         "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
         "max_potions": 3,  # per player and per run (reinforced II ones: potions.strong_per_fight)
-        # Armor wears out slower here than in duels (1 per hit taken): every piece loses 1 durability for this
-        # many hits taken. A rest (3 hits at 2) is a chance of one more: 50%. The sword loses 1 per attack.
-        "armor_hits_per_durability": 2,
         "wave_growth": 0.10,
         # Each extra player in the group adds this share of every wave's monsters (1 = a whole wave more).
         "group_monsters": 1.0,
@@ -680,9 +677,6 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if r["night_start_hour"] > 23 or r["night_end_hour"] > 23:
         out.append(("`balance.rob.night_start_hour` and `night_end_hour` are hours: 0 to 23.",
                     [("rob", "night_start_hour"), ("rob", "night_end_hour")]))
-    if float(merged["pve"]["armor_hits_per_durability"]) < 1:
-        out.append(("`balance.pve.armor_hits_per_durability` must be at least 1.",
-                    [("pve", "armor_hits_per_durability")]))
     le = merged["live_events"]
     if not 0 <= le["earliest_hour"] < le["latest_hour"] <= 23:
         out.append(("Timed events: the random event starts between `earliest_hour` and `latest_hour`: hours from 0 "

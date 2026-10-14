@@ -581,9 +581,6 @@ FIELDS: list[Field] = [
     _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
     _b("pve.max_players", "pve", "Players per group", min=1, max=10),
     _b("pve.cooldown_minutes", "pve", "Minutes between two runs", "From the start of a run.", max=10_080),
-    _b("pve.armor_hits_per_durability", "pve", "Armor: hits taken for 1 durability",
-       "Every armor piece loses 1 durability for this many hits taken in the dungeon (in duels: 1 per hit). "
-       "2 = half as fast.", kind="float", min=1, max=100),
     _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
     _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
        "Then everyone still in leaves with their loot.", min=1, max=60),

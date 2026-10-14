@@ -11,8 +11,9 @@
   now, or helps during the next wave). No answer in time = leaving with the loot.
 - The loot of every wave cleared adds up, but a player who dies loses it (and
   the entry fee). Clearing wave 5 adds `clear_bonus` and pays everyone left.
-- Gear works like in duels (Dwarves hit harder, Witches drink better) and
-  wears out the same way.
+- Gear works like in duels (Dwarves hit harder, Witches drink better). The sword
+  wears out like in duels (1 per attack), but each hit taken wears only one armor
+  piece (drawn at random) instead of all four: the monsters hit often and softly.
 
 This part is the fight itself (no database); the runs are below.
 """
@@ -23,7 +24,6 @@ import random
 from dataclasses import asdict, dataclass, field
 
 from game import cooldowns, duel, gear, players, potions, settings
-from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
 
@@ -446,11 +446,7 @@ def _end_member(ctx: Ctx, run: dict, member: dict, status: str, pay: int = 0) ->
     sword = pieces.get("sword")
     if sword and hero.attacks:
         gear.wear(ctx, sword, hero.attacks)
-    armor_wear = gear.armor_wear(ctx, hero.hits_taken, float(_cfg()["armor_hits_per_durability"]))  # slower than duels
-    for slot in ARMOR:
-        piece = pieces.get(slot)
-        if piece and armor_wear:
-            gear.wear(ctx, piece, armor_wear)
+    gear.wear_one_piece_per_hit(ctx, pieces, hero.hits_taken)  # many small hits here: one piece each
 
 
 def _close_if_empty(ctx: Ctx, run: dict) -> dict:
