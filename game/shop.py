@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 
 from game import anvil, enchants, gear, live_events, players, potions, settings, species
-from game.catalog import MATERIALS, RECIPES, SHIELD, materials_for
+from game.catalog import ARMOR, MATERIALS, RECIPES, SHIELD, materials_for
 from game.db import Ctx
 from game.errors import GameError
 
@@ -95,9 +95,43 @@ def item_value(item: str, material: str) -> float:
 
 
 def max_durability(material: str, item: str | None = None) -> int:
+    g = settings.get()["gear"]
     if item == SHIELD:
-        return int(settings.get()["gear"]["shield_durability"])
-    return int(settings.get()["gear"]["durability"][material])
+        return int(g["shield_durability"])
+    base = int(g["durability"][material])
+    if item in ARMOR:  # each armor piece its share, like in Minecraft
+        return max(1, round(base * float(g["armor_durability_share"][item])))
+    return base
+
+
+def rescaled(durability: int, old_max: int, new_max: int) -> int:
+    """The durability a piece keeps when its maximum changes: the same share (a piece that wasn't broken stays
+    usable)."""
+    if old_max <= 0:
+        return new_max
+    kept = min(new_max, round(durability * new_max / old_max))
+    return max(1, kept) if durability > 0 else 0
+
+
+def sync_max_durability(ctx: Ctx) -> int:
+    """Gear (and gear listed at the auction) made before a durability setting or rule changed gets the new
+    maximum, keeping the same share of durability. Returns how many changed."""
+    changed = 0
+    for r in ctx.all("SELECT gear_id, item, material, durability, max_durability FROM gear;"):
+        new = max_durability(r["material"], r["item"])
+        if new != r["max_durability"]:
+            ctx.execute("UPDATE gear SET durability=?, max_durability=? WHERE gear_id=?;",
+                        (rescaled(r["durability"], r["max_durability"], new), new, r["gear_id"]))
+            changed += 1
+    for r in ctx.all("SELECT auction_id, asset, durability, max_durability FROM auctions "
+                     "WHERE asset LIKE 'gear:%' AND max_durability IS NOT NULL;"):
+        _, material, item = r["asset"].split(":")[:3]
+        new = max_durability(material, item)
+        if new != r["max_durability"]:
+            ctx.execute("UPDATE auctions SET durability=?, max_durability=? WHERE auction_id=?;",
+                        (rescaled(r["durability"], r["max_durability"], new), new, r["auction_id"]))
+            changed += 1
+    return changed
 
 
 def create_gear(ctx: Ctx, user_id: int, item: str, material: str) -> int:

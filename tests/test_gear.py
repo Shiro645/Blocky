@@ -125,15 +125,58 @@ class ArmorWearTests(GameTestCase):
         await self.end_run(10, 40)
         pieces = await self.run_game(gear.get_pieces, ids)
         self.assertEqual(pieces["sword"]["durability"], 250 - 10)  # the sword: 1 per attack, like in duels
-        lost = [250 - pieces[slot]["durability"] for slot in ARMOR]
+        lost = [pieces[slot]["max_durability"] - pieces[slot]["durability"] for slot in ARMOR]
         self.assertEqual(sum(lost), 40)  # 40 hits = 40 durability over the whole armor
         self.assertTrue(all(n < 40 for n in lost), lost)  # spread over the pieces
 
     async def test_an_empty_slot_takes_its_hits(self):
         ids = await self.kit(("chestplate",))
         await self.end_run(0, 40)
-        lost = 250 - (await self.run_game(gear.get_pieces, ids))["chestplate"]["durability"]
+        piece = (await self.run_game(gear.get_pieces, ids))["chestplate"]
+        lost = piece["max_durability"] - piece["durability"]
         self.assertTrue(0 < lost < 25, lost)  # about a quarter, not all 40
+
+
+class ArmorDurabilityTests(GameTestCase):
+    def test_each_piece_its_share(self):
+        self.assertEqual([shop.max_durability("iron", s) for s in ("helmet", "chestplate", "leggings", "boots")],
+                         [172, 250, 234, 203])
+        self.assertEqual(shop.max_durability("netherite", "chestplate"), 1500)
+        self.assertEqual(shop.max_durability("iron", "sword"), 250)  # tools: all of it
+        self.assertEqual(shop.max_durability("gold", "boots"), 49)
+
+    async def test_old_pieces_are_adapted_keeping_their_share(self):
+        from game import exchange
+
+        boots = await self.run_game(shop.create_gear, ALICE, "boots", "iron")
+        shield = await self.run_game(shop.create_gear, ALICE, "shield", "iron")
+        sword = await self.run_game(shop.create_gear, ALICE, "sword", "iron")
+
+        def made_before(ctx):  # as crafted before the update: every piece 250
+            ctx.execute("UPDATE gear SET max_durability=250, durability=200 WHERE gear_id=?;", (boots,))
+            ctx.execute("UPDATE gear SET durability=0 WHERE gear_id=?;", (shield,))
+
+        await self.run_game(made_before)
+        listed = await self.run_game(shop.create_gear, BOB, "chestplate", "iron")
+        await self.run_game(players.give_emeralds, BOB, 100)
+        await self.run_game(exchange.list_for_sale, BOB, "gear:iron:chestplate", 1, 50)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE auctions SET max_durability=999, durability=999;"))
+        self.assertEqual(await self.run_game(shop.sync_max_durability), 2)
+        pieces = await self.run_game(gear.get_pieces, {"boots": boots, "shield": shield, "sword": sword})
+        self.assertEqual((pieces["boots"]["durability"], pieces["boots"]["max_durability"]), (162, 203))  # 80%
+        self.assertEqual(pieces["shield"]["durability"], 0)  # a worn-out shield stays worn out
+        self.assertEqual(pieces["sword"]["max_durability"], 250)
+        row = await self.run_game(lambda ctx: dict(ctx.one("SELECT durability, max_durability FROM auctions;")))
+        self.assertEqual(row, {"durability": 250, "max_durability": 250})
+        self.assertEqual(await self.run_game(shop.sync_max_durability), 0)  # nothing left to do
+        del listed
+
+    async def test_a_piece_given_back_never_goes_above_its_maximum(self):
+        from game import assets
+
+        await self.run_game(assets.give, ALICE, "gear:iron:boots", 1, 250)
+        piece = (await self.run_game(shop.get_gear, ALICE))[0]
+        self.assertEqual((piece["durability"], piece["max_durability"]), (203, 203))
 
 
 class SellGearTests(GameTestCase):

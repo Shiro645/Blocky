@@ -198,4 +198,10 @@ UPDATES: tuple[Update, ...] = (
         "The staff can now choose the **mining channels**: messages there mine blocks and give XP and drops. "
         "Until some are chosen, every channel mines, as before.",
     ),
+    Update(
+        "2026-10-armor-durability", "2026-10-15", "Armor durability, like in Minecraft",
+        "Each armor piece now has its own durability, like in Minecraft: the **chestplate** lasts the longest, then "
+        "the leggings, the boots and the helmet (iron: 250, 234, 203 and 172). Before, boots lasted as long as a "
+        "chestplate for half the ingots. Your armor keeps the same share of durability it had.",
+    ),
 )

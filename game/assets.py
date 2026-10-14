@@ -204,8 +204,8 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
         for _ in range(amount):
             gear_id = shop.create_gear(ctx, user_id, parts[2], parts[1])
             if durability is not None or repairs:
-                ctx.execute("UPDATE gear SET durability=COALESCE(?, durability), repairs=? WHERE gear_id=?;",
-                            (durability, int(repairs or 0), gear_id))
+                ctx.execute("UPDATE gear SET durability=MIN(COALESCE(?, durability), max_durability), repairs=? "
+                            "WHERE gear_id=?;", (durability, int(repairs or 0), gear_id))
             enchants.set_enchants(ctx, gear_id, gear_enchants(key))
 
 

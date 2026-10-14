@@ -18,6 +18,12 @@ class EconomyCraftCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @commands.Cog.listener()
+    async def on_blocky_config_changed(self, key: str, before) -> None:
+        """A durability changed in /config: the gear already made gets the new maximum (same share left)."""
+        if key.startswith(("gear.durability", "gear.armor_durability_share", "gear.shield_durability")):
+            await self.bot.db.run(shop.sync_max_durability)
+
     @app_commands.command(name="craft", description="Craft tools, armor, a shield or an anvil with ingots and sticks.")
     @app_commands.describe(item="What to craft", material="Which material (you need its ingots; not for the shield or the anvil)")
     @app_commands.choices(item=CRAFT_CHOICES, material=MATERIAL_CHOICES)

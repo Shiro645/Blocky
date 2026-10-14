@@ -54,6 +54,9 @@ DEFAULTS: dict[str, Any] = {
     "gear": {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
         "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
+        # Armor pieces get this share of their material's durability, in Minecraft's proportions (11, 16, 15 and
+        # 13 sixteenths): the chestplate lasts the longest, the helmet the least. Tools: all of it.
+        "armor_durability_share": {"helmet": 0.6875, "chestplate": 1.0, "leggings": 0.9375, "boots": 0.8125},
         # Pickaxe: extra cobblestone per mining event, and a chance per tier to
         # upgrade the mined block (cobblestone -> gravel -> deepslate -> obsidian -> bedrock).
         "pickaxe_extra_blocks_per_tier": 1,
@@ -677,6 +680,10 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if r["night_start_hour"] > 23 or r["night_end_hour"] > 23:
         out.append(("`balance.rob.night_start_hour` and `night_end_hour` are hours: 0 to 23.",
                     [("rob", "night_start_hour"), ("rob", "night_end_hour")]))
+    for slot, share in merged["gear"]["armor_durability_share"].items():
+        if not 0 < float(share) <= 1:
+            out.append((f"`balance.gear.armor_durability_share.{slot}` goes from 1% to 100%.",
+                        [("gear", "armor_durability_share", slot)]))
     le = merged["live_events"]
     if not 0 <= le["earliest_hour"] < le["latest_hour"] <= 23:
         out.append(("Timed events: the random event starts between `earliest_hour` and `latest_hour`: hours from 0 "

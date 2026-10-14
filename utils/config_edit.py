@@ -320,7 +320,8 @@ FIELDS: list[Field] = [
          "New → chipped → damaged → broken (12% = about 25 uses)."),
     *[_b(f"gear.tier.{m}", "tools", f"{m.capitalize()} tier", "Tool bonuses are multiplied by the tier.", min=1, max=20)
       for m in MATERIALS],
-    *[_b(f"gear.durability.{m}", "tools", f"{m.capitalize()} durability", "Uses before a piece breaks.", min=1, max=1_000_000)
+    *[_b(f"gear.durability.{m}", "tools", f"{m.capitalize()} durability", "Uses before a piece breaks (armor: its share of this, see Swords, "
+         "armor & shield). Changing it adapts the pieces already made.", min=1, max=1_000_000)
       for m in MATERIALS],
     _b("gear.pickaxe_extra_blocks_per_tier", "tools", "Pickaxe: extra cobblestone per tier", max=100),
     _pct("gear.pickaxe_upgrade_chance_per_tier", "tools", "Pickaxe: upgrade chance per tier",
@@ -338,6 +339,9 @@ FIELDS: list[Field] = [
     _pct("gear.max_damage_reduction", "combat_gear", "Max damage reduction"),
     _b("gear.shield_blocks_per_fight", "combat_gear", "Shield: blocks per duel",
        "Times a player can \"Attack + block\" in a duel (it blocks the opponent's next attack).", min=0, max=20),
+    *[_pct(f"gear.armor_durability_share.{slot}", "combat_gear", f"{slot.capitalize()}: share of the durability",
+           "Of its material's durability (Minecraft: helmet 69%, chestplate 100%, leggings 94%, boots 81%). "
+           "Changing it adapts the pieces already made.") for slot in ARMOR],
     _b("gear.shield_durability", "combat_gear", "Shield: durability", "Of a new or repaired shield.", min=1, max=100_000),
     _b("gear.shield_wear_per_block", "combat_gear", "Shield: durability used per block",
        "At 0 it stays, unusable until /repair.", min=1, max=100_000),

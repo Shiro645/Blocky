@@ -218,7 +218,10 @@ def _gear(s: Settings) -> list[str]:
         _sword(s),
         _armor(s),
         _shield(s),
-        "Durability: " + listing(g["durability"]),
+        "Durability: " + listing(g["durability"]) + " · armor: helmet **" + pct(g["armor_durability_share"]["helmet"])
+        + "**, chestplate **" + pct(g["armor_durability_share"]["chestplate"]) + "**, leggings **"
+        + pct(g["armor_durability_share"]["leggings"]) + "**, boots **" + pct(g["armor_durability_share"]["boots"])
+        + "** of it",
         "Wear: tools **1** per mining reward where they help · sword **1** per attack · armor: in duels **every "
         "piece** loses 1 per hit taken, in the dungeon **one piece** (drawn at random) per hit",
     ]
