@@ -193,4 +193,9 @@ UPDATES: tuple[Update, ...] = (
         "with their loot), and the next wave starts by itself when all are ready. The message shows who is ready. "
         "If you don't answer within 5 minutes, you leave with your loot and the others go on.",
     ),
+    Update(
+        "2026-10-mining-channels", "2026-10-15", "Mining channels",
+        "The staff can now choose the **mining channels**: messages there mine blocks and give XP and drops. "
+        "Until some are chosen, every channel mines, as before.",
+    ),
 )

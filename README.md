@@ -44,6 +44,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### ⛏️ Mining & economy
 
 - **Passive mining**: chatting mines 1–6 random blocks (cobblestone, gravel, deepslate, rare obsidian, very rare bedrock), with a cooldown (30 s, at least 10 s with talents and enchantments).
+- **Mining channels** (`channels.mining`, set in `/config` → Channels): when the staff pick some, only messages there (and in their threads) mine blocks and give XP and drops; the other channels give nothing (spam channels keep their tiny reward). Not set = every channel mines.
 - **Spam channels** (`channels.spam`, set in `/config`): messages there don't mine blocks, give no XP, no drops and no challenge progress — only a tiny reward (0.01 emerald per message by default, so about 1 emerald an hour of spam), with a cooldown of their own.
 - `/inventory` — Blocks, emeralds, items and gear
 - `/sell [block] [amount]` — Sell your blocks (cobblestone 1, gravel 3, deepslate 5, obsidian 7, bedrock 10 emeralds): all of them, only one kind (`block`), or a number of them (`amount`: more than you have sells all you have; without a kind, the least valuable blocks go first)
@@ -277,6 +278,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.wiki` | Wiki channel: the bot keeps every feature explained there, with the current numbers (0 = no wiki) |
 | `channels.guide_category` | Category of the guide channels: every new member gets a private channel there with the guide and a checklist (0 = no guide channels; `/guide` still shows the guide) |
 | `channels.spam` | List of spam channels: no blocks, XP or drops there, only `balance.mining.spam_reward` emeralds per message |
+| `channels.mining` | List of mining channels: only messages there (and in their threads) mine blocks and give XP and drops (empty = every channel) |
 | `roles.level_roles` | `{"level": role_id}`, e.g. `{"10": 123, "25": 456}`. Members keep the highest role reached. In `/config` → Level roles, pick the role in the bot's list (roles above the bot's own role aren't listed: it couldn't give them), then type the level. |
 | `roles.season_champion` | Role given to the winner of the last weekly season |
 | `roles.tournament_champion` | Role given to the winner of the last weekend tournament |

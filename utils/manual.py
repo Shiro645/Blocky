@@ -589,7 +589,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "mining", "mining",
-        "There is no command to mine: **every message you send mines blocks**, at most once per cooldown. "
+        "There is no command to mine: **every message you send mines blocks**, at most once per cooldown (only in "
+        "the mining channels when the staff set some). "
         "It's silent: check what you got with /inventory.\n"
         "Your equipped tools add bonuses (/gear), your talents improve the odds (/talents), and teammates who "
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "

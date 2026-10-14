@@ -197,6 +197,9 @@ FIELDS: list[Field] = [
           help="Drops and bosses appear here (not set = where people chat)."),
     Field("ch_staff_log", "channels", "Staff channel", ("channels", "staff_log"), "channel",
           help="/link requests and the log of every staff action."),
+    Field("ch_mining", "channels", "Mining channels", ("channels", "mining"), "channels",
+          help="Chatting there mines blocks and gives XP and drops (their threads too). Not set = every channel "
+               "mines. Set = the other channels give nothing (spam channels keep their tiny reward)."),
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
