@@ -178,9 +178,10 @@ SECTIONS: tuple[Section, ...] = (
         "Play **alone or in a group**: others join with the button (each pays the entry, refunded if they leave "
         "before the start) and the leader starts. Each wave plays out on its own with your gear and species; the "
         "message shows the fight, everyone's health and the loot.\n\n"
-        "**Health isn't restored between waves.** Between two waves the leader starts the next one, anyone can drink "
-        "a potion (Healing heals now, Strength and Speed help in the next wave, Harming hits every monster) or "
-        "**leave with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the "
+        "**Health isn't restored between waves.** Between two waves everyone clicks **Ready** or **leaves with "
+        "their loot**: the next wave starts by itself when all are ready, and whoever doesn't answer in time "
+        "leaves with their loot. Anyone can drink a potion (Healing heals now, Strength and Speed help in the "
+        "next wave, Harming hits every monster). Each wave cleared adds to your loot, but **if you die you lose it** and the "
         "entry. Clearing all 5 waves pays a bonus. Gear wears out like in duels. `/pve info` shows the difficulties "
         "and when you can play again.",
         ("pve start",),

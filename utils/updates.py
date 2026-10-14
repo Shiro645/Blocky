@@ -187,4 +187,10 @@ UPDATES: tuple[Update, ...] = (
         "piece). A full run costs each piece about 22 durability instead of 45: an iron set lasts twice as long "
         "between repairs. Duels and the sword don't change.",
     ),
+    Update(
+        "2026-10-dungeon-ready", "2026-10-14", "Dungeon: everyone decides",
+        "Between two waves, the leader no longer starts the next one alone: everyone clicks **✅ Ready** (or leaves "
+        "with their loot), and the next wave starts by itself when all are ready. The message shows who is ready. "
+        "If you don't answer within 5 minutes, you leave with your loot and the others go on.",
+    ),
 )

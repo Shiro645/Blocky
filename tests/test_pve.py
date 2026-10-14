@@ -88,9 +88,9 @@ class RunTests(GameTestCase):
         res = await self.run_game(pve.start, run["run_id"], ALICE)
         self.assertEqual((res["wave"], res["result"]["cleared"], res["run"]["status"]), (1, True, "between"))
         with self.assertRaisesRegex(GameError, "already started"):
-            await self.run_game(pve.next_wave, run["run_id"], ALICE, 0)  # an old button
+            await self.run_game(pve.ready, run["run_id"], ALICE, 0)  # an old button
         for wave in range(1, 5):
-            res = await self.run_game(pve.next_wave, run["run_id"], ALICE, wave)
+            res = (await self.run_game(pve.ready, run["run_id"], ALICE, wave))["last"]  # alone: it starts at once
         self.assertTrue(res["cleared_all"])
         self.assertEqual(res["run"]["status"], "done")
         loot = sum(pve.wave_reward("easy", w) for w in range(1, 6))
@@ -125,19 +125,57 @@ class RunTests(GameTestCase):
         self.assertEqual(res["run"]["leader_id"], BOB)
         with self.assertRaisesRegex(GameError, "not fighting"):
             await self.run_game(pve.leave, run["run_id"], ALICE)
-        res = await self.run_game(pve.next_wave, run["run_id"], BOB, 1)
+        res = await self.run_game(pve.ready, run["run_id"], BOB, 1)
         self.assertEqual(len(res["run"]["in"]), 1)
+        self.assertEqual(res["last"]["wave"], 2)
 
     async def test_death_loses_the_loot(self):
         run = await self.run_game(pve.create, ALICE, "easy")
         await self.run_game(pve.start, run["run_id"], ALICE)
         settings.load({"pve": {"difficulties": {"easy": {"strength": 50}}}})
-        res = await self.run_game(pve.next_wave, run["run_id"], ALICE, 1)
+        res = (await self.run_game(pve.ready, run["run_id"], ALICE, 1))["last"]
         self.assertFalse(res["result"]["cleared"])
         member = res["run"]["members"][0]
         self.assertEqual((member["status"], member["paid"], res["run"]["status"]), ("dead", 0, "done"))
         self.assertEqual(await self.emeralds(ALICE), 970)
         self.assertEqual(await self.run_game(players.get_stat, ALICE, "pve_deaths"), 1)
+
+    async def test_the_next_wave_waits_for_everyone(self):
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.join, run["run_id"], BOB)
+        await self.run_game(pve.start, run["run_id"], ALICE)
+        res = await self.run_game(pve.ready, run["run_id"], ALICE, 1)  # the leader can't go on alone
+        self.assertIsNone(res["last"])
+        self.assertEqual(res["run"]["wave"], 1)
+        self.assertEqual([pve.is_ready(res["run"], m) for m in res["run"]["in"]], [True, False])
+        with self.assertRaisesRegex(GameError, "already ready"):
+            await self.run_game(pve.ready, run["run_id"], ALICE, 1)
+        res = await self.run_game(pve.ready, run["run_id"], BOB, 1)  # everyone is ready: it starts
+        self.assertEqual((res["last"]["wave"], res["run"]["wave"]), (2, 2))
+        self.assertFalse(any(pve.is_ready(res["run"], m) for m in res["run"]["in"]))  # ready again for wave 3
+
+    async def test_leaving_lets_the_others_go_on(self):
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.join, run["run_id"], BOB)
+        await self.run_game(pve.start, run["run_id"], ALICE)
+        await self.run_game(pve.ready, run["run_id"], ALICE, 1)
+        res = await self.run_game(pve.leave, run["run_id"], BOB)
+        self.assertEqual(res["paid"], pve.wave_reward("easy", 1))
+        self.assertEqual(res["last"]["wave"], 2)  # Alice only waited for Bob
+
+    async def test_no_answer_in_time_leaves_and_the_others_go_on(self):
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.join, run["run_id"], BOB)
+        await self.run_game(pve.start, run["run_id"], ALICE)
+        await self.run_game(pve.ready, run["run_id"], BOB, 1)
+        self.advance(5 * MINUTE)
+        events = await self.run_game(pve.expire)
+        self.assertEqual([e["type"] for e in events], ["continued"])
+        self.assertEqual(events[0]["last"]["wave"], 2)
+        members = {m["user_id"]: m for m in events[0]["run"]["members"]}
+        self.assertEqual((members[ALICE]["status"], members[BOB]["status"]), ("left", "in"))
+        self.assertEqual(events[0]["run"]["leader_id"], BOB)  # the leader left: Bob leads
+        self.assertEqual(await self.emeralds(ALICE), 970 + pve.wave_reward("easy", 1))
 
     async def test_potions_between_waves(self):
         await self.run_game(players.add_item, ALICE, "potion", "healing", 2)

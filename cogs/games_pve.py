@@ -30,8 +30,11 @@ def member_line(run: dict, m: dict) -> str:
     if hero is None:
         return who
     max_potions = int(settings.get()["pve"]["max_potions"])
-    return (f"{who} — ❤️ {hero.hp:.1f}/{hero.max_hp:g} · 💰 {em(m['loot'])} · 🧪 {m['potions']}/{max_potions}"
-            + (" · 💪 ready" if hero.strength or hero.speed or hero.harming else ""))
+    waiting = ""
+    if run["status"] == "between":
+        waiting = "✅ " if pve.is_ready(run, m) else "⏳ "
+    return (f"{waiting}{who} — ❤️ {hero.hp:.1f}/{hero.max_hp:g} · 💰 {em(m['loot'])} · 🧪 {m['potions']}/{max_potions}"
+            + (" · 💪 potion on" if hero.strength or hero.speed or hero.harming else ""))
 
 
 def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
@@ -70,29 +73,30 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
         waves.append(f"Clear all {len(pve.WAVES)}: loot +{float(c['clear_bonus']):.0%}")
         embed.add_field(name="Waves (per player)", value="\n".join(waves), inline=False)
     elif run["status"] == "between":
-        embed.set_footer(text="The leader starts the next wave · anyone can drink a potion or leave with their loot. "
-                              "No decision in time = everyone leaves with their loot.")
+        embed.set_footer(text="Everyone clicks Ready (✅) or leaves with their loot: the next wave starts when all "
+                              "are ready. No answer in time = you leave with your loot. Anyone can drink a potion.")
         embed.add_field(name="Decide before", value=f"<t:{run['deadline']}:R>", inline=True)
     return embed
 
 
 class PveButton(discord.ui.DynamicItem[discord.ui.Button],
-                template=r"blocky:pve:(?P<action>join|start|quit|next|potion|leave):(?P<run_id>\d+):(?P<wave>\d+)"):
+                template=r"blocky:pve:(?P<action>join|start|quit|ready|next|potion|leave):(?P<run_id>\d+):(?P<wave>\d+)"):
     """The buttons of a dungeon run. They survive restarts."""
 
     LOOK = {
         "join": ("Join", "⚔️", discord.ButtonStyle.success),
         "start": ("Start", "▶️", discord.ButtonStyle.primary),
         "quit": ("Leave the group", "🚪", discord.ButtonStyle.secondary),
-        "next": ("Next wave", "▶️", discord.ButtonStyle.danger),
+        "ready": ("Ready", "✅", discord.ButtonStyle.danger),
+        "next": ("Ready", "✅", discord.ButtonStyle.danger),  # messages posted before the Ready button
         "potion": ("Drink a potion", "🧪", discord.ButtonStyle.secondary),
         "leave": ("Leave with my loot", "🚪", discord.ButtonStyle.success),
     }
 
     def __init__(self, action: str, run_id: int, wave: int = 0) -> None:
         label, emoji, style = self.LOOK[action]
-        if action == "next":
-            label = f"Wave {wave + 1}"
+        if action in ("ready", "next"):
+            label = f"Ready for wave {wave + 1}"
         super().__init__(discord.ui.Button(label=label, emoji=emoji, style=style,
                                            custom_id=f"blocky:pve:{action}:{run_id}:{wave}"))
         self.action, self.run_id, self.wave = action, run_id, wave
@@ -117,7 +121,7 @@ def run_view(run: dict) -> discord.ui.View | None:
         for action in ("join", "start", "quit"):
             view.add_item(PveButton(action, run["run_id"]))
     elif run["status"] == "between":
-        for action in ("next", "potion", "leave"):
+        for action in ("ready", "potion", "leave"):
             view.add_item(PveButton(action, run["run_id"], run["wave"]))
     else:
         return None
@@ -208,13 +212,20 @@ class PveCog(commands.Cog):
         elif action == "start":
             last = await db.run(pve.start, run_id, uid)
             run = last["run"]
-        elif action == "next":
-            last = await db.run(pve.next_wave, run_id, uid, wave)
-            run = last["run"]
+        elif action in ("ready", "next"):  # "next": a button posted before the update
+            res = await db.run(pve.ready, run_id, uid, wave)
+            run, last = res["run"], res["last"]
+            shown = interaction.message.embeds if interaction.message else []
+            if last is None and shown:
+                # Still waiting for others: keep the story of the last wave, only the players change.
+                embed = run_embed(run)
+                embed.title, embed.description = shown[0].title, shown[0].description
+                await interaction.response.edit_message(embed=embed, view=run_view(run))
+                return
         elif action == "leave":
             res = await db.run(pve.leave, run_id, uid)
             await interaction.response.send_message(f"🚪 You left the dungeon with {em(res['paid'])}.", ephemeral=True)
-            await self.refresh(res["run"])
+            await self.refresh(res["run"], res["last"])  # the others may have been waiting for you
             return
         else:  # potion
             run = await db.run(pve.get, run_id)
@@ -235,7 +246,7 @@ class PveCog(commands.Cog):
         await self.refresh(res["run"])
 
     async def refresh(self, run: dict, last: dict | None = None) -> None:
-        """Update the run's message (after a potion, a departure or a timeout)."""
+        """Update the run's message (after a potion, a departure or a timeout; `last`: a wave just played)."""
         channel = self.bot.get_channel(run["channel_id"] or 0)
         if not isinstance(channel, discord.abc.Messageable) or not run["message_id"]:
             return
@@ -249,7 +260,7 @@ class PveCog(commands.Cog):
     async def pve_loop(self):
         try:
             for event in await self.bot.db.run(pve.expire):
-                await self.refresh(event["run"])
+                await self.refresh(event["run"], event.get("last"))
         except Exception:  # an error must never stop the loop
             log.exception("PVE loop failed")
 

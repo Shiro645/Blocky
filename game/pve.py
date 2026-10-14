@@ -6,8 +6,9 @@
   `wave_growth` stronger than the previous one, and the difficulty multiplies
   the monsters' health and damage. A group faces as many monsters per player.
 - Health is not restored between waves. Each wave plays out automatically;
-  between waves the leader starts the next one, anyone can drink a potion (it
-  heals now, or helps during the next wave), and anyone can leave with their loot.
+  between waves every member says they're ready (the next wave starts when they
+  all are) or leaves with their loot, and anyone can drink a potion (it heals
+  now, or helps during the next wave). No answer in time = leaving with the loot.
 - The loot of every wave cleared adds up, but a player who dies loses it (and
   the entry fee). Clearing wave 5 adds `clear_bonus` and pays everyone left.
 - Gear works like in duels (Dwarves hit harder, Witches drink better) and
@@ -402,13 +403,33 @@ def start(ctx: Ctx, run_id: int, user_id: int) -> dict:
     return _play(ctx, get(ctx, run_id))
 
 
-def next_wave(ctx: Ctx, run_id: int, user_id: int, wave: int) -> dict:
-    """The leader starts the next wave (`wave` = waves cleared when they clicked, so a double click can't play two)."""
+def is_ready(run: dict, member: dict) -> bool:
+    """The member is ready to go on from the waves cleared so far."""
+    return member["ready_for"] == run["wave"]
+
+
+def _go_on_if_ready(ctx: Ctx, run_id: int) -> dict:
+    """Everyone still in is ready: the next wave is played. Returns {"run", "last": the wave played or None}."""
+    run = get(ctx, run_id)
+    if run["status"] == "between" and run["in"] and all(is_ready(run, m) for m in run["in"]):
+        last = _play(ctx, run)
+        return {"run": last["run"], "last": last}
+    return {"run": run, "last": None}
+
+
+def ready(ctx: Ctx, run_id: int, user_id: int, wave: int) -> dict:
+    """A member is ready for the next wave (`wave` = waves cleared when they clicked, so an old button can't
+    count for a later wave). The wave starts when everyone still in is ready. Returns {"run", "last"}."""
     run = get(ctx, run_id)
     if run["status"] != "between" or run["wave"] != wave:
         raise GameError("This wave has already started or the run is over.")
-    _leader(run, user_id)
-    return _play(ctx, run)
+    member = next((m for m in run["in"] if m["user_id"] == user_id), None)
+    if member is None:
+        raise GameError("You are not fighting in this run.")
+    if is_ready(run, member):
+        raise GameError("You're already ready: waiting for the others.")
+    ctx.execute("UPDATE pve_members SET ready_for=? WHERE run_id=? AND user_id=?;", (wave, run_id, user_id))
+    return _go_on_if_ready(ctx, run_id)
 
 
 def _end_member(ctx: Ctx, run: dict, member: dict, status: str, pay: int = 0) -> None:
@@ -486,7 +507,9 @@ def leave(ctx: Ctx, run_id: int, user_id: int) -> dict:
     if member is None:
         raise GameError("You are not fighting in this run.")
     _end_member(ctx, run, member, "left", member["loot"])
-    return {"run": _close_if_empty(ctx, run), "paid": member["loot"]}
+    _close_if_empty(ctx, run)
+    # The others were all ready and only waited for this member: the next wave starts.
+    return {**_go_on_if_ready(ctx, run_id), "paid": member["loot"]}
 
 
 def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
@@ -532,8 +555,8 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
 
 
 def expire(ctx: Ctx) -> list[dict]:
-    """Called every minute: groups not started in time are refunded; runs left waiting end
-    (everyone still in leaves with their loot)."""
+    """Called every minute: groups not started in time are refunded. Between two waves, the members who didn't
+    say they were ready in time leave with their loot, and the next wave starts for the ones who did."""
     events = []
     for row in ctx.all("SELECT run_id, status FROM pve_runs WHERE status IN ('lobby', 'between') AND deadline <= ?;",
                        (int(ctx.now),)):
@@ -543,8 +566,10 @@ def expire(ctx: Ctx) -> list[dict]:
             events.append({"type": "cancelled", "run": get(ctx, run["run_id"])})
         else:
             for m in run["in"]:
-                _end_member(ctx, run, m, "left", m["loot"])
-            run = _close_if_empty(ctx, run)
-            events.append({"type": "timeout", "run": run})
+                if not is_ready(run, m):
+                    _end_member(ctx, run, m, "left", m["loot"])
+            _close_if_empty(ctx, run)
+            res = _go_on_if_ready(ctx, run["run_id"])
+            events.append({"type": "continued" if res["last"] else "timeout", **res})
     return events
 

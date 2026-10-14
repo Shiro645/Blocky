@@ -1171,9 +1171,10 @@ PAGES: list[Page] = [
         "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
         "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
         "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
-        "gear (and species). Your health isn't restored between waves: between two waves, the leader starts the "
-        "next one, anyone can drink a potion (Healing heals now, the others help during the next wave) or **leave "
-        "with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
+        "gear (and species). Your health isn't restored between waves: between two waves, everyone clicks **Ready** "
+        "or **leaves with their loot**, and the next wave starts by itself when all are ready (whoever doesn't "
+        "answer in time leaves with their loot). Anyone can drink a potion (Healing heals now, the others help "
+        "during the next wave). Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
         "Clearing wave 5 gives a bonus. Gear wears out like in duels.",
         _pve,
         examples=("/pve start difficulty:🟡 Normal",),
