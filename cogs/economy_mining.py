@@ -53,6 +53,9 @@ class EconomyMiningCog(commands.Cog):
         if spam and (channel.id in spam or getattr(channel, "parent_id", None) in spam):
             # No blocks, XP, drops or challenge progress here: only a tiny reward.
             return await self.spam_mine(user_id, now)
+        mining_channels = channel_ids("mining")  # none set: every channel mines
+        if mining_channels and channel.id not in mining_channels and getattr(channel, "parent_id", None) not in mining_channels:
+            return  # not a mining channel: nothing
         if now < self._next_mine.get(user_id, 0.0):
             return
         # Reserve the slot before awaiting, so two quick messages can't both mine.

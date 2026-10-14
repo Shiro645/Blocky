@@ -218,7 +218,10 @@ def _gear(s: Settings) -> list[str]:
         _sword(s),
         _armor(s),
         _shield(s),
-        "Durability: " + listing(g["durability"]),
+        "Durability: " + listing(g["durability"]) + " · armor: helmet **" + pct(g["armor_durability_share"]["helmet"])
+        + "**, chestplate **" + pct(g["armor_durability_share"]["chestplate"]) + "**, leggings **"
+        + pct(g["armor_durability_share"]["leggings"]) + "**, boots **" + pct(g["armor_durability_share"]["boots"])
+        + "** of it",
         "Wear: tools **1** per mining reward where they help · sword **1** per attack · armor: in duels **every "
         "piece** loses 1 per hit taken, in the dungeon **one piece** (drawn at random) per hit",
     ]
@@ -589,7 +592,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "mining", "mining",
-        "There is no command to mine: **every message you send mines blocks**, at most once per cooldown. "
+        "There is no command to mine: **every message you send mines blocks**, at most once per cooldown (only in "
+        "the mining channels when the staff set some). "
         "It's silent: check what you got with /inventory.\n"
         "Your equipped tools add bonuses (/gear), your talents improve the odds (/talents), and teammates who "
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "

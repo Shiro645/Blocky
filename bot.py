@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from game import restrictions, settings
+from game import restrictions, settings, shop
 from game.db import Database
 from utils.announcer import Announcer
 from utils.config import balance_overrides, load_config, staff_role_id
@@ -119,6 +119,10 @@ class Bot(commands.Bot):
 
     async def setup_hook(self) -> None:
         await self.db.open()
+        # Gear made before a durability change gets the new maximum (same share of durability left).
+        resized = await self.db.run(shop.sync_max_durability)
+        if resized:
+            log.info("Gear durability: %d piece(s) adapted to the current maximums", resized)
         self.blocked = await self.db.run(restrictions.active)
         self.tree.interaction_check = self.not_blocked  # type: ignore[method-assign]
         self.gate_components()

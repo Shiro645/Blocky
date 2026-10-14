@@ -11,7 +11,8 @@
     "wiki": 0,
     "updates": 0,
     "robberies": 0,
-    "spam": []
+    "spam": [],
+    "mining": []
   },
   "roles": {
     "level_roles": {

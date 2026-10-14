@@ -56,7 +56,8 @@ SECTIONS: tuple[Section, ...] = (
     ),
     Section(
         "mining", "⛏️ Mining, selling and the daily reward",
-        "**Chat to mine.** When you write a message in the server (not in your private guide channel), you get a "
+        "**Chat to mine.** When you write a message in the server (not in your private guide channel; only in the "
+        "mining channels when the staff set some), you get a "
         "**mining reward**: a pile of **1 to 6 blocks**. Big "
         "piles are cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come in "
         "smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
@@ -104,7 +105,9 @@ SECTIONS: tuple[Section, ...] = (
         "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
         "enchantments. Tools lose 1 each mining reward where they help, the sword 1 per attack, and every armor "
-        "piece 1 per hit you take in a duel (in the dungeon, each hit wears only one piece). Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
+        "piece 1 per hit you take in a duel (in the dungeon, each hit wears only one piece). Like in Minecraft, "
+        "the chestplate lasts the longest, then the leggings, the boots and the helmet. Watch it in `/gear` and "
+        "`/repair` a piece before it breaks, on an **anvil** "
         "(`/craft item:anvil`, iron), with ingots of its material: each ingot gives back part of its durability, "
         "and each repair makes the next one cost more ingots, like in Minecraft. The piece keeps its enchantments, "
         "and the anvil wears out a little with each use. A shield at 0 doesn't break: it stays unusable until "
