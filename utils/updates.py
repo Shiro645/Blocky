@@ -181,4 +181,16 @@ UPDATES: tuple[Update, ...] = (
              "Nobody can start a `/rob` from 22:00 to 06:00: everyone is asleep."),
         ),
     ),
+    Update(
+        "2026-10-armor-wear", "2026-10-14", "Armor lasts longer in the dungeon",
+        "In the dungeon, each hit you take now wears **only one armor piece** (drawn at random) instead of all "
+        "four. A full run costs your whole armor about 45 durability instead of 180 (about 11 per piece instead "
+        "of 45): an iron set lasts 4 times longer between repairs. Duels and the sword don't change.",
+    ),
+    Update(
+        "2026-10-dungeon-ready", "2026-10-14", "Dungeon: everyone decides",
+        "Between two waves, the leader no longer starts the next one alone: everyone clicks **✅ Ready** (or leaves "
+        "with their loot), and the next wave starts by itself when all are ready. The message shows who is ready. "
+        "If you don't answer within 5 minutes, you leave with your loot and the others go on.",
+    ),
 )

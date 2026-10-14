@@ -125,6 +125,17 @@ def shield_blocks(equipped: dict[str, dict]) -> int:
     return min(int(g["shield_blocks_per_fight"]), math.ceil(shield["durability"] / per_block))
 
 
+def wear_one_piece_per_hit(ctx: Ctx, pieces: dict[str, dict], hits_taken: int) -> None:
+    """The dungeon's armor wear: each hit wears 1 durability off one armor slot drawn at random (an empty slot:
+    nothing wears). Duels wear every piece at each hit instead."""
+    hits = {slot: 0 for slot in ARMOR}
+    for _ in range(hits_taken):
+        hits[ctx.rng.choice(ARMOR)] += 1
+    for slot, n in hits.items():
+        if n and slot in pieces:
+            wear(ctx, pieces[slot], n)
+
+
 def wear_shield(ctx: Ctx, piece: dict, blocks: int) -> bool:
     """The shield blocked `blocks` attacks. At 0 it stays (unusable until /repair). True when it just wore out."""
     if piece["durability"] <= 0 or blocks <= 0:

@@ -219,6 +219,8 @@ def _gear(s: Settings) -> list[str]:
         _armor(s),
         _shield(s),
         "Durability: " + listing(g["durability"]),
+        "Wear: tools **1** per mining reward where they help · sword **1** per attack · armor: in duels **every "
+        "piece** loses 1 per hit taken, in the dungeon **one piece** (drawn at random) per hit",
     ]
 
 
@@ -693,8 +695,9 @@ PAGES: list[Page] = [
         "gear", "gear",
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
-        "Tools wear out when they give their bonus while mining. The sword wears out in duels and against "
-        "bosses, armor in duels, the shield each time it blocks an attack in a duel. Tournament fights don't "
+        "Tools wear out when they give their bonus while mining. The sword wears out in duels, the dungeon and "
+        "against bosses (1 per attack), armor in duels (every piece, 1 per hit taken) and in the dungeon (only one "
+        "piece per hit, drawn at random), the shield each time it blocks an attack in a duel. Tournament fights don't "
         "wear anything (and nobody blocks there).",
         _gear,
         examples=("/gear",),
@@ -1168,9 +1171,10 @@ PAGES: list[Page] = [
         "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
         "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
         "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
-        "gear (and species). Your health isn't restored between waves: between two waves, the leader starts the "
-        "next one, anyone can drink a potion (Healing heals now, the others help during the next wave) or **leave "
-        "with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
+        "gear (and species). Your health isn't restored between waves: between two waves, everyone clicks **Ready** "
+        "or **leaves with their loot**, and the next wave starts by itself when all are ready (whoever doesn't "
+        "answer in time leaves with their loot). Anyone can drink a potion (Healing heals now, the others help "
+        "during the next wave). Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
         "Clearing wave 5 gives a bonus. Gear wears out like in duels.",
         _pve,
         examples=("/pve start difficulty:🟡 Normal",),

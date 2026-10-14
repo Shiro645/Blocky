@@ -103,7 +103,8 @@ SECTIONS: tuple[Section, ...] = (
         "opponent's whole next attack, a few times per duel. Nobody sees it coming: the duel only says how much it "
         "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
-        "enchantments. Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
+        "enchantments. Tools lose 1 each mining reward where they help, the sword 1 per attack, and every armor "
+        "piece 1 per hit you take in a duel (in the dungeon, each hit wears only one piece). Watch it in `/gear` and `/repair` a piece before it breaks, on an **anvil** "
         "(`/craft item:anvil`, iron), with ingots of its material: each ingot gives back part of its durability, "
         "and each repair makes the next one cost more ingots, like in Minecraft. The piece keeps its enchantments, "
         "and the anvil wears out a little with each use. A shield at 0 doesn't break: it stays unusable until "
@@ -177,9 +178,10 @@ SECTIONS: tuple[Section, ...] = (
         "Play **alone or in a group**: others join with the button (each pays the entry, refunded if they leave "
         "before the start) and the leader starts. Each wave plays out on its own with your gear and species; the "
         "message shows the fight, everyone's health and the loot.\n\n"
-        "**Health isn't restored between waves.** Between two waves the leader starts the next one, anyone can drink "
-        "a potion (Healing heals now, Strength and Speed help in the next wave, Harming hits every monster) or "
-        "**leave with their loot**. Each wave cleared adds to your loot, but **if you die you lose it** and the "
+        "**Health isn't restored between waves.** Between two waves everyone clicks **Ready** or **leaves with "
+        "their loot**: the next wave starts by itself when all are ready, and whoever doesn't answer in time "
+        "leaves with their loot. Anyone can drink a potion (Healing heals now, Strength and Speed help in the "
+        "next wave, Harming hits every monster). Each wave cleared adds to your loot, but **if you die you lose it** and the "
         "entry. Clearing all 5 waves pays a bonus. Gear wears out like in duels. `/pve info` shows the difficulties "
         "and when you can play again.",
         ("pve start",),

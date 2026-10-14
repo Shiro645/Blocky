@@ -599,6 +599,10 @@ MIGRATIONS: list[str] = [
         codes TEXT NOT NULL            -- the challenges picked, comma separated
     );
     """,
+    # 31: dungeon: the wave each member is ready to go on from (the next wave starts when all are ready)
+    """
+    ALTER TABLE pve_members ADD COLUMN ready_for INTEGER NOT NULL DEFAULT -1;
+    """,
 ]
 
 

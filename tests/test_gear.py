@@ -103,6 +103,39 @@ def _wear(ctx, gear_id: int, durability: int) -> None:
     ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (durability, gear_id))
 
 
+class ArmorWearTests(GameTestCase):
+    async def kit(self, items) -> dict[str, int]:
+        ids = {}
+        for item in items:
+            ids[item] = await self.run_game(shop.create_gear, ALICE, item, "iron")
+            await self.run_game(gear.equip, ALICE, ids[item])
+        return ids
+
+    async def end_run(self, attacks: int, hits: int) -> None:
+        from game import pve
+
+        hero = await self.run_game(pve.make_hero, ALICE)
+        hero.attacks, hero.hits_taken = attacks, hits
+        await self.run_game(pve._end_member, {"run_id": 0}, {"user_id": ALICE, "hero": hero}, "cleared")
+
+    async def test_the_dungeon_wears_one_armor_piece_per_hit(self):
+        from game.catalog import ARMOR
+
+        ids = await self.kit(("sword",) + ARMOR)
+        await self.end_run(10, 40)
+        pieces = await self.run_game(gear.get_pieces, ids)
+        self.assertEqual(pieces["sword"]["durability"], 250 - 10)  # the sword: 1 per attack, like in duels
+        lost = [250 - pieces[slot]["durability"] for slot in ARMOR]
+        self.assertEqual(sum(lost), 40)  # 40 hits = 40 durability over the whole armor
+        self.assertTrue(all(n < 40 for n in lost), lost)  # spread over the pieces
+
+    async def test_an_empty_slot_takes_its_hits(self):
+        ids = await self.kit(("chestplate",))
+        await self.end_run(0, 40)
+        lost = 250 - (await self.run_game(gear.get_pieces, ids))["chestplate"]["durability"]
+        self.assertTrue(0 < lost < 25, lost)  # about a quarter, not all 40
+
+
 class SellGearTests(GameTestCase):
     async def test_price_is_a_share_of_the_value_times_the_durability_left(self):
         gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
