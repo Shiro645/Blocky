@@ -309,9 +309,10 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
         sword = equipped.get("sword")
         if sword and fighter.attacks and gear.wear(ctx, sword, fighter.attacks):
             broken.append((fighter.user_id, f"{sword['material']} sword"))
+        armor_wear = gear.armor_wear(ctx, fighter.hits_taken)
         for slot in ARMOR:
             piece = equipped.get(slot)
-            if piece and fighter.hits_taken and gear.wear(ctx, piece, fighter.hits_taken):
+            if piece and armor_wear and gear.wear(ctx, piece, armor_wear):
                 broken.append((fighter.user_id, f"{piece['material']} {slot}"))
         if fighter.blocks_used and SHIELD in equipped and gear.wear_shield(ctx, equipped[SHIELD], fighter.blocks_used):
             broken.append((fighter.user_id, "iron shield (worn out: /repair it)"))

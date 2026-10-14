@@ -219,6 +219,8 @@ def _gear(s: Settings) -> list[str]:
         _armor(s),
         _shield(s),
         "Durability: " + listing(g["durability"]),
+        f"Wear: tools **1** per mining reward where they help · sword **1** per attack · every armor piece **1** "
+        f"per **{num(g['armor_hits_per_durability'])}** hits taken",
     ]
 
 
@@ -693,8 +695,9 @@ PAGES: list[Page] = [
         "gear", "gear",
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
-        "Tools wear out when they give their bonus while mining. The sword wears out in duels and against "
-        "bosses, armor in duels, the shield each time it blocks an attack in a duel. Tournament fights don't "
+        "Tools wear out when they give their bonus while mining. The sword wears out in duels, the dungeon and "
+        "against bosses (1 per attack), armor in duels and the dungeon (every piece, half as fast: 1 every 2 "
+        "hits taken by default), the shield each time it blocks an attack in a duel. Tournament fights don't "
         "wear anything (and nobody blocks there).",
         _gear,
         examples=("/gear",),

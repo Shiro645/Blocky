@@ -181,4 +181,10 @@ UPDATES: tuple[Update, ...] = (
              "Nobody can start a `/rob` from 22:00 to 06:00: everyone is asleep."),
         ),
     ),
+    Update(
+        "2026-10-armor-wear", "2026-10-14", "Armor wears out half as fast",
+        "In duels and the dungeon, your armor now loses **1 durability every 2 hits** you take (it was 1 per hit, "
+        "on every piece). A full dungeon run costs each piece about 22 durability instead of 45: an iron set "
+        "lasts twice as long between repairs. The sword doesn't change (1 per attack).",
+    ),
 )

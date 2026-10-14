@@ -125,6 +125,17 @@ def shield_blocks(equipped: dict[str, dict]) -> int:
     return min(int(g["shield_blocks_per_fight"]), math.ceil(shield["durability"] / per_block))
 
 
+def armor_wear(ctx: Ctx, hits_taken: int) -> int:
+    """Durability each armor piece loses for these hits (gear.armor_hits_per_durability hits = 1; the rest is a
+    chance of one more)."""
+    per = max(1.0, float(settings.get()["gear"]["armor_hits_per_durability"]))
+    whole = int(hits_taken // per)
+    rest = hits_taken / per - whole
+    if rest > 1e-9 and ctx.rng.random() < rest:
+        whole += 1
+    return whole
+
+
 def wear_shield(ctx: Ctx, piece: dict, blocks: int) -> bool:
     """The shield blocked `blocks` attacks. At 0 it stays (unusable until /repair). True when it just wore out."""
     if piece["durability"] <= 0 or blocks <= 0:

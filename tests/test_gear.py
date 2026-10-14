@@ -103,6 +103,24 @@ def _wear(ctx, gear_id: int, durability: int) -> None:
     ctx.execute("UPDATE gear SET durability=? WHERE gear_id=?;", (durability, gear_id))
 
 
+class ArmorWearTests(GameTestCase):
+    async def test_one_durability_every_two_hits(self):
+        self.assertEqual(await self.run_game(gear.armor_wear, 0), 0)
+        self.assertEqual(await self.run_game(gear.armor_wear, 2), 1)
+        self.assertEqual(await self.run_game(gear.armor_wear, 40), 20)
+        odd = [await self.run_game(gear.armor_wear, 3) for _ in range(200)]
+        self.assertEqual(set(odd), {1, 2})  # the rest is a 50% chance of one more
+        self.assertTrue(70 < odd.count(2) < 130)
+
+    async def test_the_setting(self):
+        from game import settings
+
+        settings.load({"gear": {"armor_hits_per_durability": 1}})
+        self.assertEqual(await self.run_game(gear.armor_wear, 7), 7)
+        settings.load({"gear": {"armor_hits_per_durability": 4}})
+        self.assertEqual(await self.run_game(gear.armor_wear, 8), 2)
+
+
 class SellGearTests(GameTestCase):
     async def test_price_is_a_share_of_the_value_times_the_durability_left(self):
         gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")

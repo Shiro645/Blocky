@@ -335,6 +335,9 @@ FIELDS: list[Field] = [
     _pct("gear.max_damage_reduction", "combat_gear", "Max damage reduction"),
     _b("gear.shield_blocks_per_fight", "combat_gear", "Shield: blocks per duel",
        "Times a player can \"Attack + block\" in a duel (it blocks the opponent's next attack).", min=0, max=20),
+    _b("gear.armor_hits_per_durability", "combat_gear", "Armor: hits taken for 1 durability",
+       "In duels and the dungeon, every armor piece loses 1 durability for this many hits taken (2 = half as fast "
+       "as the sword, which loses 1 per attack).", kind="float", min=1, max=100),
     _b("gear.shield_durability", "combat_gear", "Shield: durability", "Of a new or repaired shield.", min=1, max=100_000),
     _b("gear.shield_wear_per_block", "combat_gear", "Shield: durability used per block",
        "At 0 it stays, unusable until /repair.", min=1, max=100_000),

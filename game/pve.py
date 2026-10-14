@@ -425,10 +425,11 @@ def _end_member(ctx: Ctx, run: dict, member: dict, status: str, pay: int = 0) ->
     sword = pieces.get("sword")
     if sword and hero.attacks:
         gear.wear(ctx, sword, hero.attacks)
+    armor_wear = gear.armor_wear(ctx, hero.hits_taken)
     for slot in ARMOR:
         piece = pieces.get(slot)
-        if piece and hero.hits_taken:
-            gear.wear(ctx, piece, hero.hits_taken)
+        if piece and armor_wear:
+            gear.wear(ctx, piece, armor_wear)
 
 
 def _close_if_empty(ctx: Ctx, run: dict) -> dict:
