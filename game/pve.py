@@ -425,7 +425,7 @@ def _end_member(ctx: Ctx, run: dict, member: dict, status: str, pay: int = 0) ->
     sword = pieces.get("sword")
     if sword and hero.attacks:
         gear.wear(ctx, sword, hero.attacks)
-    armor_wear = gear.armor_wear(ctx, hero.hits_taken)
+    armor_wear = gear.armor_wear(ctx, hero.hits_taken, float(_cfg()["armor_hits_per_durability"]))  # slower than duels
     for slot in ARMOR:
         piece = pieces.get(slot)
         if piece and armor_wear:

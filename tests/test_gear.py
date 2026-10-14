@@ -104,21 +104,29 @@ def _wear(ctx, gear_id: int, durability: int) -> None:
 
 
 class ArmorWearTests(GameTestCase):
-    async def test_one_durability_every_two_hits(self):
-        self.assertEqual(await self.run_game(gear.armor_wear, 0), 0)
-        self.assertEqual(await self.run_game(gear.armor_wear, 2), 1)
-        self.assertEqual(await self.run_game(gear.armor_wear, 40), 20)
-        odd = [await self.run_game(gear.armor_wear, 3) for _ in range(200)]
+    async def test_one_durability_every_n_hits(self):
+        self.assertEqual(await self.run_game(gear.armor_wear, 7), 7)  # duels: every hit
+        self.assertEqual(await self.run_game(gear.armor_wear, 0, 2), 0)
+        self.assertEqual(await self.run_game(gear.armor_wear, 2, 2), 1)
+        self.assertEqual(await self.run_game(gear.armor_wear, 40, 2), 20)
+        self.assertEqual(await self.run_game(gear.armor_wear, 8, 4), 2)
+        odd = [await self.run_game(gear.armor_wear, 3, 2) for _ in range(200)]
         self.assertEqual(set(odd), {1, 2})  # the rest is a 50% chance of one more
         self.assertTrue(70 < odd.count(2) < 130)
 
-    async def test_the_setting(self):
-        from game import settings
+    async def test_the_dungeon_wears_armor_slower_than_duels(self):
+        from game import pve
 
-        settings.load({"gear": {"armor_hits_per_durability": 1}})
-        self.assertEqual(await self.run_game(gear.armor_wear, 7), 7)
-        settings.load({"gear": {"armor_hits_per_durability": 4}})
-        self.assertEqual(await self.run_game(gear.armor_wear, 8), 2)
+        ids = {}
+        for item in ("sword", "chestplate"):
+            ids[item] = await self.run_game(shop.create_gear, ALICE, item, "iron")
+            await self.run_game(gear.equip, ALICE, ids[item])
+        hero = await self.run_game(pve.make_hero, ALICE)
+        hero.attacks, hero.hits_taken = 10, 20
+        await self.run_game(pve._end_member, {"run_id": 0}, {"user_id": ALICE, "hero": hero}, "cleared")
+        pieces = await self.run_game(gear.get_pieces, ids)
+        self.assertEqual(pieces["sword"]["durability"], 250 - 10)
+        self.assertEqual(pieces["chestplate"]["durability"], 250 - 10)  # 20 hits, 1 every 2
 
 
 class SellGearTests(GameTestCase):

@@ -335,9 +335,6 @@ FIELDS: list[Field] = [
     _pct("gear.max_damage_reduction", "combat_gear", "Max damage reduction"),
     _b("gear.shield_blocks_per_fight", "combat_gear", "Shield: blocks per duel",
        "Times a player can \"Attack + block\" in a duel (it blocks the opponent's next attack).", min=0, max=20),
-    _b("gear.armor_hits_per_durability", "combat_gear", "Armor: hits taken for 1 durability",
-       "In duels and the dungeon, every armor piece loses 1 durability for this many hits taken (2 = half as fast "
-       "as the sword, which loses 1 per attack).", kind="float", min=1, max=100),
     _b("gear.shield_durability", "combat_gear", "Shield: durability", "Of a new or repaired shield.", min=1, max=100_000),
     _b("gear.shield_wear_per_block", "combat_gear", "Shield: durability used per block",
        "At 0 it stays, unusable until /repair.", min=1, max=100_000),
@@ -584,6 +581,9 @@ FIELDS: list[Field] = [
     _b("pve.hp", "pve", "Health of a player", "Not restored between waves.", min=1, max=1000),
     _b("pve.max_players", "pve", "Players per group", min=1, max=10),
     _b("pve.cooldown_minutes", "pve", "Minutes between two runs", "From the start of a run.", max=10_080),
+    _b("pve.armor_hits_per_durability", "pve", "Armor: hits taken for 1 durability",
+       "Every armor piece loses 1 durability for this many hits taken in the dungeon (in duels: 1 per hit). "
+       "2 = half as fast.", kind="float", min=1, max=100),
     _b("pve.lobby_minutes", "pve", "Minutes to start a group", "Then it's cancelled and refunded.", min=1, max=60),
     _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
        "Then everyone still in leaves with their loot.", min=1, max=60),

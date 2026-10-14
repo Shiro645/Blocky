@@ -125,10 +125,10 @@ def shield_blocks(equipped: dict[str, dict]) -> int:
     return min(int(g["shield_blocks_per_fight"]), math.ceil(shield["durability"] / per_block))
 
 
-def armor_wear(ctx: Ctx, hits_taken: int) -> int:
-    """Durability each armor piece loses for these hits (gear.armor_hits_per_durability hits = 1; the rest is a
-    chance of one more)."""
-    per = max(1.0, float(settings.get()["gear"]["armor_hits_per_durability"]))
+def armor_wear(ctx: Ctx, hits_taken: int, hits_per_durability: float = 1.0) -> int:
+    """Durability each armor piece loses for these hits: 1 per `hits_per_durability` hits, the rest being a
+    chance of one more."""
+    per = max(1.0, float(hits_per_durability))
     whole = int(hits_taken // per)
     rest = hits_taken / per - whole
     if rest > 1e-9 and ctx.rng.random() < rest:
