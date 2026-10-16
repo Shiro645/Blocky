@@ -170,6 +170,19 @@ def tick(ctx: Ctx) -> list[dict]:
     return out
 
 
+def today(ctx: Ctx) -> dict:
+    """The day's random event: {"status": "passed" | "on" | "coming" | "none", "event": its row or None}.
+    "coming" never says when (it's a surprise)."""
+    row = ctx.one("SELECT * FROM live_events WHERE day=? ORDER BY event_id DESC LIMIT 1;", (ctx.today.isoformat(),))
+    if row is not None:
+        return {"status": "on" if row["ends_at"] > int(ctx.now) else "passed", "event": dict(row)}
+    at = random_time(ctx)
+    last = datetime.combine(ctx.today, time(hour=int(_cfg()["latest_hour"]) % 24),
+                            tzinfo=ctx.local_now.tzinfo).timestamp()
+    coming = at is not None and int(ctx.now) < last
+    return {"status": "coming" if coming else "none", "event": None}
+
+
 def to_announce(ctx: Ctx) -> list[dict]:
     """Events started but not posted yet (just started, or the channel was missing)."""
     rows = ctx.all("SELECT * FROM live_events WHERE announced=0 AND ends_at > ?;", (int(ctx.now),))

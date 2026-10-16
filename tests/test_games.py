@@ -213,12 +213,12 @@ class LuckyBlockGame(GameTestCase):
     def test_the_table(self):
         chances = luckyblock.chances()
         self.assertAlmostEqual(sum(c for _, c, _ in chances), 1)
-        self.assertAlmostEqual(luckyblock.return_rate(), 0.842)
+        self.assertAlmostEqual(luckyblock.return_rate(), 0.95)
         # Each step is rarer than the one before, from the creeper to netherite.
         self.assertEqual([o.key for o, _, _ in chances], list(luckyblock.OUTCOMES))
         self.assertEqual([c for _, c, _ in chances], sorted((c for _, c, _ in chances), reverse=True))
         netherite = next((c, p) for o, c, p in chances if o.key == "netherite")
-        self.assertEqual(netherite, (0.002, 10.0))  # stays rare, and not too strong
+        self.assertEqual(netherite, (0.005, 10.0))  # stays rare (1 in 200), and not too strong
         settings.load({"games": {"lucky_block": {"netherite": {"weight": 0}}}})
         self.assertNotIn("netherite", [o.key for o, _, _ in luckyblock.chances()])
 

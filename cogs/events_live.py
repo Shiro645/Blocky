@@ -96,15 +96,26 @@ class LiveEventsCog(commands.Cog):
             log.warning("Could not update the timed event message", exc_info=True)
 
     # ---------- commands ----------
-    @app_commands.command(name="events", description="The timed event on now, and what each event does.")
+    @app_commands.command(name="events", description="The timed event on now, today's event and what each event does.")
     async def events_cmd(self, interaction: discord.Interaction):
-        event = await self.bot.db.run(live_events.current)
+        def load(ctx):
+            return live_events.current(ctx), live_events.today(ctx)
+
+        event, day = await self.bot.db.run(load)
         c = settings.get()["live_events"]
         if event:
             kind = live_events.KINDS[event["kind"]]
             head = (f"**{kind.label}** is on: {live_events.describe(event['kind'])}. Ends <t:{event['ends_at']}:R>.")
         else:
             head = "No event is on right now."
+        if day["status"] == "passed":
+            past = day["event"]
+            head += (f"\n📅 Today's event is over: **{live_events.KINDS[past['kind']].label}**, from "
+                     f"<t:{past['starts_at']}:t> to <t:{past['ends_at']}:t>. The next one comes tomorrow.")
+        elif day["status"] == "coming":
+            head += "\n📅 Today's event hasn't come yet: it can start any time now. Watch the events channel!"
+        elif day["status"] == "none" and c["daily_random"]:
+            head += "\n📅 No random event today anymore: the next one comes tomorrow."
         if c["daily_random"] and live_events.random_kinds():
             head += (f"\nOne event comes by itself every day, at a random time between "
                      f"**{int(c['earliest_hour']):02d}:00** and **{int(c['latest_hour']):02d}:00**, for "

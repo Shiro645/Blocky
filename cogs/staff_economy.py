@@ -254,7 +254,7 @@ class StaffEconomyCog(commands.Cog):
         if "duel" in timers and (cog := self.bot.get_cog("DuelCog")) is not None:
             cog.cooldown_until.pop(user_id, None)  # type: ignore[attr-defined]
         if "games" in timers:
-            for name in ("LuckyBlockCog", "RouletteCog"):
+            for name in ("LuckyBlockCog", "RouletteCog", "BlackjackCog", "MinesCog"):
                 if (cog := self.bot.get_cog(name)) is not None:
                     cog._next.pop(user_id, None)  # type: ignore[attr-defined]
         if "mining" in timers and (cog := self.bot.get_cog("EconomyMiningCog")) is not None:

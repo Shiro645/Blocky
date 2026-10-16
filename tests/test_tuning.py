@@ -20,8 +20,8 @@ class TuningTests(unittest.TestCase):
         settings.load()
 
     def test_xp_curve(self):
-        self.assertEqual([players.xp_required_for_level(n) for n in (1, 2, 10)], [100, 125, 325])
-        settings.load({"levels": {"xp_first_level": 50, "xp_increase_per_level": 0}})
+        self.assertEqual([players.xp_required_for_level(n) for n in (1, 2, 10, 50)], [100, 105, 155, 1092])
+        settings.load({"levels": {"xp_first_level": 50, "xp_growth_per_level": 1}})
         self.assertEqual([players.xp_required_for_level(n) for n in (1, 2, 10)], [50, 50, 50])
 
     def test_mining_odds(self):

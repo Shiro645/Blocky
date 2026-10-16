@@ -2,8 +2,8 @@
 
 What can fall out, how often (weight) and what it pays (times the bet, the bet
 included) are settings (games.lucky_block). With the defaults each outcome is rarer than
-the one before, from the creeper (loses everything) to netherite (1 in 500, x10), and a
-block gives back about 84% of the bets on average. Bets, the daily cap and the waiting time are
+the one before, from the creeper (loses everything) to netherite (1 in 200, x10), and a
+block gives back about 95% of the bets on average. Bets, the daily cap and the waiting time are
 shared with the wheel (game/gambling.py, games.*).
 """
 from __future__ import annotations
@@ -49,7 +49,7 @@ def chances() -> list[tuple[Outcome, float, float]]:
 
 
 def return_rate() -> float:
-    """What a bet gives back on average (about 0.84 with the defaults)."""
+    """What a bet gives back on average (about 0.95 with the defaults)."""
     return sum(chance * payout for _, chance, payout in chances())
 
 

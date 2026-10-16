@@ -69,6 +69,8 @@ EXTENSIONS = [
     "cogs.events_live",
     "cogs.games_roulette",
     "cogs.games_luckyblock",
+    "cogs.games_blackjack",
+    "cogs.games_mines",
     "cogs.games_blockdle",
     "cogs.games_quiz",
     "cogs.games_rob",

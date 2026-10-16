@@ -19,13 +19,13 @@ class ProfileTests(GameTestCase):
     async def test_colors_are_bought_once(self):
         await self.run_game(players.give_emeralds, ALICE, 2000)
         res = await self.run_game(profiles.set_color, ALICE, "lime")
-        self.assertEqual(res["paid"], 300)
+        self.assertEqual(res["paid"], 150)
         await self.run_game(profiles.set_color, ALICE, "default")
         self.assertEqual((await self.run_game(profiles.set_color, ALICE, "lime"))["paid"], 0)  # kept for good
         res = await self.run_game(profiles.set_color, ALICE, "#FF8800")
-        self.assertEqual((res["paid"], res["color"]), (1500, "#ff8800"))
+        self.assertEqual((res["paid"], res["color"]), (750, "#ff8800"))
         self.assertEqual((await self.run_game(profiles.set_color, ALICE, "123abc"))["paid"], 0)
-        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 200)
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 1100)
         self.assertEqual(profiles.color_rgb("#123abc"), (0x12, 0x3A, 0xBC))
         with self.assertRaisesRegex(GameError, "Not enough"):
             await self.run_game(profiles.set_color, BOB, "red")
@@ -36,7 +36,7 @@ class ProfileTests(GameTestCase):
         await self.run_game(players.give_emeralds, ALICE, 500)
         frames = await self.run_game(profiles.frames_of, ALICE)
         self.assertEqual((frames["stone"], frames["netherite"]), ("price", "locked"))
-        self.assertEqual((await self.run_game(profiles.set_frame, ALICE, "stone"))["paid"], 200)
+        self.assertEqual((await self.run_game(profiles.set_frame, ALICE, "stone"))["paid"], 100)
         with self.assertRaisesRegex(GameError, "Win a weekend tournament"):
             await self.run_game(profiles.set_frame, ALICE, "netherite")
         await self.run_game(players.bump_stat, ALICE, "tournaments_won")
@@ -85,7 +85,7 @@ class BannerTests(GameTestCase):
         with self.assertRaisesRegex(GameError, "3 patterns at most"):
             profiles.check_banner("blue", [("chevron", "yellow")] * 4)
         res = await self.run_game(profiles.set_banner, ALICE, "blue", [("chevron", "yellow"), ("border", "black")])
-        self.assertEqual(res["paid"], 200)
+        self.assertEqual(res["paid"], 100)
         self.assertEqual(await self.run_game(profiles.banner_of, team["team_id"]),
                          {"base": "blue", "layers": [("chevron", "yellow"), ("border", "black")]})
-        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 100)
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 200)

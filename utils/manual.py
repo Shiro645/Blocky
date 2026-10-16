@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, guide, live_events, luckyblock, potions, progress, roulette
+from game import blockdle, enchants, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import RECIPES, TALENT_BRANCHES
 from game.profiles import FRAMES
@@ -264,8 +264,9 @@ def _xp(s: Settings) -> list[str]:
     m, d, du, b, t = s["mining"], s["daily"], s["duel"], s["boss"], s["tournament"]
     lo, hi = m["xp_per_message"]
     return [
-        f"XP for the next level: **{num(s['levels']['xp_first_level'])}** at level 1, "
-        f"**+{num(s['levels']['xp_increase_per_level'])}** per level",
+        f"XP for the next level: **{num(s['levels']['xp_first_level'])}** at level 1, then "
+        f"**×{float(s['levels']['xp_growth_per_level']):g}** each level (level 10: **{num(players.xp_required_for_level(10))}**, "
+        f"level 50: **{num(players.xp_required_for_level(50))}**)",
         f"1 talent point every **{num(s['talents']['points_every_levels'])}** levels",
         f"XP sources: mining **{num(lo)}–{num(hi)}** per reward · daily **{num(d['xp'])}** · "
         f"duel won **{num(du['xp_win'])}** / lost **{num(du['xp_loss'])}** · boss defeated **{num(b['xp_reward'])}** · "
@@ -474,6 +475,30 @@ def _luckyblock(s: Settings) -> list[str]:
         "Winnings don't count for the seasons"]
 
 
+def _blackjack(s: Settings) -> list[str]:
+    g = s["games"]
+    closed = [] if g["blackjack_enabled"] else ["🔒 **Closed right now**"]
+    return closed + [
+        f"Win: **×2** the bet · blackjack: **×{1 + float(g['blackjack_natural_payout']):g}** · push: the bet back",
+        f"The dealer draws until **{num(g['blackjack_dealer_stands'])}** · double: only with your first two cards",
+        f"No move for **{num(g['move_minutes'])} min**: you stand",
+    ] + _games(s) + ["Winnings don't count for the seasons"]
+
+
+def _mines(s: Settings) -> list[str]:
+    g = s["games"]
+    closed = [] if g["mines_enabled"] else ["🔒 **Closed right now**"]
+    examples = " · ".join(f"{t} TNT: ×{mines.multiplier(1, t):.2f} → ×{mines.multiplier(3, t):.2f} → "
+                          f"×{mines.multiplier(5, t):.2f}" for t in (1, 3, 5))
+    return closed + [
+        f"20 blocks, **1 to {num(g['mines_tnt_max'])}** TNT · each safe block raises the multiplier "
+        f"(**{pct(g['mines_return'])}** of a fair game)",
+        f"After 1, 3 and 5 blocks: {examples}",
+        f"The game cashes out by itself at **×{float(g['mines_max_multiplier']):g}** · no move for "
+        f"**{num(g['move_minutes'])} min**: you cash out (nothing dug: the bet back)",
+    ] + _games(s) + ["Winnings don't count for the seasons"]
+
+
 def _roulette(s: Settings) -> list[str]:
     zeros = "0 and 00" if s["games"]["roulette_zeros"] == 2 else "0"
     rate = 36 / (36 + int(s["games"]["roulette_zeros"]))
@@ -552,7 +577,9 @@ def _pve(s: Settings) -> list[str]:
                      f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
     lines += [
         f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
-        f"Up to **{num(p['max_players'])}** players (each extra player: **+{pct(p['group_monsters'])}** monsters) · "
+        f"Up to **{num(p['max_players'])}** players (each extra player: **+{pct(p['group_monsters'])}** monsters, "
+        f"**+{pct(p['difficulties']['nightmare'].get('group_monsters', p['group_monsters']))}** in Nightmare: a raid "
+        "for a full group) · "
         "a run every "
         f"**{duration(float(p['cooldown_minutes']) * 60)}**",
         f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
@@ -723,8 +750,9 @@ PAGES: list[Page] = [
     ),
     Page(
         "unequip", "gear",
-        "Takes off the piece in a slot. It goes back to your inventory.",
-        examples=("/unequip slot:sword",),
+        "Takes off the piece in a slot, or **every piece** when you don't pick a slot. They go back to your "
+        "inventory.",
+        examples=("/unequip slot:sword", "/unequip"),
         related=("equip", "gear"),
     ),
     Page(
@@ -1101,7 +1129,8 @@ PAGES: list[Page] = [
     ),
     Page(
         "events", "events",
-        "Shows the **timed event** on now and what each one does. For a while (an hour by default) everyone gets a "
+        "Shows the **timed event** on now, whether **today's event** already came (which one and when), and what "
+        "each one does. For a while (an hour by default) everyone gets a "
         "bonus: 🎰 **Gambling Frenzy** (bigger bets and daily limit at the Lucky Block and the wheel), ⛏️ **Mining "
         "Rush** (more mining XP), 💰 **Golden Hour** (/sell pays more), 🍀 **Lucky Hour** (more obsidian and "
         "bedrock) or 🏷️ **Market Sale** (/market cheaper). One comes by itself every day at a random time, and the "
@@ -1127,7 +1156,25 @@ PAGES: list[Page] = [
         "The bank wins a little on average.",
         _luckyblock,
         examples=("/luckyblock amount:50",),
-        related=("blockdle guess", "quiz"),
+        related=("blackjack", "mines", "wheel"),
+    ),
+    Page(
+        "blackjack", "games",
+        "A hand of **blackjack** against the dealer: get closer to 21 than him without going over. Aces count 1 or "
+        "11, faces 10. **Hit** takes a card, **Stand** lets the dealer play, **Double** doubles your bet for one "
+        "last card. 21 with your first two cards is a **blackjack** and pays 3:2. Only you can use the buttons.",
+        _blackjack,
+        examples=("/blackjack amount:50",),
+        related=("mines", "luckyblock"),
+    ),
+    Page(
+        "mines", "games",
+        "**Mines**: 20 blocks, some hide TNT. Dig them one by one with the buttons: each safe block (💎) raises "
+        "your multiplier, and you can **cash out** any time after the first one. Hit the TNT (💥) and you lose "
+        "the bet. More TNT = bigger multipliers. Only you can use the buttons.",
+        _mines,
+        examples=("/mines amount:50", "/mines amount:20 tnt:5"),
+        related=("blackjack", "luckyblock"),
     ),
     Page(
         "wheel", "games",
@@ -1136,7 +1183,7 @@ PAGES: list[Page] = [
         "block**: when the wheel stops on it, every Redstone or Obsidian bet loses. In `bet`, pick Redstone, "
         "Obsidian or **A number**; for a number, pick it in the `number` option (type it to find it: Discord only "
         "lists 25 at a time), or just type the number in `bet`. The staff chooses which bets are open (`/config` → "
-        "Games & events → Lucky Block & wheel).",
+        "Games & events → Games of chance).",
         _roulette,
         examples=("/wheel bet:🟥 Redstone amount:50", "/wheel bet:🎯 A number amount:10 number:17",
                   "/wheel bet:17 amount:10"),

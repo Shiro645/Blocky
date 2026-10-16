@@ -603,6 +603,25 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE pve_members ADD COLUMN ready_for INTEGER NOT NULL DEFAULT -1;
     """,
+    # 32: games of chance played over several clicks (blackjack, mines): the bet and the game so far
+    """
+    CREATE TABLE chance_games (
+        game_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,                 -- blackjack | mines
+        bet INTEGER NOT NULL,               -- emeralds put in (a doubled blackjack bet counts twice)
+        state TEXT NOT NULL,                -- JSON: the cards, the TNT and the blocks dug…
+        status TEXT NOT NULL DEFAULT 'active',  -- active | done
+        result TEXT,                        -- how it ended (win, lose, push, blackjack, boom, cashed…)
+        paid INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        deadline INTEGER NOT NULL,          -- no move by then: the game ends by itself
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX idx_chance_games_active ON chance_games(status, deadline);
+    CREATE INDEX idx_chance_games_user ON chance_games(user_id, kind, status);
+    """,
 ]
 
 

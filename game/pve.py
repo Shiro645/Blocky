@@ -83,15 +83,19 @@ def label(difficulty: str) -> str:
     return f"{emoji} {name}"
 
 
-def wave_text(wave: int, players_count: int = 1) -> str:
+def wave_text(wave: int, players_count: int = 1, difficulty: str | None = None) -> str:
     """'3 🧟 Zombie, 2 💀 Skeleton' for wave 1..5."""
-    return ", ".join(f"{group_count(n, players_count)} {MONSTERS[k].emoji} {MONSTERS[k].name}"
+    return ", ".join(f"{group_count(n, players_count, difficulty)} {MONSTERS[k].emoji} {MONSTERS[k].name}"
                      for k, n in WAVES[wave - 1])
 
 
-def group_count(count: int, heroes: int) -> int:
-    """How many of a wave's monsters a group of `heroes` faces (pve.group_monsters per extra player)."""
-    return count + round(count * float(_cfg()["group_monsters"]) * (max(1, heroes) - 1))
+def group_count(count: int, heroes: int, difficulty: str | None = None) -> int:
+    """How many of a wave's monsters a group of `heroes` faces: pve.group_monsters per extra player, or the
+    difficulty's own share (Nightmare: fewer, it's a raid for a full group)."""
+    c = _cfg()
+    per = float(c["difficulties"][difficulty].get("group_monsters", c["group_monsters"]) if difficulty
+                else c["group_monsters"])
+    return count + round(count * per * (max(1, heroes) - 1))
 
 
 def strength(difficulty: str, wave: int) -> float:
@@ -156,7 +160,7 @@ def spawn(wave: int, difficulty: str, heroes: int) -> list[Monster]:
     out = []
     for kind, count in WAVES[wave - 1]:
         k = MONSTERS[kind]
-        for _ in range(group_count(count, heroes)):
+        for _ in range(group_count(count, heroes, difficulty)):
             out.append(Monster(kind, k.hp * mult, (k.dmg[0] * mult, k.dmg[1] * mult), k.fuse))
     return out
 
