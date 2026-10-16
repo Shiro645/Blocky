@@ -19,6 +19,15 @@ class EquipTests(GameTestCase):
         self.assertTrue(first["equipped"])
         self.assertFalse(second["equipped"])
 
+    async def test_unequip_everything(self):
+        self.assertEqual(await self.run_game(gear.unequip_all, ALICE), [])
+        for item in ("sword", "helmet", "boots"):
+            gid = await self.run_game(shop.create_gear, ALICE, item, "iron")
+            await self.run_game(gear.equip, ALICE, gid)
+        done = await self.run_game(gear.unequip_all, ALICE)
+        self.assertEqual(sorted(g["item"] for g in done), ["boots", "helmet", "sword"])
+        self.assertEqual(await self.run_game(gear.get_equipped, ALICE), {})
+
     async def test_one_piece_per_slot(self):
         a = await self.run_game(shop.create_gear, ALICE, "helmet", "iron")
         b = await self.run_game(shop.create_gear, ALICE, "helmet", "diamond")

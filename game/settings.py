@@ -49,8 +49,9 @@ DEFAULTS: dict[str, Any] = {
         # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
         "lucky_rare_weight": 1,
     },
-    # XP to go from a level to the next: xp_first_level at level 1, then xp_increase_per_level more each level.
-    "levels": {"xp_first_level": 100, "xp_increase_per_level": 25},
+    # XP to go from a level to the next: xp_first_level at level 1, then xp_growth_per_level times more each level
+    # (1.05 = +5% a level: level 10 needs 155, level 50 needs 1,092, level 100 needs 12,524).
+    "levels": {"xp_first_level": 100, "xp_growth_per_level": 1.05},
     "gear": {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
         "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
@@ -294,7 +295,7 @@ DEFAULTS: dict[str, Any] = {
     # difficulty's reward; clearing wave 5 adds clear_bonus.
     "pve": {
         "hp": 20,
-        "max_players": 4,
+        "max_players": 5,
         "cooldown_minutes": 60,
         "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
         "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
@@ -315,23 +316,26 @@ DEFAULTS: dict[str, Any] = {
         "xp_per_wave": 15,
         "wave_rewards": [5, 8, 12, 18, 27],
         # Calibrated (solo, no potions, all 5 waves): Easy ~98% with iron gear; Normal ~90% diamond;
-        # Hard ~80% netherite; Hardcore ~80% enchanted netherite; Nightmare ~35% enchanted netherite.
+        # Hard ~80% netherite; Hardcore ~80% enchanted netherite. Nightmare is a raid: its monsters are much
+        # stronger but each extra player adds fewer of them (its own group_monsters), so a group of 5 in
+        # diamond with Protection III and Sharpness III clears it ~35% of the time (4 players or fewer ~0-2%,
+        # 5 in the same netherite gear ~68%).
         "difficulties": {
             "easy": {"entry": 30, "strength": 0.85, "reward": 1.0},
             "normal": {"entry": 75, "strength": 1.0, "reward": 2.5},
             "hard": {"entry": 200, "strength": 1.13, "reward": 6.0},
             "hardcore": {"entry": 500, "strength": 1.26, "reward": 14.0},
-            "nightmare": {"entry": 1200, "strength": 1.42, "reward": 32.0},
+            "nightmare": {"entry": 1200, "strength": 2.64, "reward": 32.0, "group_monsters": 0.5},
         },
     },
     # Profile customization (/customize) and team banners (/team banner).
     "profiles": {
         "bio_max": 150,
-        "color_price": 300,  # each dye color, bought once
-        "hex_price": 1500,  # unlocks any #hex color, once
-        "banner_cost": 200,  # each change of a team banner (paid by the leader)
+        "color_price": 150,  # each dye color, bought once
+        "hex_price": 750,  # unlocks any #hex color, once
+        "banner_cost": 100,  # each change of a team banner (paid by the leader)
         # Frames sold for emeralds (the others are earned, see game/profiles.py).
-        "frame_prices": {"stone": 200, "gold": 500, "redstone": 800, "lapis": 1000, "diamond": 2000, "emerald": 3000},
+        "frame_prices": {"stone": 100, "gold": 250, "redstone": 400, "lapis": 500, "diamond": 1000, "emerald": 1500},
         # What it takes to earn the other frames and the titles (game/profiles.py says what is counted).
         "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1},
         "title_goals": {
@@ -387,17 +391,29 @@ DEFAULTS: dict[str, Any] = {
         "max_bet": 200,
         "cooldown_seconds": 5,  # between two games of a player
         "daily_win_cap": 1500,
+        # Blackjack (/blackjack) and mines (/mines) share the bets and the daily cap. A game with no move for
+        # move_minutes ends by itself (blackjack: you stand; mines: you cash out, or get the bet back if you
+        # dug nothing).
+        "move_minutes": 3,
+        "blackjack_enabled": True,
+        "blackjack_natural_payout": 1.5,  # a blackjack (21 with the first two cards) pays 3:2
+        "blackjack_dealer_stands": 17,  # the dealer draws until this total
+        "mines_enabled": True,
+        "mines_return": 0.95,  # what a cash out pays compared to a fair game (0.95 = the bank keeps 5%)
+        "mines_tnt_max": 10,  # TNT a player may hide in the 20 blocks (at least 1)
+        "mines_max_multiplier": 25.0,  # the game cashes out by itself at this many times the bet
         # Lucky Block (/luckyblock): how often each thing falls out (weights) and what it pays (times the bet,
         # the bet included). Each step is rarer than the one before, from the creeper to netherite (1 in 500,
-        # x10 at most). The defaults give back about 84% of the bets on average.
+        # x10 at most). The defaults give back about 95% of the bets on average.
         "lucky_block": {
-            "creeper": {"weight": 270, "payout": 0.0},
-            "cobblestone": {"weight": 250, "payout": 0.5},
-            "iron": {"weight": 230, "payout": 1.0},
-            "gold": {"weight": 180, "payout": 1.5},
-            "diamond": {"weight": 50, "payout": 2.5},
-            "emerald": {"weight": 18, "payout": 4.0},
-            "netherite": {"weight": 2, "payout": 10.0},
+            # Gives back 95% of the bets on average; 28.5% of the blocks pay more than the bet.
+            "creeper": {"weight": 315, "payout": 0.0},
+            "cobblestone": {"weight": 220, "payout": 0.5},
+            "iron": {"weight": 180, "payout": 1.0},
+            "gold": {"weight": 150, "payout": 1.5},
+            "diamond": {"weight": 90, "payout": 2.5},
+            "emerald": {"weight": 40, "payout": 4.0},
+            "netherite": {"weight": 5, "payout": 10.0},
         },
         "roulette_enabled": True,  # the wheel (/wheel), a Minecraft roulette
         # What players may bet on at the wheel: Redstone (red), Obsidian (black) and a number for now.
@@ -710,6 +726,9 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for pile in ("odds_6_blocks", "odds_4_5_blocks", "odds_2_3_blocks", "odds_1_block"):
         if sum(float(w) for w in m[pile].values()) <= 0:
             out.append((f"`balance.mining.{pile}`: at least one block needs a weight above 0.", [("mining", pile)]))
+    if not 1 <= float(merged["levels"]["xp_growth_per_level"]) <= 2:
+        out.append(("`balance.levels.xp_growth_per_level` goes from 1 (the same every level) to 2.",
+                    [("levels", "xp_growth_per_level")]))
     if merged["levels"]["xp_first_level"] < 1:
         out.append(("`balance.levels.xp_first_level` must be at least 1.", [("levels", "xp_first_level")]))
     for pool in ("goals", "daily_goals"):

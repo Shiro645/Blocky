@@ -70,7 +70,7 @@ CATEGORIES = {
     "bosses": "🐉 Bosses",
     "tournament": "🏟️ Tournament",
     "live_events": "⏱️ Timed events",
-    "chance": "🟨 Lucky Block & wheel",
+    "chance": "🎰 Games of chance",
     "minigames": "🧩 Blockdle & quiz",
     "rob": "🦹 Robberies",
     "drops": "🎁 Drops",
@@ -268,8 +268,9 @@ FIELDS: list[Field] = [
       for pile, size in PILES for b in BLOCK_TYPES],
     # ---- XP & talents ----
     _b("levels.xp_first_level", "xp", "XP from level 1 to 2", "XP needed to reach level 2.", min=1, max=1_000_000),
-    _b("levels.xp_increase_per_level", "xp", "Extra XP needed per level",
-       "Each level needs this much more XP than the previous one.", max=1_000_000),
+    _b("levels.xp_growth_per_level", "xp", "XP growth per level (×)",
+       "Each level needs this many times the XP of the previous one: 1.05 = +5% a level (level 50: 1,092 XP, "
+       "level 100: 12,524). 1 = the same every level.", kind="float", min=1, max=2),
     _b("talents.points_every_levels", "xp", "Levels per talent point", "A talent point every this many levels.", min=1, max=100),
     *[_b(f"talents.caps.{t}", "xp", f"{t.capitalize()} talent: max points", "Points beyond this can't be bought.", max=100)
       for t in ("miner", "trader", "lucky", "efficiency")],
@@ -491,13 +492,26 @@ FIELDS: list[Field] = [
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),
     # ---- mini-games ----
-    # shared by the Lucky Block and the wheel first: they're the ones changed most
-    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block and the wheel.", min=1),
-    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block and the wheel.", min=1),
+    # shared by every game of chance first: they're the ones changed most
+    _b("games.min_bet", "chance", "Games of chance: minimum bet", "Lucky Block, wheel, blackjack and mines.", min=1),
+    _b("games.max_bet", "chance", "Games of chance: maximum bet", "Lucky Block, wheel, blackjack and mines.", min=1),
     _b("games.cooldown_seconds", "chance", "Games of chance: seconds between 2 games",
-       "Each game counts its own wait (Lucky Block, the wheel).", max=3600),
+       "Each game counts its own wait (Lucky Block, wheel, blackjack, mines).", max=3600),
     _b("games.daily_win_cap", "chance", "Daily limit at games of chance", "Once a player won this much today at the "
-       "Lucky Block and the wheel (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
+       "games of chance (winnings minus losses), they play again tomorrow. 0 = no limit.", max=1_000_000),
+    _b("games.move_minutes", "chance", "Blackjack & mines: minutes to play a move",
+       "Then the game ends by itself (blackjack: stand; mines: cash out, or the bet back if nothing was dug).",
+       min=1, max=60),
+    _b("games.blackjack_enabled", "chance", "Blackjack open", "Off: /blackjack says it's closed.", kind="bool"),
+    _b("games.blackjack_natural_payout", "chance", "Blackjack: a blackjack pays (×bet)",
+       "On top of the bet back: 1.5 = 3:2.", kind="float", min=1, max=10),
+    _b("games.blackjack_dealer_stands", "chance", "Blackjack: the dealer draws up to", min=12, max=21),
+    _b("games.mines_enabled", "chance", "Mines open", "Off: /mines says it's closed.", kind="bool"),
+    _pct("games.mines_return", "chance", "Mines: share of a fair game paid",
+         "95% = the bank keeps 5% of every cash out on average.", max=1),
+    _b("games.mines_tnt_max", "chance", "Mines: most TNT a player can hide", "In the 20 blocks.", min=1, max=19),
+    _b("games.mines_max_multiplier", "chance", "Mines: cash out by itself at (×bet)",
+       "Keeps a lucky streak from winning millions.", kind="float", min=1, max=10_000),
     _b("games.roulette_enabled", "chance", "Wheel open", "Off: /wheel says it's closed.", kind="bool"),
     _b("games.roulette_zeros", "chance", "Wheel: Diamond blocks (green slots)", "The Diamond blocks make the bank "
        "win a little on average.", kind="choice", min=None,
@@ -620,6 +634,9 @@ FIELDS: list[Field] = [
           _b(f"pve.difficulties.{key}.reward", "pve", f"{name}: reward multiplier",
              "Multiplies the wave rewards.", kind="float", min=0, max=1000),
       )],
+    _pct("pve.difficulties.nightmare.group_monsters", "pve", "Nightmare: monsters added per extra player",
+         "Its own share (the others use \"Monsters added per extra player\"): lower = a raid for a full group.",
+         max=5),
     # ---- species ----
     _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),
     _b("species.change_days", "species", "Days between two changes", kind="float", max=365),

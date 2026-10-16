@@ -53,6 +53,13 @@ def unequip(ctx: Ctx, user_id: int, slot: str) -> dict:
     return dict(row)
 
 
+def unequip_all(ctx: Ctx, user_id: int) -> list[dict]:
+    """Take off every piece. Returns them (empty when nothing was worn)."""
+    rows = [dict(r) for r in ctx.all("SELECT * FROM gear WHERE user_id=? AND equipped=1 ORDER BY gear_id;", (user_id,))]
+    ctx.execute("UPDATE gear SET equipped=0 WHERE user_id=? AND equipped=1;", (user_id,))
+    return enchants.attach(ctx, rows)
+
+
 def equip_best(ctx: Ctx, user_id: int) -> list[dict]:
     """Equip, for every empty slot, the best piece owned (highest tier, then enchantments, then durability)."""
     equipped = get_equipped(ctx, user_id)

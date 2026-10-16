@@ -60,6 +60,15 @@ class FightTests(GameTestCase):
         zombies = pve.spawn(1, "normal", 1)
         self.assertEqual([m.hp for m in zombies], [10.0] * 3)
 
+    def test_nightmare_is_a_raid(self):
+        settings.load()
+        self.assertEqual(settings.get()["pve"]["max_players"], 5)
+        nm = float(settings.get()["pve"]["difficulties"]["nightmare"]["group_monsters"])
+        self.assertLess(nm, settings.get()["pve"]["group_monsters"])  # fewer monsters per extra player
+        self.assertEqual(pve.group_count(4, 5, "nightmare"), 4 + round(4 * nm * 4))
+        self.assertEqual(pve.group_count(4, 5, "hard"), 4 + 16)  # the others: a whole wave per player
+        self.assertEqual(len(pve.spawn(1, "nightmare", 5)), pve.group_count(3, 5, "nightmare"))
+
     def test_two_harming_potions_count_each_kill_once(self):
         heroes = [pve.Hero(uid, 12, 1, 0.2, 20, 20) for uid in (ALICE, BOB)]
         heroes[0].harming = heroes[1].harming = 100.0

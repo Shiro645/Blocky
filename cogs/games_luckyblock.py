@@ -13,6 +13,57 @@ from utils.checks import check_game_channel
 from utils.ui import em
 
 
+# The block breaking, frame by frame (monospace art), before the result.
+FRAMES = (
+    r"""
+     ________
+    /       /|
+   /  ???  / |
+  /_______/  |
+  |       |  |
+  |  ???  |  /
+  |       | /
+  |_______|/
+""",
+    r"""
+     ________
+    /   ,   /|
+   /  ?\?  / |
+  /___/___/  |
+  |   \   |  |
+  |  ?/?  |  /
+  |   \   | /
+  |_______|/
+""",
+    r"""
+     __  ____
+    / \/ /\ /|
+   / ?\ ?/ / |
+  /_/\_/\_/  |
+  |\ /\ / |  |
+  | X  X  |  /
+  |/ \/ \ | /
+  |_/\__\_|/
+""",
+    r"""
+   \   .   |   .   /
+  .  \   \ | /   /  .
+ -  -  - POP! -  -  -
+  .  /   / | \   \  .
+   /   .   |   .   \
+""",
+)
+CAPTIONS = ("*Mining the Lucky Block…*", "*It's cracking…*", "*Almost…*", "*POP!*")
+FRAME_SECONDS = 0.7
+
+
+def frame_embed(user: discord.abc.User, amount: int, n: int) -> discord.Embed:
+    embed = discord.Embed(title="🟨❓ Lucky Block", color=discord.Color.yellow(),
+                          description=f"```{FRAMES[n]}```{CAPTIONS[n]} (bet {em(amount)})")
+    embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
+    return embed
+
+
 def result_embed(user: discord.abc.User, res: dict) -> discord.Embed:
     o, amount, won = res["outcome"], res["amount"], res["won"]
     lines = [f"*{o.text}*", ""]
@@ -58,11 +109,14 @@ class LuckyBlockCog(commands.Cog):
         except BaseException:
             self._next[interaction.user.id] = ready  # nothing was played: no cooldown
             raise
-        suspense = discord.Embed(title="🟨❓ Lucky Block", description=f"*Breaking the block…* (bet {em(amount)})",
-                                 color=discord.Color.yellow())
-        suspense.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
-        await interaction.response.send_message(embed=suspense)
-        await asyncio.sleep(1.5)
+        await interaction.response.send_message(embed=frame_embed(interaction.user, amount, 0))
+        try:
+            for n in range(1, len(FRAMES)):
+                await asyncio.sleep(FRAME_SECONDS)
+                await interaction.edit_original_response(embed=frame_embed(interaction.user, amount, n))
+            await asyncio.sleep(FRAME_SECONDS)
+        except discord.HTTPException:
+            pass
         try:
             await interaction.edit_original_response(embed=result_embed(interaction.user, res))
         except discord.HTTPException:

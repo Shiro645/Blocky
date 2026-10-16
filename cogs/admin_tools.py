@@ -55,6 +55,7 @@ class AdminToolsCog(commands.Cog):
             target = backups.due(backups.backup_dir(self.bot.db.path), now, int(b["hour"]))
             if target is not None:
                 await self.make_backup(target)
+                self.bot.dispatch("blocky_nightly_backup")  # e.g. the check for a new version of the bot
         except Exception:  # an error must never stop the loop
             log.exception("Backup failed")
 

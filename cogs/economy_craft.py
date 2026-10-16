@@ -135,10 +135,16 @@ class EconomyCraftCog(commands.Cog):
             "✅ Equipped:\n" + "\n".join(f"- {gear_label(g)}" for g in done), ephemeral=True
         )
 
-    @app_commands.command(name="unequip", description="Remove the piece of gear from a slot.")
-    @app_commands.describe(slot="The slot to empty")
+    @app_commands.command(name="unequip", description="Remove the piece of gear from a slot, or everything.")
+    @app_commands.describe(slot="The slot to empty (empty = take everything off)")
     @app_commands.choices(slot=ITEM_CHOICES)
-    async def unequip(self, interaction: discord.Interaction, slot: str):
+    async def unequip(self, interaction: discord.Interaction, slot: str | None = None):
+        if slot is None:
+            done = await self.bot.db.run(gear.unequip_all, interaction.user.id)
+            if not done:
+                return await interaction.response.send_message("You have nothing equipped.", ephemeral=True)
+            return await interaction.response.send_message(
+                "✅ Unequipped:\n" + "\n".join(f"- {gear_label(g)}" for g in done), ephemeral=True)
         g = await self.bot.db.run(gear.unequip, interaction.user.id, slot)
         await interaction.response.send_message(f"✅ Unequipped {gear_label(g)}.", ephemeral=True)
 

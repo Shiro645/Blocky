@@ -56,6 +56,17 @@ class LiveEventTests(GameTestCase):
 
         return datetime.fromtimestamp(self.now + days * DAY, ZoneInfo("Europe/Paris")).date()
 
+    async def test_today(self):
+        at = await self.run_game(live_events.random_time)
+        self.now = at - MINUTE
+        self.assertEqual((await self.run_game(live_events.today))["status"], "coming")
+        self.now = at
+        await self.run_game(live_events.tick)
+        day = await self.run_game(live_events.today)
+        self.assertEqual((day["status"], day["event"]["starts_at"]), ("on", int(at)))
+        self.advance(61 * MINUTE)
+        self.assertEqual((await self.run_game(live_events.today))["status"], "passed")
+
     async def test_no_random_event_when_turned_off(self):
         from game import settings
 

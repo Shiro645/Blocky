@@ -204,4 +204,23 @@ UPDATES: tuple[Update, ...] = (
         "the leggings, the boots and the helmet (iron: 250, 234, 203 and 172). Before, boots lasted as long as a "
         "chestplate for half the ingots. Your armor keeps the same share of durability it had.",
     ),
+    Update(
+        "2026-10-1-final", "2026-10-16", "Blocky 1.final",
+        "The last update of Blocky 1: new games of chance, a better Lucky Block and a real raid in the dungeon.",
+        (
+            ("🃏 Blackjack", "`/blackjack <amount>`: beat the dealer without going over 21. Hit, stand or double; a "
+             "blackjack pays 3:2."),
+            ("💣 Mines", "`/mines <amount> [tnt]`: 20 blocks hide some TNT. Each safe block raises your multiplier: "
+             "cash out before the boom!"),
+            ("🟨 Lucky Block", "It now gives back **95%** of the bets on average (84% before): diamonds, emeralds and "
+             "netherite fall out much more often, with an animation of the block breaking."),
+            ("🏰 Dungeon", "Groups of up to **5**. **Nightmare** is now a raid: far stronger monsters, made for a full "
+             "group of 5 in enchanted diamond."),
+            ("⭐ Levels", "Each level now needs 5% more XP than the previous one: the first levels come faster, the "
+             "highest ones take longer. You keep your level."),
+            ("🎨 Cosmetics", "Colors, frames and team banners are **half price**."),
+            ("🛠️ Small things", "`/unequip` without a slot takes everything off, and `/events` tells you whether "
+             "today's event already came."),
+        ),
+    ),
 )

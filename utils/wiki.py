@@ -278,7 +278,12 @@ SECTIONS: tuple[Section, ...] = (
         "(the red and black numbers) and double your bet if the wheel stops on it, or on one number (0 to 36) for "
         "36 times your bet. The 💎 **Diamond block** (the 0) makes every Redstone or Obsidian bet "
         "lose.\n"
-        "The 🎲 **Gambler** species can bet more at both games.\n"
+        "**Blackjack**: `/blackjack <amount>`: get closer to 21 than the dealer without going over. **Hit**, "
+        "**Stand** or **Double** with the buttons; a blackjack (21 with your first two cards) pays 3:2.\n"
+        "**Mines**: `/mines <amount> [tnt]`: 20 blocks hide some TNT. Dig them one by one: each safe block raises "
+        "your multiplier, and you **cash out** when you want. Hit the TNT and you lose the bet.\n"
+        "All these games share the same bets and the daily limit on winnings, and the 🎲 **Gambler** species can "
+        "bet more at all of them.\n"
         "**Blockdle**: guess the Minecraft block of the day with `/blockdle guess`. After each guess you see how "
         "your block compares on 6 properties (tool, hardness, blast resistance, transparent, craftable, version). "
         "The fewer guesses, the bigger the reward. `/blockdle today` and `/blockdle top`.\n"
@@ -289,7 +294,7 @@ SECTIONS: tuple[Section, ...] = (
         "Low-level players can't be robbed, a robbed player is safe for a while, and nobody can start a robbery "
         "at night (everyone is asleep).\n"
         "Winnings from these games don't count for the seasons.",
-        ("luckyblock", "wheel", "blockdle guess", "quiz", "rob"),
+        ("luckyblock", "wheel", "blackjack", "mines", "blockdle guess", "quiz", "rob"),
     ),
     Section(
         "minecraft", "🌍 The Minecraft server",

@@ -19,6 +19,7 @@ from utils.ui import ConfirmView
 log = logging.getLogger("update")
 
 PENDING_KEY = "update_pending"  # botstate: {"id", "channel_id", "user_id", "at"} of the running update
+ALERTED_KEY = "update_alerted"  # botstate: the GitHub version the staff were last told about
 UPDATE_MINUTES = 20  # longest wait for an update (pull + build)
 
 
@@ -136,6 +137,37 @@ class UpdateCog(commands.Cog):
 
         await interaction.followup.send(embed=embed, view=ConfirmView(interaction.user.id, "Update and restart", go),
                                         ephemeral=True)
+
+
+    # ---------- the nightly check ----------
+    @commands.Cog.listener()
+    async def on_blocky_nightly_backup(self) -> None:
+        """Right after the nightly backup: if GitHub has a new version, tell the staff (once per version)."""
+        try:
+            await self.alert_if_behind()
+        except Exception:  # never break the backup loop
+            log.exception("Nightly update check failed")
+
+    async def alert_if_behind(self) -> bool:
+        if not selfupdate.updater_alive():
+            return False  # no updater: /bot_update can't run anyway
+        rid = selfupdate.request("check")
+        res = await selfupdate.wait_result(rid, 90)
+        selfupdate.forget(rid)
+        if not res or not res.get("ok") or not res.get("behind"):
+            return False
+        if await self.bot.db.run(botstate.get, ALERTED_KEY) == res["remote"]:
+            return False  # already told about this version
+        channel = self.bot.get_channel(channel_id("staff_log") or 0)
+        if not isinstance(channel, discord.abc.Messageable):
+            return False
+        embed = discord.Embed(title=f"🔄 Blocky can be updated: {res['behind']} new change(s) on GitHub",
+                              description=commit_lines(res["commits"]) or "(merges only)", color=discord.Color.blurple())
+        embed.add_field(name="Version", value=f"`{res['head']}` → `{res['remote']}`", inline=False)
+        embed.set_footer(text="Use /bot_update to install them: the bot rebuilds and restarts (a few minutes).")
+        await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        await self.bot.db.run(botstate.put, ALERTED_KEY, res["remote"])
+        return True
 
 
 async def setup(bot: commands.Bot):

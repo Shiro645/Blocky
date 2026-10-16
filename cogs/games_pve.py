@@ -61,7 +61,7 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
                 lines.append(f"🏆 **The dungeon is cleared!** Loot +{float(c['clear_bonus']):.0%}, paid to everyone left.")
         if run["status"] == "between":
             nxt = run["wave"] + 1
-            lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, len(run['in']))} "
+            lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, len(run['in']), diff)} "
                          f"(+{em(pve.wave_reward(diff, nxt))} each)")
         elif run["status"] == "done" and last is None:
             lines.append("This run is over.")
