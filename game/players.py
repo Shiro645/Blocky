@@ -370,6 +370,23 @@ def add_talent_points(ctx: Ctx, user_id: int, delta: int) -> dict:
     return get_user(ctx, user_id)
 
 
+def talent_reset_cost(user: dict) -> int:
+    """What /talent_reset costs: a price per spent point, never under the minimum."""
+    t = settings.get()["talents"]
+    return max(int(t["reset_cost_min"]), int(t["reset_cost_per_point"]) * _spent_talent_points(user))
+
+
+def buy_talent_reset(ctx: Ctx, user_id: int) -> dict:
+    """/talent_reset: the player pays to get every spent point back."""
+    user = get_user(ctx, user_id)
+    if not _spent_talent_points(user):
+        raise GameError("You haven't spent any talent point: nothing to reset.")
+    cost = talent_reset_cost(user)
+    spend_emeralds(ctx, user_id, cost)
+    bump_stat(ctx, user_id, "talent_resets")
+    return {**reset_talents(ctx, user_id), "cost": cost}
+
+
 def reset_talents(ctx: Ctx, user_id: int) -> dict:
     """Refund every spent point."""
     user = get_user(ctx, user_id)

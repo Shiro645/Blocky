@@ -30,7 +30,8 @@
     "species_witch": 0,
     "species_mage": 0,
     "species_miner": 0,
-    "event_ping": 0
+    "event_ping": 0,
+    "untouchable": 0
   },
   "emojis": {},
   "minecraft": {

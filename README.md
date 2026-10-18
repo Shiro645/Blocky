@@ -93,7 +93,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 
 ### ⭐ XP & talents
 
-- `/xp`, `/talents`, `/talent_buy <branch> [points]`
+- `/xp`, `/talents`, `/talent_buy <branch> [points]`, `/talent_reset` (every spent point back for 50 emeralds a point, at least 100: `balance.talents.reset_cost_per_point`, `reset_cost_min`; asks to confirm)
 - XP comes from activity; 1 talent point every 5 levels.
 - Branches (each has a cap): **Miner** (better blocks), **Trader** (sell bonus), **Lucky** (bedrock chance), **Efficiency** (shorter cooldown).
 - Level-ups are announced, and configurable **level roles** are given automatically.
@@ -189,7 +189,7 @@ They work in the game channels set in `/config` (`channels.games`) and in the gu
   | 💀 Nightmare | 1,200 | ×1.42 | 3,360 | enchanted netherite ~35% (potions help) |
 
   Monsters get +10% health and damage every wave. Everything is tuned with `balance.pve` (`/config` → Combat → Dungeon and Dungeon monsters).
-- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted in the robberies channel (`channels.robberies`, `/config` → Channels; game channels are busy with commands, so only the bot should write there) — or where `/rob` was used when none is set — with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, **no robbery can start from 22:00 to 06:00** (server time; one started at 21:59 keeps going: `night_start_hour`, `night_end_hour`, the same hour twice = robberies all day), and stolen emeralds don't count for the seasons. All tuned with `balance.rob` (`/config` → Robberies).
+- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). The robbery is posted in the robberies channel (`channels.robberies`, `/config` → Channels; game channels are busy with commands, so only the bot should write there) — or where `/rob` was used when none is set — with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, **no robbery can start from 22:00 to 06:00** (server time; one started at 21:59 keeps going: `night_start_hour`, `night_end_hour`, the same hour twice = robberies all day), and stolen emeralds don't count for the seasons. Members with the **Untouchables** role (`roles.untouchable`, `/config` → Roles, given by hand by the staff) can't be robbed and can't rob anyone. All tuned with `balance.rob` (`/config` → Robberies).
 - Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_enabled`, `roulette_bets`, `roulette_zeros` (1 = 0 only, the default; 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `blockdle_no_repeat_days` (days before a block of the day comes back), `quiz_every_minutes` (0 = only `/event quiz`), `quiz_every_jitter` (e.g. `0.25` = give or take 25%), `quiz_no_repeat` (the last questions not asked again), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Games & events (Games of chance, Blockdle & quiz).
 
 ### 🛡️ Teams
@@ -288,6 +288,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `roles.updates_ping` | Role pinged when a new feature is announced (0 = no ping) |
 | `roles.blocky_player` | Blocky player role: only its members get a guide channel (give it with an onboarding question in *Channels & Roles*; 0 = no guide channels) |
 | `roles.team_leader` | Role given to every team leader (and taken back when they no longer lead a team) |
+| `roles.untouchable` | Untouchables: members with this role can't be robbed and can't rob (given by hand by the staff) |
 | `roles.species_villager` … `species_gambler` | Role given to the players of each species (`species_villager`, `species_dwarf`, `species_witch`, `species_mage`, `species_miner`, `species_gambler`) |
 | `roles.event_ping` | Role pinged when a boss appears, the wandering villager arrives or a tournament opens (0 = no ping). Nobody else is pinged. |
 | `minecraft.server_host` / `server_port` | Minecraft server address used by `/server_status` |
