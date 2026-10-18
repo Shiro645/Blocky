@@ -48,6 +48,8 @@ DEFAULTS: dict[str, Any] = {
         "miner_bonus_min_pile": 4,  # the bonus block only comes on piles of at least this many blocks (1-6)
         # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
         "lucky_rare_weight": 1,
+        # /talent_reset: every spent point back for reset_cost_per_point emeralds a point (never under reset_cost_min).
+        "reset_cost_per_point": 50, "reset_cost_min": 100,
     },
     # XP to go from a level to the next: xp_first_level at level 1, then xp_growth_per_level times more each level
     # (1.05 = +5% a level: level 10 needs 155, level 50 needs 1,092, level 100 needs 12,524).

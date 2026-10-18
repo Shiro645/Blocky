@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from game import robbery, settings
 from game.errors import GameError
 from utils.checks import check_game_channel
-from utils.config import channel_id
+from utils.config import channel_id, role_id
 from utils.ui import dm, em, report_error
 
 log = logging.getLogger("rob")
@@ -63,6 +63,12 @@ def rob_view(rob: dict) -> discord.ui.View:
     return view
 
 
+def is_untouchable(member: discord.abc.User) -> bool:
+    """Members with roles.untouchable are out of the robberies: nobody robs them, they rob nobody."""
+    rid = role_id("untouchable")
+    return bool(rid) and isinstance(member, discord.Member) and member.get_role(rid) is not None
+
+
 def can_see(channel: discord.abc.GuildChannel | discord.Thread, member: discord.Member) -> bool:
     try:
         return channel.permissions_for(member).view_channel
@@ -90,6 +96,10 @@ class RobCog(commands.Cog):
         check_game_channel(interaction)
         if member.bot:
             raise GameError("Bots have nothing worth stealing.")
+        if is_untouchable(member):
+            raise GameError(f"🛡️ {member.mention} is **untouchable**: nobody can rob them.")
+        if is_untouchable(interaction.user):
+            raise GameError("🛡️ You're **untouchable**: nobody robs you, and you don't rob anyone either.")
         if interaction.channel_id in getattr(self.bot, "guide_channels", {}):
             raise GameError("Not from a guide channel: the victim must be able to see the robbery.")
         # Where it's posted: the robberies channel, else here; always where the victim can see the button.

@@ -13,7 +13,8 @@ MINUTE = 60
 
 def set_hand(ctx, game_id: int, player: list[str], dealer: list[str]) -> None:
     game = gambling.get_game(ctx, game_id)
-    game["state"].update({"player": player, "dealer": dealer})
+    deck = [c for c in blackjack.new_deck(random.Random(0)) if c not in player + dealer]
+    game["state"].update({"player": player, "dealer": dealer, "deck": deck})
     gambling.save_game(ctx, game)
 
 
@@ -39,6 +40,22 @@ class BlackjackTests(GameTestCase):
                 return game
             await self.run_game(players.give_emeralds, ALICE, amount * 3)  # keep enough to play again
         raise AssertionError("no plain deal found")
+
+    def test_a_real_deck(self):
+        deck = blackjack.new_deck(random.Random(1))
+        self.assertEqual((len(deck), len(set(deck))), (52, 52))
+
+    async def test_no_card_comes_out_twice(self):
+        settings.load({"games": {"max_bet": 10_000, "daily_win_cap": 0}})
+        await self.run_game(players.give_emeralds, ALICE, 100_000)
+        for seed in range(200):
+            self.db.rng = random.Random(seed)
+            game = await self.run_game(blackjack.start, ALICE, 10)
+            while game["status"] == "active":
+                game = await self.run_game(blackjack.hit, game["game_id"], ALICE)
+            table = game["state"]["player"] + game["state"]["dealer"]
+            self.assertEqual(len(table), len(set(table)), table)
+            self.assertEqual(len(table) + len(game["state"]["deck"]), 52)
 
     async def test_stand_and_win(self):
         game = await self.start(["10♠", "9♥"], ["10♦", "7♣"])

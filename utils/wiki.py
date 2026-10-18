@@ -86,7 +86,8 @@ SECTIONS: tuple[Section, ...] = (
         "**Talents**: every few levels you get a **talent point**. Spend it with `/talent_buy <branch> [points]` in "
         "one of 4 branches, each with a maximum: **Miner** (better blocks), **Trader** (better sale prices), "
         "**Lucky** (more obsidian and bedrock) and **Efficiency** (shorter mining cooldown). `/talents` shows your "
-        "points and what each branch does. Choose your style: points can only be reset by the staff.\n"
+        "points and what each branch does. Changed your mind? `/talent_reset` gives all your points back, for some "
+        "emeralds.\n"
         "`/xp` shows your level, your XP bar and your talent points.",
         ("xp", "talents"),
     ),
@@ -292,7 +293,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Robbery**: `/rob <member> <mode>`: **risky** (they get pinged, big loot) or **discreet** (no ping, small "
         "loot). The victim has a while to press **Stop the thief!**: then the thief pays them a fine instead. "
         "Low-level players can't be robbed, a robbed player is safe for a while, and nobody can start a robbery "
-        "at night (everyone is asleep).\n"
+        "at night (everyone is asleep). **Untouchables** (a role the staff gives) can't be robbed and don't rob.\n"
         "Winnings from these games don't count for the seasons.",
         ("luckyblock", "wheel", "blackjack", "mines", "blockdle guess", "quiz", "rob"),
     ),

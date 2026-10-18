@@ -236,6 +236,9 @@ FIELDS: list[Field] = [
                "question in Channels & Roles) and is deleted if they lose it. Not set = no guide channels."),
     Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
           help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
+    Field("role_untouchable", "roles", "Untouchables role", ("roles", "untouchable"), "role",
+          help="Members with this role are out of the robberies: nobody can /rob them and they can't /rob anyone. "
+               "The staff gives and takes it by hand. Not set = nobody is untouchable."),
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
             help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
       for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
@@ -275,6 +278,10 @@ FIELDS: list[Field] = [
     *[_b(f"talents.caps.{t}", "xp", f"{t.capitalize()} talent: max points", "Points beyond this can't be bought.", max=100)
       for t in ("miner", "trader", "lucky", "efficiency")],
     _pct("talents.trader_bonus_per_point", "xp", "Trader: /sell bonus per point"),
+    _b("talents.reset_cost_per_point", "xp", "Talent reset: price per point", "/talent_reset costs this many "
+       "emeralds for each spent point it gives back.", max=1_000_000),
+    _b("talents.reset_cost_min", "xp", "Talent reset: minimum price", "/talent_reset never costs less than this.",
+       max=1_000_000),
     _b("talents.efficiency_seconds_per_point", "xp", "Efficiency: seconds less per point", "Shorter mining cooldown.", max=3600),
     _b("talents.miner_gravel_4_5", "xp", "Miner: gravel weight/point (4-5)", "Added to gravel on piles of 4-5 blocks."),
     _b("talents.miner_gravel_4_5_max", "xp", "Miner: max gravel bonus (4-5)"),

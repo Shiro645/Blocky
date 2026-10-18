@@ -1,6 +1,7 @@
 """Blackjack (/blackjack): beat the dealer without going over 21.
 
-- Cards come from an endless shoe (every card as likely each time). Aces count 1 or 11, faces 10.
+- Each hand is dealt from a real deck of 52 cards, shuffled: a card comes out once (at most 4 of a rank).
+  Aces count 1 or 11, faces 10.
 - You get two cards, the dealer one face up and one face down. 21 with your first two cards is a
   **blackjack**: it pays games.blackjack_natural_payout (3:2), unless the dealer has one too (a push).
 - Hit (one more card), stand (the dealer plays), or double (twice the bet, one card, then you stand).
@@ -26,8 +27,19 @@ def _cfg() -> dict:
     return settings.get()["games"]
 
 
-def draw(rng: random.Random) -> str:
-    return rng.choice(RANKS) + rng.choice(SUITS)
+def new_deck(rng: random.Random) -> list[str]:
+    deck = [rank + suit for rank in RANKS for suit in SUITS]
+    rng.shuffle(deck)
+    return deck
+
+
+def draw(state: dict, rng: random.Random) -> str:
+    """The next card of the hand's deck (a hand started before the deck existed gets one without the cards
+    already on the table)."""
+    if "deck" not in state:
+        dealt = state["player"] + state["dealer"]
+        state["deck"] = [c for c in new_deck(rng) if c not in dealt]
+    return state["deck"].pop()
 
 
 def value(cards: list[str]) -> int:
@@ -51,7 +63,9 @@ def is_blackjack(cards: list[str]) -> bool:
 def start(ctx: Ctx, user_id: int, amount: int) -> dict:
     if not _cfg()["blackjack_enabled"]:
         raise GameError("🃏 The blackjack table is closed for now.")
-    state = {"player": [draw(ctx.rng), draw(ctx.rng)], "dealer": [draw(ctx.rng), draw(ctx.rng)], "doubled": False}
+    state = {"player": [], "dealer": [], "doubled": False, "deck": new_deck(ctx.rng)}
+    for hand in ("player", "dealer", "player", "dealer"):  # dealt in turn, like at a table
+        state[hand].append(draw(state, ctx.rng))
     game = gambling.open_game(ctx, user_id, KIND, amount, state)
     players.bump_stat(ctx, user_id, "blackjack_hands")
     players.bump_stat(ctx, user_id, "blackjack_bet", amount)
@@ -62,7 +76,7 @@ def start(ctx: Ctx, user_id: int, amount: int) -> dict:
 
 def hit(ctx: Ctx, game_id: int, user_id: int) -> dict:
     game = gambling.my_game(ctx, game_id, user_id, KIND)
-    game["state"]["player"].append(draw(ctx.rng))
+    game["state"]["player"].append(draw(game["state"], ctx.rng))
     if value(game["state"]["player"]) >= 21:
         return _finish(ctx, game)  # bust, or 21: nothing more to ask
     return gambling.save_game(ctx, game)
@@ -84,7 +98,7 @@ def double(ctx: Ctx, game_id: int, user_id: int) -> dict:
     players.spend_emeralds(ctx, user_id, extra)
     players.bump_stat(ctx, user_id, "blackjack_bet", extra)
     game["state"]["doubled"] = True
-    game["state"]["player"].append(draw(ctx.rng))
+    game["state"]["player"].append(draw(game["state"], ctx.rng))
     game = gambling.save_game(ctx, game, extra_bet=extra)
     return _finish(ctx, game)
 
@@ -104,7 +118,7 @@ def _finish(ctx: Ctx, game: dict) -> dict:
         result, paid = "bust", 0
     else:
         while value(dealer) < int(_cfg()["blackjack_dealer_stands"]):
-            dealer.append(draw(ctx.rng))
+            dealer.append(draw(state, ctx.rng))
         mine, theirs = value(player), value(dealer)
         if theirs > 21 or mine > theirs:
             result, paid = "win", bet * 2

@@ -153,6 +153,20 @@ class ProgressionTests(GameTestCase):
         self.assertEqual(p["talent_points"], 4)
         self.assertEqual(p["trader_points"], 0)
 
+    async def test_paid_reset(self):
+        with self.assertRaisesRegex(GameError, "nothing to reset"):
+            await self.run_game(players.buy_talent_reset, ALICE)
+        await self.run_game(players.add_talent_points, ALICE, 5)
+        await self.run_game(players.buy_talent, ALICE, "miner", 1)
+        await self.run_game(players.give_emeralds, ALICE, 99)
+        with self.assertRaisesRegex(GameError, "Not enough emeralds"):  # 1 point: the 100 minimum
+            await self.run_game(players.buy_talent_reset, ALICE)
+        await self.run_game(players.buy_talent, ALICE, "efficiency", 3)  # 4 points: 4 × 50
+        await self.run_game(players.give_emeralds, ALICE, 201)
+        p = await self.run_game(players.buy_talent_reset, ALICE)
+        self.assertEqual((p["cost"], p["talent_points"], p["miner_points"], p["efficiency_points"]), (200, 5, 0, 0))
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 100)
+
 
 class MiningTests(GameTestCase):
     async def test_mine_adds_blocks_xp_and_stats(self):

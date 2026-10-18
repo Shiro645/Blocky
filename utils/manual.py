@@ -284,7 +284,10 @@ def _talents(s: Settings) -> list[str]:
         "efficiency": f"mining cooldown **-{num(t['efficiency_seconds_per_point'])} s** per point "
         f"(never below {duration(s['mining']['min_cooldown_seconds'])})",
     }
-    return [f"**{b.capitalize()}** (max {num(caps[b])}): {effects[b]}" for b in TALENT_BRANCHES]
+    return [f"**{b.capitalize()}** (max {num(caps[b])}): {effects[b]}" for b in TALENT_BRANCHES] + [
+        f"/talent_reset: every spent point back for **{num(t['reset_cost_per_point'])}** emeralds a point "
+        f"(at least **{num(t['reset_cost_min'])}**)",
+    ]
 
 
 def _auction(s: Settings) -> list[str]:
@@ -601,6 +604,7 @@ def _rob(s: Settings) -> list[str]:
          f"**{int(r['night_end_hour']):02d}:00** (one started before keeps going)"
          if int(r["night_start_hour"]) != int(r["night_end_hour"]) else "Robberies are possible day and night"),
         "Stolen emeralds and fines don't count for the seasons",
+        "Members with the Untouchables role (set by the staff) can't be robbed, and can't rob anyone",
     ]
 
 
@@ -809,15 +813,23 @@ PAGES: list[Page] = [
         "Shows the 4 talent branches, what they do, your points in each and their maximum.",
         _talents,
         examples=("/talents",),
-        related=("talent_buy", "xp"),
+        related=("talent_buy", "talent_reset", "xp"),
     ),
     Page(
         "talent_buy", "progress",
-        "Spends talent points in a branch. Points are permanent (only staff can reset talents), "
-        "and a branch can't go above its maximum.",
+        "Spends talent points in a branch. A branch can't go above its maximum. Changed your mind? /talent_reset "
+        "gives every point back, for emeralds.",
         _talents,
         examples=("/talent_buy branch:efficiency points:2",),
-        related=("talents", "xp"),
+        related=("talents", "talent_reset", "xp"),
+    ),
+    Page(
+        "talent_reset", "progress",
+        "Gives back every talent point you spent, to spend again with /talent_buy. It costs emeralds for each point "
+        "it gives back (with a minimum price), and asks you to confirm first.",
+        _talents,
+        examples=("/talent_reset",),
+        related=("talent_buy", "talents"),
     ),
     Page(
         "species choose", "profile",
@@ -1162,7 +1174,7 @@ PAGES: list[Page] = [
         "blackjack", "games",
         "A hand of **blackjack** against the dealer: get closer to 21 than him without going over. Aces count 1 or "
         "11, faces 10. **Hit** takes a card, **Stand** lets the dealer play, **Double** doubles your bet for one "
-        "last card. 21 with your first two cards is a **blackjack** and pays 3:2. Only you can use the buttons.",
+        "last card. Each hand uses a real 52-card deck, shuffled. 21 with your first two cards is a **blackjack** and pays 3:2. Only you can use the buttons.",
         _blackjack,
         examples=("/blackjack amount:50",),
         related=("mines", "luckyblock"),

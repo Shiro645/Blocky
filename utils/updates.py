@@ -223,4 +223,18 @@ UPDATES: tuple[Update, ...] = (
              "today's event already came."),
         ),
     ),
+    Update(
+        "2026-10-blackjack-deck", "2026-10-18", "Blackjack: a real deck",
+        "Each hand of `/blackjack` is now dealt from a real 52-card deck, shuffled: a card comes out only once "
+        "(no more five cards of the same value).",
+    ),
+    Update(
+        "2026-10-talent-reset", "2026-10-18", "Reset your talents",
+        "Changed your mind about your talents? `/talent_reset` gives back every point you spent, to spend again "
+        "with `/talent_buy`. It costs emeralds for each point given back.",
+    ),
+    Update(
+        "2026-10-untouchables", "2026-10-18", "Untouchables",
+        "Members with the **Untouchables** role can't be robbed, and can't rob anyone either.",
+    ),
 )

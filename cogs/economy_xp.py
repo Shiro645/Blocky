@@ -6,7 +6,8 @@ from discord.ext import commands
 
 from game import players, settings
 from game.catalog import TALENT_BRANCHES, TALENT_INFO
-from utils.ui import EMOJI, progress_bar
+from game.errors import GameError
+from utils.ui import EMOJI, ConfirmView, em, progress_bar
 
 BRANCH_CHOICES = [app_commands.Choice(name=b, value=b) for b in TALENT_BRANCHES]
 
@@ -53,7 +54,8 @@ class EconomyXPCog(commands.Cog):
             name="How to earn and spend",
             value=(
                 f"You earn 1 point every **{settings.get()['talents']['points_every_levels']}** levels. "
-                "Spend them with `/talent_buy`."
+                "Spend them with `/talent_buy`. Changed your mind? `/talent_reset` gives them all back for "
+                f"{em(players.talent_reset_cost(p))}."
             ),
             inline=False,
         )
@@ -70,6 +72,27 @@ class EconomyXPCog(commands.Cog):
             f"✅ Spent **{points}** point(s) into **{branch}**. "
             f"Now: **{updated[branch + '_points']}/{players.talent_cap(branch)}**.",
             ephemeral=True,
+        )
+
+    @app_commands.command(name="talent_reset", description="Pay emeralds to get back every talent point you spent.")
+    async def talent_reset(self, interaction: discord.Interaction):
+        user = interaction.user
+        p = await self.bot.db.run(players.get_user, user.id)
+        spent = sum(p[b + "_points"] for b in TALENT_BRANCHES)
+        if not spent:
+            raise GameError("You haven't spent any talent point: nothing to reset.")
+
+        async def do(i: discord.Interaction) -> None:
+            res = await self.bot.db.run(players.buy_talent_reset, user.id)
+            await i.response.edit_message(
+                content=f"🌟 Talents reset (-{em(res['cost'])}). You have **{res['talent_points']}** points to "
+                        "spend again with `/talent_buy`.", view=None)
+
+        branches = ", ".join(f"{b} {p[b + '_points']}" for b in TALENT_BRANCHES if p[b + "_points"])
+        await interaction.response.send_message(
+            f"Reset your talents ({branches}) and get your **{spent}** point(s) back for "
+            f"{em(players.talent_reset_cost(p))}?",
+            view=ConfirmView(user.id, "Reset", do), ephemeral=True,
         )
 
 
