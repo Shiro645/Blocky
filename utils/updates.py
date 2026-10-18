@@ -223,4 +223,9 @@ UPDATES: tuple[Update, ...] = (
              "today's event already came."),
         ),
     ),
+    Update(
+        "2026-10-blackjack-deck", "2026-10-18", "Blackjack: a real deck",
+        "Each hand of `/blackjack` is now dealt from a real 52-card deck, shuffled: a card comes out only once "
+        "(no more five cards of the same value).",
+    ),
 )

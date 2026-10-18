@@ -1162,7 +1162,7 @@ PAGES: list[Page] = [
         "blackjack", "games",
         "A hand of **blackjack** against the dealer: get closer to 21 than him without going over. Aces count 1 or "
         "11, faces 10. **Hit** takes a card, **Stand** lets the dealer play, **Double** doubles your bet for one "
-        "last card. 21 with your first two cards is a **blackjack** and pays 3:2. Only you can use the buttons.",
+        "last card. Each hand uses a real 52-card deck, shuffled. 21 with your first two cards is a **blackjack** and pays 3:2. Only you can use the buttons.",
         _blackjack,
         examples=("/blackjack amount:50",),
         related=("mines", "luckyblock"),
