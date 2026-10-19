@@ -309,4 +309,19 @@ UPDATES: tuple[Update, ...] = (
              "The top 3 teams share the pot, straight into their chests."),
         ),
     ),
+    Update(
+        "2026-10-bounties", "2026-10-20", "Bounties",
+        "Put a price on someone's head!",
+        (
+            ("🎯 Wanted",
+             "`/bounty place <member> <amount>`: 250, 500, 1,000 or 2,500 emeralds on a player's head (level 10 and "
+             "up). Nobody knows who paid, and bounties on the same player add up."),
+            ("🗡️ Claim it",
+             "Beat them in a duel, rob them, or make them fall in a raid: you take everything on their head. Never "
+             "on a teammate."),
+            ("⏳ A week",
+             "Unclaimed after 7 days, the bounty goes back to its payer minus 10%. A player who just lost a bounty is "
+             "safe from new ones for a day. `/bounty list` shows who is wanted."),
+        ),
+    ),
 )

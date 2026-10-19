@@ -78,6 +78,7 @@ EXTENSIONS = [
     "cogs.games_boss",
     "cogs.player_beacon",
     "cogs.competition_war",
+    "cogs.competition_bounty",
     "cogs.games_dummy",
     "cogs.help_command",
 ]

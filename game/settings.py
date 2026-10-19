@@ -430,6 +430,15 @@ DEFAULTS: dict[str, Any] = {
         "raid_protection_hours": 24,  # a raided chest is safe for this long
         "raid_max_rounds": 40,
     },
+    # Bounties (/bounty): fixed tiers that add up on the same head, claimed by beating the target in a duel,
+    # a /rob or a raid. Unclaimed after `days`, the payer gets it back minus refund_tax.
+    "bounty": {
+        "tiers": [250, 500, 1000, 2500],
+        "min_level": 10,  # for the payer and the target
+        "days": 7,
+        "refund_tax": 0.10,
+        "protection_hours": 24,  # no new bounty on a player this long after one was claimed
+    },
     # Profile customization (/customize) and team banners (/team banner).
     "profiles": {
         "bio_max": 150,
@@ -852,6 +861,8 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if int(w["raid_min_attackers"]) > int(w["raid_max_attackers"]):
         out.append(("`balance.war`: a raid's minimum attackers can't be above its maximum.",
                     [("war", "raid_min_attackers"), ("war", "raid_max_attackers")]))
+    if any(int(t) <= 0 for t in merged["bounty"]["tiers"]):
+        out.append(("`balance.bounty.tiers`: each tier is at least 1 emerald.", [("bounty", "tiers")]))
     if any(int(n) <= 0 or int(n) % 9 for n in merged["beacon"]["level_ingots"]):
         out.append(("`balance.beacon.level_ingots`: each level is whole blocks, a multiple of 9 ingots.",
                     [("beacon", "level_ingots")]))

@@ -44,6 +44,8 @@ def raid_embed(raid: dict) -> discord.Embed:
             lines.append(f"\n🏴 **{a} plundered {d}'s chest: {em(raid['stolen'])} taken!**")
         else:
             lines.append(f"\n🛡️ **{d} pushed the raid back!**")
+        lines += [f"🎯 <@{b['hunter_id']}> claims the bounty on <@{b['target_id']}>'s head: {em(b['amount'])}!"
+                  for b in raid.get("bounties", [])]
     embed = discord.Embed(title=f"🏴 Raid on {d}", description=join_lines(lines, 4000),
                           color=COLORS.get(raid["status"]))
     embed.add_field(name=f"Attackers ({len(raid['attackers'])})",

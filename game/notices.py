@@ -64,3 +64,28 @@ class GuideProgress:
     total: int
     completed: bool
     reward: int  # paid now (0 if it was already paid once)
+
+
+@dataclass(frozen=True)
+class BountyPlaced:
+    payer_id: int  # never shown publicly (only in the staff log)
+    target_id: int
+    amount: int
+    total: int  # everything on the target's head now
+    expires_at: int
+
+
+@dataclass(frozen=True)
+class BountyClaimed:
+    hunter_id: int
+    target_id: int
+    amount: int
+    via: str  # duel | rob | raid
+
+
+@dataclass(frozen=True)
+class BountyExpired:
+    payer_id: int
+    target_id: int
+    amount: int
+    refund: int

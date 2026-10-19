@@ -19,7 +19,7 @@ import json
 import random
 from dataclasses import dataclass, field
 
-from game import gear, players, potions, settings, species
+from game import bounty, gear, players, potions, settings, species
 from game.catalog import ARMOR, SHIELD
 from game.db import Ctx
 from game.errors import GameError
@@ -304,6 +304,7 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
     from game import war  # war depends on this module
 
     war_points = war.on_duel(ctx, winner.user_id, loser.user_id)
+    claimed = bounty.claim(ctx, winner.user_id, loser.user_id, "duel")
 
     broken: list[tuple[int, str]] = []
     for fighter in fight.fighters:
@@ -328,6 +329,7 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
         "rounds": fight.rounds,
         "broken": broken,
         "war_points": war_points,
+        "bounty": claimed,
     }
 
 

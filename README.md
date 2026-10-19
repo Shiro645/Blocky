@@ -232,6 +232,12 @@ They work in the game channels set in `/config` (`channels.games`) and in the gu
 - **Raids** — `/team raid <team>`: you open a raid against another team at war; **2 to 4** members of your team join with the button within **5 min** (the leader can launch earlier). Then the target's members are pinged and have **30 min** to click **Defend** (up to 4). Then both sides fight it out at once, with their gear like in duels (each fighter hits a random enemy every round; gear wears out). The attackers win, or nobody defended: they take **15%** of the chest (5,000 at most) into their own chest. No raids at night (22:00–06:00, like `/rob`), one raid a day per team, and a raided chest is safe for **24 h**. **Raider** achievement for 5 raids won.
 - All in `balance.war` (`/config` → Games & events → 🏴 Gang wars).
 
+### 🎯 Bounties
+- `/bounty place <member> <amount>` — puts **250 / 500 / 1,000 / 2,500** emeralds (fixed tiers) on a player's head. The payer and the target need level **10**; never on yourself or a teammate. The payer stays anonymous: the announcement and `/bounty list` never name them (only the staff log does). The target gets a DM. Bounties on the same player add up.
+- **Claiming** — the winner of a duel against the target, the thief of a successful `/rob` on them, or the raider (attacker or defender) whose blow makes them fall in a raid takes everything on their head, never one of their teammates. Announced, and shown in the duel, robbery and raid results.
+- Each bounty lasts **7 days**; unclaimed, its payer gets it back minus **10%** (DM). After a claim, no new bounty on that player for **24 h**. `/bounty list` shows who is wanted, `/bounty info` the rules and your own. A reset of the emeralds drops the active bounties (no refund).
+- All in `balance.bounty` (`/config` → Games & events → 💀 Bounties).
+
 ### 🎨 Profile customization
 
 Everything shows on the profile card of `/profile`. Each change shows a preview card only you see; what costs emeralds asks for a confirmation first.
@@ -575,6 +581,7 @@ game/                        # game rules, no Discord code
 ├── gate.py                  # gate bosses (Wither, Ender Dragon, Warden)
 ├── beacon.py                # the server's Beacon
 ├── war.py                   # gang wars: team chests, the weekly war, raids
+├── bounty.py                # bounties on players' heads
 ├── live_events.py           # timed events (Gambling Frenzy, Mining Rush, Golden Hour, Lucky Hour, Market Sale)
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature

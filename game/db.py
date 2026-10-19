@@ -715,6 +715,23 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (raid_id, user_id)
     );
     """,
+    # 37: bounties: emeralds on a player's head (one row per payer: they add up on the same target)
+    """
+    CREATE TABLE bounties (
+        bounty_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_id INTEGER NOT NULL,
+        payer_id INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',  -- active | claimed | expired | cancelled
+        claimed_by INTEGER,
+        claimed_via TEXT,                       -- duel | rob | raid
+        ended_at INTEGER
+    );
+    CREATE INDEX idx_bounties_target ON bounties(target_id, status);
+    CREATE INDEX idx_bounties_status ON bounties(status, expires_at);
+    """,
 ]
 
 

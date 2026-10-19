@@ -17,7 +17,7 @@ import json
 import random
 from dataclasses import dataclass
 
-from game import botstate, duel, gear, players, robbery, settings, teams
+from game import botstate, bounty, duel, gear, players, robbery, settings, teams
 from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
@@ -324,6 +324,7 @@ class Raider:
     attacks: int = 0
     hits_taken: int = 0
     gear_ids: dict | None = None
+    downed_by: int | None = None  # who dealt the blow that made them fall (bounties)
 
 
 def fight(rng: random.Random, attackers: list[Raider], defenders: list[Raider]) -> tuple[str, list[str]]:
@@ -344,8 +345,10 @@ def fight(rng: random.Random, attackers: list[Raider], defenders: list[Raider]) 
                 if rng.random() < float(d["crit_chance"]):
                     dmg *= float(d["crit_multiplier"])
                 dmg = max(float(d["min_hit_after_armor"]), dmg * (1 - target.reduction))
-                hits.append((target, dmg))
-        for target, dmg in hits:  # at once: a fighter falling this round still strikes
+                hits.append((f, target, dmg))
+        for f, target, dmg in hits:  # at once: a fighter falling this round still strikes
+            if target.hp > 0 and target.hp - dmg <= 0:
+                target.downed_by = f.user_id
             target.hp = max(0.0, target.hp - dmg)
             target.hits_taken += 1
         down_a = sum(1 for f in attackers if f.hp <= 0)
@@ -382,10 +385,14 @@ def resolve_raid(ctx: Ctx, raid_id: int) -> dict:
         raise GameError("This raid isn't waiting for its assault.")
     attackers = [_raider(ctx, uid, "attack") for uid in raid["attackers"]]
     defenders = [_raider(ctx, uid, "defend") for uid in raid["defenders"]]
+    claimed = []
     if defenders:
         winner, log = fight(ctx.rng, attackers, defenders)
         for r in attackers + defenders:
             _wear(ctx, r)
+            got = bounty.claim(ctx, r.downed_by, r.user_id, "raid") if r.downed_by is not None else None
+            if got:
+                claimed.append(got)
     else:
         winner, log = "attack", ["Nobody came to defend the chest."]
     stolen = 0
@@ -402,7 +409,7 @@ def resolve_raid(ctx: Ctx, raid_id: int) -> dict:
             players.bump_stat(ctx, uid, "raids_defended")
     ctx.execute("UPDATE raids SET status=?, stolen=?, log=?, deadline=? WHERE raid_id=?;",
                 ("won" if winner == "attack" else "lost", stolen, json.dumps(log), int(ctx.now), raid_id))
-    return get_raid(ctx, raid_id)
+    return {**get_raid(ctx, raid_id), "bounties": claimed}
 
 
 def due_raids(ctx: Ctx) -> list[dict]:

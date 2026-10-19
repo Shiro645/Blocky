@@ -31,6 +31,8 @@ def rob_embed(rob: dict) -> discord.Embed:
                              description=f"{victim} caught {thief} in the act{fine}.{war}")
     if rob["status"] == "done":
         war = f"\n🏴 +{rob['war_points']} gang war point(s) for {thief}'s team." if rob.get("war_points") else ""
+        if rob.get("bounty"):
+            war += f"\n🎯 {thief} claims the bounty on {victim}'s head: {em(rob['bounty']['amount'])}!"
         return discord.Embed(title="💰 Robbery done", color=discord.Color.dark_red(),
                              description=f"{thief} got away with {em(rob['stolen'])} from {victim}.{war}")
     title = "🦹 Robbery in progress!" if risky else "🤫 A discreet robbery…"
