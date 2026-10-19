@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import live_events, players, shop
+from game import players, shop
 from utils.ui import EMOJI, BaseView, em, item_label, mat, report_error
 
 
@@ -24,17 +24,27 @@ class QuantityModal(discord.ui.Modal, title="Enter quantity"):
 
         res = await self.bot.db.run(shop.buy, interaction.user.id, self.key, units)
         offer = res["offer"]
-        why = " + ".join(w for w, on in ((f"🏷️ Market Sale -{res['sale']:.0%}", res["sale"]),
+        why = " + ".join(w for w, on in ((f"🏷️ prices {-res['sale']:+.0%} (Market Sale, biome)", round(res["sale"], 4)),
                                          ("🧑‍🌾 Villager price", res["villager"])) if on)
+        saved = res["saved"]
         await interaction.response.send_message(
             f"✅ Bought **{item_label(offer['item'], offer['material'], res['amount'])}** for **{em(res['price'])}**"
-            + (f" ({why}: -{em(res['saved'])})" if res["saved"] else "") + ".\n"
+            + (f" ({why}: {'-' if saved > 0 else '+'}{em(abs(saved))})" if saved else "") + ".\n"
             f"New balance: **{em(res['balance'])}**.",
             ephemeral=True,
         )
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await report_error(interaction, error)
+
+
+def price_note(discount: float, when: str) -> str:
+    """The market's prices are lower (a Market Sale, the biome) or higher (the biome) than usual."""
+    if round(discount, 4) > 0:
+        return f"🏷️ Everything is **{discount:.0%}** cheaper {when} (Market Sale, biome of the week)!\n\n"
+    if round(discount, 4) < 0:
+        return f"📈 Everything is **{-discount:.0%}** dearer {when} (biome of the week: `/biome`).\n\n"
+    return ""
 
 
 def market_options(discount: float = 0.0) -> list[discord.SelectOption]:
@@ -46,8 +56,8 @@ def market_options(discount: float = 0.0) -> list[discord.SelectOption]:
             desc = f"{offer['unit_size']} sticks for {price} emeralds"
         else:
             desc = f"{price} emeralds each"
-        if discount:
-            desc += f" (sale: -{discount:.0%})"
+        if round(discount, 4):
+            desc += f" ({-discount:+.0%})"
         icon = EMOJI.get("stick") if offer["item"] == "stick" else mat(offer["material"])
         options.append(discord.SelectOption(label=offer["label"], value=key, description=desc, emoji=icon or None))
     return options
@@ -69,10 +79,10 @@ class EconomyMarketCog(commands.Cog):
     @app_commands.command(name="market", description="Open the market and buy items with emeralds.")
     async def market(self, interaction: discord.Interaction):
         def load(ctx, user_id):
-            return players.get_emeralds(ctx, user_id), live_events.market_discount(ctx)
+            return players.get_emeralds(ctx, user_id), shop.market_discount(ctx)
 
         balance, discount = await self.bot.db.run(load, interaction.user.id)
-        sale = f"🏷️ **Market Sale**: everything is **{discount:.0%}** cheaper right now!\n\n" if discount else ""
+        sale = price_note(discount, "right now")
         embed = discord.Embed(
             title="Market",
             description=(

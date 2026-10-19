@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from game import live_events, players, settings
+from game import biomes, live_events, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -20,10 +20,10 @@ def _cfg() -> dict:
 
 def max_bet(ctx: Ctx | None = None, user_id: int | None = None) -> int:
     """The highest bet, for this player (Gamblers bet higher: species.gambler_max_bet; everyone during a
-    Gambling Frenzy)."""
+    Gambling Frenzy, and in the Desert's week)."""
     top = float(_cfg()["max_bet"])
     if ctx is not None:
-        top *= live_events.bet_multiplier(ctx)
+        top *= live_events.bet_multiplier(ctx) * biomes.multiplier(ctx, "gamble_bet")  # the Desert
         if user_id is not None:
             from game import species  # here: species imports a lot of the game
 

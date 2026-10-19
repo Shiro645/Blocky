@@ -324,4 +324,19 @@ UPDATES: tuple[Update, ...] = (
              "safe from new ones for a day. `/bounty list` shows who is wanted."),
         ),
     ),
+    Update(
+        "2026-10-biomes", "2026-10-20", "Biomes of the week",
+        "Every Monday, the whole server moves to a new biome!",
+        (
+            ("🗺️ 10 biomes",
+             "Desert, Mountains, Badlands, Forest, Dark Forest, Jungle, Swamp, Ocean, Mushroom Fields and Tundra: "
+             "one is drawn every Monday, never the same twice in a row. `/biome` shows this week's."),
+            ("⚖️ A bonus and a malus",
+             "Each biome helps something and slows something else, like the real one: the Mountains have emerald ore "
+             "(`/sell` +15%) but steep slopes (mining 10% slower), the Ocean has shipwrecks (more drops) but you mine "
+             "underwater…"),
+            ("🎯 The biome's challenge",
+             "Each biome has a challenge of its own, worth 250 emeralds, on top of the weekly challenges."),
+        ),
+    ),
 )

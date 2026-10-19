@@ -24,7 +24,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import beacon, cooldowns, dimensions, duel, gear, players, potions, settings
+from game import beacon, biomes, cooldowns, dimensions, duel, gear, players, potions, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -154,8 +154,9 @@ def make_hero(ctx: Ctx, user_id: int) -> Hero:
     f, equipped = duel.make_fighter(ctx, user_id)
     hp = float(_cfg()["hp"])
     strength, resistance = beacon.combat(ctx)  # the server's Beacon
+    taken = biomes.multiplier(ctx, "damage_taken")  # the week's biome
     return Hero(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
-                1 - (1 - f.reduction) * (1 - resistance), hp, hp, f.potion_boost,
+                1 - (1 - f.reduction) * (1 - resistance) * taken, hp, hp, f.potion_boost,
                 gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
 
 
@@ -473,7 +474,7 @@ def _play(ctx: Ctx, run: dict) -> dict:
     members = {m["user_id"]: m for m in run["in"]}
     heroes = [m["hero"] for m in run["in"]]
     result = fight_wave(ctx.rng, heroes, wave, run["difficulty"])
-    reward = wave_reward(run["difficulty"], wave)
+    reward = int(round(wave_reward(run["difficulty"], wave) * biomes.multiplier(ctx, "dungeon_loot")))  # the Jungle
     xp = int(_cfg()["xp_per_wave"])
     for hero in heroes:
         _save_hero(ctx, run["run_id"], hero)

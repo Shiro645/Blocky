@@ -17,6 +17,7 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from game import settings
+from game.biomes import BIOMES
 from game.catalog import ARMOR, BLOCK_TYPES, DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, MATERIALS, block_name
 from utils.config import balance_overrides
 
@@ -34,7 +35,8 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
                                  "teams", "beacon")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
-    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "war", "bounty", "drops")),
+    "games": ("🎉 Games & events", ("live_events", "biomes", "chance", "minigames", "rob", "war", "bounty",
+                                       "drops")),
 }
 
 CATEGORIES = {
@@ -74,6 +76,7 @@ CATEGORIES = {
     "bosses": "🐉 Gate bosses",
     "tournament": "🏟️ Tournament",
     "live_events": "⏱️ Timed events",
+    "biomes": "🗺️ Biomes of the week",
     "chance": "🎰 Games of chance",
     "minigames": "🧩 Blockdle & quiz",
     "rob": "🦹 Robberies",
@@ -484,6 +487,20 @@ FIELDS: list[Field] = [
     _b("war.raids_per_day", "war", "Raids a team launches a day", min=1, max=20),
     _b("war.raid_protection_hours", "war", "Hours a raided chest is safe", kind="float", max=720),
     _b("war.raid_max_rounds", "war", "Raid: fight rounds (max)", min=1, max=500),
+    # ---- biomes of the week ----
+    _pct("biomes.bonus", "biomes", "Bonus of a biome", "A percent effect: +this (or -this for a cooldown, prices, "
+         "damage taken).", max=0.9),
+    _pct("biomes.malus", "biomes", "Malus of a biome", "A percent effect: -this (or +this for a cooldown, prices, "
+         "damage taken).", max=0.9),
+    _b("biomes.odds_bonus", "biomes", "Bonus on a chance ×", "Rare blocks, drops, the highest bet.", kind="float",
+       min=1, max=10),
+    _b("biomes.odds_malus", "biomes", "Malus on a chance ×", "Rare blocks, drops.", kind="float", min=0.1, max=1),
+    _b("biomes.challenge_reward", "biomes", "Biome challenge: emeralds", "Paid apart from the weekly challenges.",
+       max=1_000_000),
+    *[_b(f"biomes.enabled.{b.key}", "biomes", f"{b.label}: in the draw", "Off: never drawn (the staff can still "
+         "set it with /event biome).", kind="bool", min=None) for b in BIOMES.values()],
+    *[_b(f"biomes.challenges.{b.key}", "biomes", f"{b.label}: challenge target", "What to reach for its challenge.",
+         min=1, max=1_000_000) for b in BIOMES.values()],
     # ---- bounties ----
     *[_b(f"bounty.tiers.{i}", "bounty", f"Tier {i + 1}: emeralds", "One of the fixed amounts a bounty can be.",
          min=1, max=10_000_000) for i in range(4)],

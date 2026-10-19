@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable
 
-from game import enchants, gear, guide, players, settings
+from game import biomes, enchants, gear, guide, players, settings
 from game.catalog import ARMOR
 from game.db import Ctx, week_id_of
 from game.notices import AchievementUnlocked, AllChallengesCompleted, ChallengeCompleted
@@ -298,6 +298,55 @@ def advance_challenges(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
                 ctx.notices.append(ChallengeCompleted(user_id, c.text, c.reward, daily=kind == "day"))
                 if kind == "week":
                     _check_all_done(ctx, user_id, key)
+    _advance_biome(ctx, user_id, stat, amount)
+
+
+# ---------------- the biome's challenge ----------------
+def biome_challenge(ctx: Ctx) -> Challenge | None:
+    """This week's biome challenge (paid apart: it doesn't count for the weekly book)."""
+    biome = biomes.current(ctx)
+    if biome is None:
+        return None
+    c = settings.get()["biomes"]
+    stat, text = next((s, t) for code, s, t in _CHALLENGES if code == biome.challenge)
+    target = int(c["challenges"][biome.key])
+    return Challenge(f"biome_{biome.key}", stat, target, int(c["challenge_reward"]), text(target))
+
+
+def _biome_row(ctx: Ctx, user_id: int, c: Challenge):
+    return ctx.one("SELECT progress, completed_at FROM challenge_progress WHERE week_id=? AND user_id=? AND code=?;",
+                   (f"biome:{ctx.week_id}", user_id, c.code))
+
+
+def _advance_biome(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
+    c = biome_challenge(ctx)
+    if c is None or c.stat != stat or c.target <= 0:
+        return
+    key = f"biome:{ctx.week_id}"
+    ctx.execute(
+        """
+        INSERT INTO challenge_progress(week_id, user_id, code, progress) VALUES(?, ?, ?, ?)
+        ON CONFLICT(week_id, user_id, code) DO UPDATE SET progress = progress + excluded.progress;
+        """,
+        (key, user_id, c.code, amount),
+    )
+    row = _biome_row(ctx, user_id, c)
+    if row["completed_at"] is None and row["progress"] >= c.target:
+        ctx.execute("UPDATE challenge_progress SET completed_at=? WHERE week_id=? AND user_id=? AND code=?;",
+                    (int(ctx.now), key, user_id, c.code))
+        players.earn_emeralds(ctx, user_id, c.reward)
+        players.bump_stat(ctx, user_id, "biome_challenges")
+        biome = biomes.current(ctx)
+        ctx.notices.append(ChallengeCompleted(user_id, f"{biome.label}: {c.text}", c.reward))
+
+
+def biome_progress(ctx: Ctx, user_id: int) -> dict | None:
+    c = biome_challenge(ctx)
+    if c is None:
+        return None
+    row = _biome_row(ctx, user_id, c)
+    return {"text": c.text, "target": c.target, "reward": c.reward,
+            "progress": min(row["progress"], c.target) if row else 0, "completed": bool(row and row["completed_at"])}
 
 
 def _check_all_done(ctx: Ctx, user_id: int, week: str) -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from game import settings
+from game.biomes import BIOMES
 from game.db import Database
 
 # Wednesday 2026-10-07 12:00 Paris time.
@@ -19,9 +20,13 @@ class GameTestCase(unittest.IsolatedAsyncioTestCase):
     """Fresh database, default settings, fixed clock and seeded randomness."""
 
     overrides: dict | None = None
+    biomes_on = False  # no biome of the week: its bonuses would change the numbers the tests check
 
     async def asyncSetUp(self) -> None:
-        settings.load(self.overrides)
+        overrides = dict(self.overrides or {})
+        if not self.biomes_on and "biomes" not in overrides:
+            overrides["biomes"] = {"enabled": {k: False for k in BIOMES}}
+        settings.load(overrides)
         self._tmp = tempfile.TemporaryDirectory()
         self.db = Database(Path(self._tmp.name) / "test.db")
         self.now = START

@@ -430,6 +430,20 @@ DEFAULTS: dict[str, Any] = {
         "raid_protection_hours": 24,  # a raided chest is safe for this long
         "raid_max_rounds": 40,
     },
+    # Biomes of the week (/biome, game/biomes.py): one for the whole server, a bonus and a malus. Percent effects
+    # +bonus / -malus; chances (rare blocks, drops, the highest bet) ×odds_bonus / ×odds_malus. Each biome has a
+    # challenge: what to reach (challenges, the stat of its code in game/progress.py), paying challenge_reward.
+    "biomes": {
+        "bonus": 0.15,
+        "malus": 0.10,
+        "odds_bonus": 1.5,
+        "odds_malus": 0.9,
+        "enabled": {"desert": True, "mountains": True, "badlands": True, "forest": True, "dark_forest": True,
+                    "jungle": True, "swamp": True, "ocean": True, "mushroom": True, "tundra": True},
+        "challenge_reward": 250,
+        "challenges": {"desert": 30, "mountains": 1500, "badlands": 6, "forest": 3, "dark_forest": 3, "jungle": 20,
+                       "swamp": 3, "ocean": 3, "mushroom": 250, "tundra": 900},
+    },
     # Bounties (/bounty): fixed tiers that add up on the same head, claimed by beating the target in a duel,
     # a /rob or a raid. Unclaimed after `days`, the payer gets it back minus refund_tax.
     "bounty": {

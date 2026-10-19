@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, time, timedelta
 
-from game import bounty, cooldowns, players, settings
+from game import biomes, bounty, cooldowns, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -81,6 +81,7 @@ def start(ctx: Ctx, thief_id: int, victim_id: int, mode: str) -> dict:
     if players.get_emeralds(ctx, victim_id) <= 0:
         raise GameError(f"<@{victim_id}> has no emeralds to steal.")
     amount = ctx.rng.randint(int(c[f"{mode}_min"]), int(c[f"{mode}_max"]))
+    amount = int(round(amount * biomes.multiplier(ctx, "rob_loot")))  # the Dark Forest
     ends_at = now + int(float(c["minutes_to_stop"]) * 60)
     cur = ctx.execute(
         "INSERT INTO robberies(thief_id, victim_id, mode, amount, started_at, ends_at) VALUES(?, ?, ?, ?, ?, ?);",

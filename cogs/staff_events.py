@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import live_events
+from game.biomes import BIOMES
 from game.errors import GameError
 from utils.checks import staff_only
 
@@ -44,6 +45,13 @@ class StaffEventsCog(commands.Cog):
     @staff_only()
     async def beacon(self, interaction: discord.Interaction, lit: bool, step: app_commands.Range[int, 0, 16] | None = None):
         await self.cog("BeaconCog").staff_set(interaction, lit, step)
+
+    @event.command(name="biome", description="STAFF: Set this week's biome (and announce it).")
+    @app_commands.describe(biome="The biome until next Monday")
+    @app_commands.choices(biome=[app_commands.Choice(name=b.label, value=b.key) for b in BIOMES.values()])
+    @staff_only()
+    async def biome(self, interaction: discord.Interaction, biome: str):
+        await self.cog("BiomesCog").staff_set(interaction, biome)
 
     @event.command(name="drop", description="STAFF: Make a drop appear in this channel now.")
     @staff_only()
