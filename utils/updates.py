@@ -291,4 +291,22 @@ UPDATES: tuple[Update, ...] = (
              "a small bonus of your own. `/beacon info` shows it all."),
         ),
     ),
+    Update(
+        "2026-10-gang-wars", "2026-10-20", "Gang wars",
+        "Teams are now at war! Every week, all the teams fight each other for points and a pot of emeralds.",
+        (
+            ("💰 The team chest",
+             "`/team chest deposit` puts emeralds in your team's chest: safe from /rob, but not from raids. Only the "
+             "leader takes them out. Every Monday a share of every chest goes into the war's pot."),
+            ("🎯 Points",
+             "Win duels against members of other teams, rob them (or stop their robberies), and raid their chests. "
+             "`/war` shows the standings, the pot and the latest feats."),
+            ("🏴 Raids",
+             "`/team raid <team>`: gather a few teammates and attack another team's chest. They're pinged and have "
+             "30 minutes to defend it; then both sides fight. Win (or find nobody home) and you take 15% of their "
+             "chest."),
+            ("🏆 The end of the week",
+             "The top 3 teams share the pot, straight into their chests."),
+        ),
+    ),
 )

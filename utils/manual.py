@@ -427,6 +427,24 @@ def _beacon(s: Settings) -> list[str]:
     ]
 
 
+def _war(s: Settings) -> list[str]:
+    w = s["war"]
+    p = w["points"]
+    prizes = " / ".join(pct(x) for x in w["prizes"])
+    return [
+        f"At war: every team of at least **{num(w['min_members'])}** members · Monday levy **{pct(w['levy'])}** of each "
+        f"chest into the pot · podium {prizes} after a **{pct(w['tax'])}** tax",
+        f"Points: duel won vs an enemy **+{num(p['duel'])}** (max {num(w['duel_pair_cap'])} a day per pair) · robbery "
+        f"on an enemy **+{num(p['rob'])}** · stopping one **+{num(p['rob_stopped'])}** · raid won **+{num(p['raid'])}** "
+        f"· raid pushed back **+{num(p['raid_defended'])}**",
+        f"Raids: **{num(w['raid_min_attackers'])}–{num(w['raid_max_attackers'])}** attackers, gather "
+        f"**{num(w['raid_gather_minutes'])} min**, defenders have **{num(w['raid_defend_minutes'])} min** (up to "
+        f"{num(w['raid_max_defenders'])}) · won: **{pct(w['raid_steal'])}** of the chest ({em(w['raid_steal_max'])} max) · "
+        f"{num(w['raids_per_day'])} a day per team · a raided chest is safe **{num(w['raid_protection_hours'])} h** · "
+        "no raids at night",
+    ]
+
+
 def _tournament(s: Settings) -> list[str]:
     t = s["tournament"]
     split = t["prize_split"]
@@ -1449,6 +1467,50 @@ PAGES: list[Page] = [
         related=("team top",),
     ),
     Page(
+        "war", "teams",
+        "Shows this week's **gang war**: every team at war (at least a few members) against all the others, their "
+        "points, the pot and the latest feats. Points come from duels won against members of other teams (a few a "
+        "day for the same pair), robberies on them (and stopping theirs), and raids on their chests (won or pushed "
+        "back). Every Monday a share of every chest goes into the pot, and when the week ends the top teams share "
+        "it, into their chests.",
+        _war,
+        examples=("/war",),
+        related=("team raid", "team chest view", "duel", "rob"),
+    ),
+    Page(
+        "team chest deposit", "teams",
+        "Puts emeralds in your team's chest. A personal /rob can't reach them, but other teams can **raid** the "
+        "chest, and every Monday a share of it goes into the gang war's pot. Only the leader takes emeralds out.",
+        _war,
+        examples=("/team chest deposit amount:500",),
+        related=("team chest withdraw", "team chest view", "war"),
+    ),
+    Page(
+        "team chest withdraw", "teams",
+        "LEADER: takes emeralds out of your team's chest, into your own emeralds.",
+        examples=("/team chest withdraw amount:200",),
+        related=("team chest deposit", "team chest view"),
+    ),
+    Page(
+        "team chest view", "teams",
+        "Shows your team's chest, whether it's safe from raids right now, and what the gang war takes and gives.",
+        _war,
+        examples=("/team chest view",),
+        related=("team chest deposit", "war"),
+    ),
+    Page(
+        "team raid", "teams",
+        "Raids another team's chest. You open the raid; members of your team join with the button (a few at least), "
+        "then the party leaves (the leader clicks Launch, or the gathering time is up). The target's members are "
+        "pinged and have a while to click **Defend**. Then the attackers and the defenders fight it out, all at once, "
+        "with their gear (like duels). The attackers win (or nobody came to defend): they take a share of the chest "
+        "into their own, and their team scores. The defenders win: their team scores. Gear wears out. No raids at "
+        "night, one raid a day per team, and a raided chest is safe for a while.",
+        _war,
+        examples=("/team raid team:DIG",),
+        related=("war", "team chest view"),
+    ),
+    Page(
         "team top", "teams",
         "This week's team season: teams ranked by the emeralds their members earned while in the team. "
         "The best earner counts in full and the others less and less (×0.69, ×0.41, ×0.29, ×0.22), so a big "
@@ -1793,6 +1855,12 @@ PAGES: list[Page] = [
         _villager,
         examples=("/event villager action:Come now (usual visit length)",),
         related=("villager",),
+    ),
+    Page(
+        "war_chest", "staff_events",
+        "Sets a team's chest (to fix a problem). The staff channel keeps a trace.",
+        examples=("/war_chest team:DIG amount:0",),
+        related=("team chest view", "war"),
     ),
     Page(
         "team_remove", "staff_events",

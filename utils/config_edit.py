@@ -34,7 +34,7 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
                                  "teams", "beacon")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
-    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "drops")),
+    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "war", "drops")),
 }
 
 CATEGORIES = {
@@ -48,6 +48,7 @@ CATEGORIES = {
     "mining_odds": "📊 Mining odds",
     "dimensions": "🌋 Dimensions & netherite",
     "beacon": "🔆 Beacon",
+    "war": "🏴 Gang wars",
     "market": "🛒 Market & daily",
     "trading": "🤝 Trading & auction",
     "loans": "💳 Loans",
@@ -160,7 +161,7 @@ _ACHIEVEMENT_NAMES = {
     "team_champion": "Squad Goals", "tycoon": "Emerald Tycoon", "wear_and_tear": "Wear and Tear",
     "lucky_100": "Feeling Lucky", "wheel_100": "Spin Doctor", "bullseye": "Bullseye", "blockdle_10": "Block Detective", "quiz_10": "Know-It-All", "thief_10": "Master Thief", "watch_5": "Neighborhood Watch", "dungeon_hard": "Into the Depths", "dungeon_hardcore": "Hardcore Hero", "dungeon_nightmare": "Nightmare Slayer", "challenger_10": "Challenger", "challenger_50": "Challenge Master", "high_roller": "High Roller", "enchanter_10": "Enchanter", "handyman_10": "Handyman", "regular_20": "Regular Customer", "moneylender": "Moneylender",
     "wither_slayer": "Wither Slayer", "dragon_slayer": "Dragon Slayer", "warden_slayer": "Warden Slayer",
-    "beacon_builder": "Beacon Builder",
+    "beacon_builder": "Beacon Builder", "warlord": "Warlord", "raider_5": "Raider",
 }
 _CHALLENGE_NAMES = {
     "mine_blocks": "Mine blocks", "find_bedrock": "Find bedrock", "sell_blocks": "Earn emeralds by selling",
@@ -459,6 +460,29 @@ FIELDS: list[Field] = [
     _b("drops.claim_seconds", "drops", "Seconds to claim a drop", min=5, max=840),
     _b("drops.table", "drops", "Drop table", "What a drop can be, and how often (weight ÷ total).", "table", None,
        item="drops"),
+    # ---- gang wars ----
+    _b("war.min_members", "war", "Members to be at war", "A team with fewer members isn't in the weekly war.",
+       min=1, max=50),
+    _pct("war.levy", "war", "Weekly levy on each chest", "Taken every Monday into the week's pot."),
+    _pct("war.tax", "war", "Tax on the pot", "Taken before the podium is paid."),
+    *[_pct(f"war.prizes.{i}", "war", f"Pot share of #{i + 1}", "After the tax, paid into the team's chest.")
+      for i in range(3)],
+    *[_b(f"war.points.{k}", "war", f"Points: {label}", max=1000) for k, label in (
+        ("duel", "duel won against an enemy"), ("rob", "robbery on an enemy"),
+        ("rob_stopped", "enemy robbery stopped"), ("raid", "raid won"), ("raid_defended", "raid pushed back"))],
+    _b("war.duel_pair_cap", "war", "Duel wins a day per pair", "Wins of one player over the same enemy that score "
+       "in a day.", max=100),
+    _b("war.raid_min_attackers", "war", "Raid: attackers (min)", min=1, max=10),
+    _b("war.raid_max_attackers", "war", "Raid: attackers (max)", min=1, max=10),
+    _b("war.raid_max_defenders", "war", "Raid: defenders (max)", min=1, max=10),
+    _b("war.raid_gather_minutes", "war", "Raid: minutes to gather", min=1, max=120),
+    _b("war.raid_defend_minutes", "war", "Raid: minutes to defend", "Between the call and the assault.",
+       min=1, max=600),
+    _pct("war.raid_steal", "war", "Raid: share of the chest taken"),
+    _b("war.raid_steal_max", "war", "Raid: most emeralds taken", max=10_000_000),
+    _b("war.raids_per_day", "war", "Raids a team launches a day", min=1, max=20),
+    _b("war.raid_protection_hours", "war", "Hours a raided chest is safe", kind="float", max=720),
+    _b("war.raid_max_rounds", "war", "Raid: fight rounds (max)", min=1, max=500),
     # ---- beacon ----
     *[_b(f"beacon.level_ingots.{i}", "beacon", f"Level {i + 1}: ingots", "Ingots for this level in one material "
          "(a multiple of 9: whole blocks).", min=9, max=1_000_000) for i in range(4)],

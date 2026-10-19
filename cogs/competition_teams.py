@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from cogs.player_profile import banner_file
-from game import profiles, settings, team_spaces, teams
+from game import profiles, settings, team_spaces, teams, war
 from game.errors import GameError
 from utils.checks import staff_only
 from utils.config import role_id, staff_role_id
@@ -106,6 +106,7 @@ class TeamsCog(commands.Cog):
     team = app_commands.Group(name="team", description="Teams: play together and win the weekly team season.")
     channel = app_commands.Group(name="channel", description="LEADER: The channels of your team's category.",
                                  parent=team)
+    chest = app_commands.Group(name="chest", description="Your team's chest: emeralds for the gang war.", parent=team)
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -577,6 +578,7 @@ class TeamsCog(commands.Cog):
         else:
             bonus = f"{data['active_today']} mined today. Mine together for up to **+{max_bonus:.0%} XP**."
         embed.add_field(name="Team bonus", value=bonus, inline=True)
+        embed.add_field(name="💰 Chest", value=em(int(t.get("chest") or 0)), inline=True)
         if data["wins"]:
             embed.add_field(name="🏆 Team seasons won", value=str(data["wins"]), inline=True)
         space = await self.bot.db.run(team_spaces.get, t["team_id"])
@@ -594,6 +596,51 @@ class TeamsCog(commands.Cog):
             return
         embed.set_thumbnail(url="attachment://banner.png")
         await interaction.response.send_message(embed=embed, file=file)
+
+    # ---------- chest and raids (gang wars, game/war.py) ----------
+    @chest.command(name="deposit", description="Put emeralds in your team's chest (safe from /rob, not from raids).")
+    @app_commands.describe(amount="Emeralds to put in")
+    async def chest_deposit(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1]):
+        res = await self.bot.db.run(war.deposit, interaction.user.id, amount)
+        await interaction.response.send_message(
+            f"💰 {interaction.user.mention} put {em(amount)} in **[{res['team']['tag']}]**'s chest "
+            f"(now {em(res['chest'])}).", allowed_mentions=discord.AllowedMentions.none())
+
+    @chest.command(name="withdraw", description="LEADER: Take emeralds out of your team's chest.")
+    @app_commands.describe(amount="Emeralds to take out")
+    async def chest_withdraw(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1]):
+        res = await self.bot.db.run(war.withdraw, interaction.user.id, amount)
+        await interaction.response.send_message(
+            f"💰 {interaction.user.mention} took {em(amount)} out of **[{res['team']['tag']}]**'s chest "
+            f"(now {em(res['chest'])}).", allowed_mentions=discord.AllowedMentions.none())
+
+    @chest.command(name="view", description="Your team's chest, and what the gang war takes and gives.")
+    async def chest_view(self, interaction: discord.Interaction):
+        def load(ctx):
+            team = teams.team_of(ctx, interaction.user.id)
+            if team is None:
+                raise GameError("You're not in a team.")
+            return team, war.chest(ctx, team["team_id"]), war.protected_until(ctx, team["team_id"])
+
+        team, amount, safe = await self.bot.db.run(load)
+        w = settings.get()["war"]
+        text = (f"💰 **[{team['tag']}] {team['name']}**'s chest: {em(amount)}.\n"
+                f"Members put emeralds in (`/team chest deposit`), only the leader takes them out. A personal /rob "
+                f"can't reach it, but other teams can **raid** it (`/team raid`): {float(w['raid_steal']):.0%} of it "
+                f"is taken when they win. Every Monday {float(w['levy']):.0%} of it goes into the gang war's pot "
+                "(`/war`).")
+        if safe:
+            text += f"\n🛡️ Raided recently: safe until <t:{safe}:f>."
+        await interaction.response.send_message(text, ephemeral=True)
+
+    @team.command(name="raid", description="Raid another team's chest: gather your team, then fight its defenders.")
+    @app_commands.describe(team="Tag or name of the team to raid")
+    @app_commands.autocomplete(team=team_autocomplete)
+    async def raid(self, interaction: discord.Interaction, team: str):
+        cog = self.bot.get_cog("WarCog")
+        if cog is None:
+            raise GameError("Raids aren't available right now.")
+        await cog.start_raid(interaction, team)  # type: ignore[attr-defined]
 
     @team.command(name="banner", description="LEADER: Design your team's banner (shown on the members' profiles).")
     @app_commands.describe(

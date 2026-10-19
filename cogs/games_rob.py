@@ -26,11 +26,13 @@ def rob_embed(rob: dict) -> discord.Embed:
     risky = rob["mode"] == "risky"
     if rob["status"] == "stopped":
         fine = f" and paid a fine of {em(rob['fine'])}" if rob["fine"] else ""
+        war = f"\n🏴 +{rob['war_points']} gang war point(s) for {victim}'s team." if rob.get("war_points") else ""
         return discord.Embed(title="🛡️ Robbery stopped!", color=discord.Color.green(),
-                             description=f"{victim} caught {thief} in the act{fine}.")
+                             description=f"{victim} caught {thief} in the act{fine}.{war}")
     if rob["status"] == "done":
+        war = f"\n🏴 +{rob['war_points']} gang war point(s) for {thief}'s team." if rob.get("war_points") else ""
         return discord.Embed(title="💰 Robbery done", color=discord.Color.dark_red(),
-                             description=f"{thief} got away with {em(rob['stolen'])} from {victim}.")
+                             description=f"{thief} got away with {em(rob['stolen'])} from {victim}.{war}")
     title = "🦹 Robbery in progress!" if risky else "🤫 A discreet robbery…"
     text = (f"{thief} is robbing {victim}!" if risky else f"{thief} is quietly emptying {victim}'s pockets…")
     text += f"\n{victim} can stop it until <t:{rob['ends_at']}:t> (<t:{rob['ends_at']}:R>) with the button below."

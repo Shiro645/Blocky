@@ -673,6 +673,48 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_beacon_gifts_week ON beacon_gifts(week_id, user_id);
     """,
+    # 36: gang wars: the teams' chests, the weekly war's points and pot, and the raids on chests
+    """
+    ALTER TABLE teams ADD COLUMN chest INTEGER NOT NULL DEFAULT 0 CHECK (chest >= 0);
+    CREATE TABLE war_weeks (
+        week_id TEXT PRIMARY KEY,
+        pot INTEGER NOT NULL DEFAULT 0,
+        settled_at INTEGER,
+        results TEXT                           -- JSON: the podium paid when the week was settled
+    );
+    CREATE TABLE war_points (
+        week_id TEXT NOT NULL,
+        team_id INTEGER NOT NULL,
+        user_id INTEGER,                       -- who scored (the raid's leader for a raid)
+        other_id INTEGER,                      -- the other player (duels: the loser) or team (raids)
+        reason TEXT NOT NULL,                  -- duel | rob | rob_stopped | raid | raid_defended
+        points INTEGER NOT NULL,
+        day TEXT NOT NULL,                     -- local date (the daily cap of duels between two players)
+        at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_war_points_week ON war_points(week_id, team_id);
+    CREATE TABLE raids (
+        raid_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        attacker_team INTEGER NOT NULL,
+        defender_team INTEGER NOT NULL,
+        leader_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'gathering',  -- gathering | defending | won | lost | cancelled
+        created_at INTEGER NOT NULL,
+        deadline INTEGER NOT NULL,             -- gathering: launch before; defending: the assault then
+        stolen INTEGER NOT NULL DEFAULT 0,
+        log TEXT,                              -- JSON: the fight's story
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX idx_raids_status ON raids(status, deadline);
+    CREATE TABLE raid_members (
+        raid_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        side TEXT NOT NULL,                    -- attack | defend
+        joined_at INTEGER NOT NULL,
+        PRIMARY KEY (raid_id, user_id)
+    );
+    """,
 ]
 
 

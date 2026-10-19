@@ -497,6 +497,9 @@ class DuelCog(commands.Cog):
                    for f in view.fight.fighters if f.blocks_used]
         if shields:
             embed.add_field(name="🛡️ Shield", value="\n".join(shields), inline=False)
+        if res.get("war_points"):
+            embed.add_field(name="🏴 Gang war", value=f"+{res['war_points']} point(s) for <@{res['winner']}>'s team",
+                            inline=False)
         if res["broken"]:
             embed.add_field(
                 name="🔨 Broken or worn out",
