@@ -427,6 +427,15 @@ def _beacon(s: Settings) -> list[str]:
     ]
 
 
+def _bounty(s: Settings) -> list[str]:
+    b = s["bounty"]
+    return [
+        "Tiers: " + " / ".join(em(t) for t in b["tiers"]) + f" · payer and target level **{num(b['min_level'])}**+",
+        f"Lasts **{num(b['days'])} days** · unclaimed: back to the payer minus **{pct(b['refund_tax'])}** · after a "
+        f"claim, no new bounty on that player for **{num(b['protection_hours'])} h**",
+    ]
+
+
 def _war(s: Settings) -> list[str]:
     w = s["war"]
     p = w["points"]
@@ -1355,6 +1364,32 @@ PAGES: list[Page] = [
         _rob,
         examples=("/rob member:@Steve mode:Risky: they get pinged, big loot", "/rob member:@Steve mode:Discreet: no ping, small loot"),
         related=("wheel", "pay"),
+    ),
+    Page(
+        "bounty place", "combat",
+        "Puts a bounty on a player's head, from your emeralds: pick one of the tiers. Nobody is told it's you (the "
+        "server is told there's a bounty, and the target gets a DM). Bounties on the same player add up. Whoever "
+        "beats them in a **duel**, **robs** them or makes them **fall in a raid** takes everything on their head "
+        "(never one of their teammates). Not on yourself or a teammate. Unclaimed when it ends, your bounty comes "
+        "back to you minus a small tax.",
+        _bounty,
+        examples=("/bounty place member:@Steve amount:500",),
+        related=("bounty list", "bounty info", "duel", "rob"),
+    ),
+    Page(
+        "bounty list", "combat",
+        "Shows the players with a bounty on their head, the biggest prize first, and when the next one ends. The "
+        "payers are never shown.",
+        _bounty,
+        examples=("/bounty list",),
+        related=("bounty place", "bounty info"),
+    ),
+    Page(
+        "bounty info", "combat",
+        "Explains bounties and shows yours: the ones you put on others (until when) and what is on your own head.",
+        _bounty,
+        examples=("/bounty info",),
+        related=("bounty place", "bounty list"),
     ),
     Page(
         "quiz", "events",

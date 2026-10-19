@@ -500,6 +500,9 @@ class DuelCog(commands.Cog):
         if res.get("war_points"):
             embed.add_field(name="🏴 Gang war", value=f"+{res['war_points']} point(s) for <@{res['winner']}>'s team",
                             inline=False)
+        if res.get("bounty"):
+            embed.add_field(name="🎯 Bounty", value=f"<@{res['winner']}> claims the bounty on <@{res['loser']}>'s head: "
+                                                   f"**{em(res['bounty']['amount'])}**", inline=False)
         if res["broken"]:
             embed.add_field(
                 name="🔨 Broken or worn out",

@@ -34,7 +34,7 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
                                  "teams", "beacon")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
-    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "war", "drops")),
+    "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "war", "bounty", "drops")),
 }
 
 CATEGORIES = {
@@ -49,6 +49,7 @@ CATEGORIES = {
     "dimensions": "🌋 Dimensions & netherite",
     "beacon": "🔆 Beacon",
     "war": "🏴 Gang wars",
+    "bounty": "💀 Bounties",
     "market": "🛒 Market & daily",
     "trading": "🤝 Trading & auction",
     "loans": "💳 Loans",
@@ -483,6 +484,14 @@ FIELDS: list[Field] = [
     _b("war.raids_per_day", "war", "Raids a team launches a day", min=1, max=20),
     _b("war.raid_protection_hours", "war", "Hours a raided chest is safe", kind="float", max=720),
     _b("war.raid_max_rounds", "war", "Raid: fight rounds (max)", min=1, max=500),
+    # ---- bounties ----
+    *[_b(f"bounty.tiers.{i}", "bounty", f"Tier {i + 1}: emeralds", "One of the fixed amounts a bounty can be.",
+         min=1, max=10_000_000) for i in range(4)],
+    _b("bounty.min_level", "bounty", "Level to pay or be a target", min=1, max=1000),
+    _b("bounty.days", "bounty", "Days a bounty lasts", min=1, max=60),
+    _pct("bounty.refund_tax", "bounty", "Tax on an unclaimed bounty", "Kept when it goes back to its payer."),
+    _b("bounty.protection_hours", "bounty", "Hours safe after a claim", "No new bounty on a player this long after "
+       "one on them was claimed.", kind="float", max=720),
     # ---- beacon ----
     *[_b(f"beacon.level_ingots.{i}", "beacon", f"Level {i + 1}: ingots", "Ingots for this level in one material "
          "(a multiple of 9: whole blocks).", min=9, max=1_000_000) for i in range(4)],

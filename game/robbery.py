@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, time, timedelta
 
-from game import cooldowns, players, settings
+from game import bounty, cooldowns, players, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -146,5 +146,6 @@ def finish_due(ctx: Ctx) -> list[dict]:
         from game import war  # war depends on this module
 
         out = {**rob, "status": "done", "stolen": stolen}
-        done.append({**out, "war_points": war.on_rob(ctx, out)})
+        done.append({**out, "war_points": war.on_rob(ctx, out),
+                     "bounty": bounty.claim(ctx, rob["thief_id"], rob["victim_id"], "rob")})
     return done

@@ -187,8 +187,13 @@ SECTIONS: tuple[Section, ...] = (
         "Witches make potions stronger.\n\n"
         "**Training dummy**: `/dummy hit` hits a dummy with your gear and shows every hit, your total and your "
         "records, with a leaderboard (`/dummy top`). `/dummy duel [gear]` is a whole training duel against a dummy "
-        "that hits back: every potion is free, nothing is used up, nothing is won or lost. The best way to learn.",
-        ("duel", "potions", "dummy hit"),
+        "that hits back: every potion is free, nothing is used up, nothing is won or lost. The best way to learn.\n\n"
+        "**🎯 Bounties**: `/bounty place <member> <amount>` puts a bounty on a player's head (a few fixed tiers, "
+        "level 10 and up, never on a teammate). The payer stays anonymous and bounties on the same player add up. "
+        "Beat them in a duel, rob them or make them fall in a raid: you take everything on their head (never their "
+        "teammates). A bounty lasts a week; unclaimed, its payer gets it back minus a small tax. `/bounty list` "
+        "shows who is wanted, `/bounty info` the rules and yours.",
+        ("duel", "potions", "dummy hit", "bounty place"),
     ),
     Section(
         "dungeon", "🏰 The PVE dungeon",

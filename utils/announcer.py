@@ -99,6 +99,33 @@ class Announcer:
             await dm(borrower, f"✅ Your late loan to {name}{where} is fully paid (collected automatically). "
                                "You can use /pay, /trade, the auction and loans again.")
 
+    async def on_BountyPlaced(self, notice: n.BountyPlaced) -> None:
+        """Public and anonymous; the target gets a private message; only the staff log names the payer."""
+        more = f" (**{em(notice.total)}** on their head now)" if notice.total > notice.amount else ""
+        await self.send(f"🎯 Someone put a bounty of **{em(notice.amount)}** on <@{notice.target_id}>'s head{more}! "
+                        "Beat them in a duel, rob them or make them fall in a raid to claim it. `/bounty list`")
+        await self.send(f"🎯 <@{notice.payer_id}> put a bounty of {em(notice.amount)} on <@{notice.target_id}>.",
+                        channel="staff_log")
+        target = self.bot.get_user(notice.target_id)
+        if target is not None:
+            guild = getattr(self.bot, "main_guild", None)
+            where = f" on **{guild.name}**" if guild else ""
+            await dm(target, f"🎯 Someone put a bounty of {em(notice.amount)} on your head{where} "
+                             f"({em(notice.total)} in total). Whoever beats you in a duel, robs you or makes you fall "
+                             f"in a raid takes it. It runs until <t:{notice.expires_at}:f>.")
+
+    async def on_BountyClaimed(self, notice: n.BountyClaimed) -> None:
+        from game.bounty import VIA  # here: the game imports this module's notices
+
+        await self.send(f"🎯 <@{notice.hunter_id}> claimed the bounty on <@{notice.target_id}>'s head with "
+                        f"{VIA.get(notice.via, notice.via)}: **{em(notice.amount)}**!")
+
+    async def on_BountyExpired(self, notice: n.BountyExpired) -> None:
+        payer = self.bot.get_user(notice.payer_id)
+        if payer is not None:
+            await dm(payer, f"🎯 Nobody claimed your bounty of {em(notice.amount)} on <@{notice.target_id}>: "
+                            f"{em(notice.refund)} came back to you (after the tax).")
+
     async def sync_level_role(self, user_id: int, level: int) -> None:
         """Give the highest level role reached and remove the other level roles."""
         pairs = level_roles()

@@ -6,10 +6,11 @@ never paid twice), gate boss fights, tournaments, the villager and the Blockdle.
 """
 from __future__ import annotations
 
+from game import bounty
 from game.db import Ctx
 
 PARTS: dict[str, str] = {
-    "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans
+    "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans, bounties
     "gear": "Gear, enchantments and the anvil",
     "levels": "Levels, XP and talents",
     "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak, dimensions,
@@ -41,6 +42,7 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             ctx.execute("UPDATE robberies SET status='stopped' WHERE status='active';")
             out["loans"] = ctx.execute("DELETE FROM loans WHERE status IN ('active', 'late');").rowcount
             ctx.execute("DELETE FROM loan_offers WHERE status='open';")
+            out["bounties"] = bounty.cancel_all(ctx)
         else:
             ctx.execute(
                 "UPDATE robberies SET status='stopped' WHERE status='active' AND (thief_id=? OR victim_id=?);",
@@ -54,6 +56,8 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             ctx.execute(
                 "DELETE FROM loan_offers WHERE status='open' AND (lender_id=? OR borrower_id=?);", (user_id, user_id)
             )
+            # The bounties they put are dropped (no refund); the ones on their head stay.
+            out["bounties"] = bounty.cancel_all(ctx, user_id)
 
     if "gear" in parts:
         ctx.execute(f"DELETE FROM gear_enchants WHERE gear_id IN (SELECT gear_id FROM gear{where});", args)
