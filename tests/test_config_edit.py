@@ -135,7 +135,7 @@ class RegistryTests(unittest.TestCase):
     def test_a_value_inside_a_list(self):
         cost = ce.FIELDS_BY_KEY["enchants.apply_cost.1"]
         cfg = ce.set_field(BASE, cost, 6)
-        self.assertEqual(cfg["balance"]["enchants"]["apply_cost"], [2, 6, 8])
+        self.assertEqual(cfg["balance"]["enchants"]["apply_cost"], [2, 6, 8, 16, 32, 64, 128])
         self.assertTrue(ce.is_modified(cfg, cost))
         cfg = ce.set_field(cfg, cost, None)  # back to the default: the override goes away
         self.assertNotIn("balance", cfg)

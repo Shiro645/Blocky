@@ -137,7 +137,10 @@ SECTIONS: tuple[Section, ...] = (
         "XP left goes to you.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
-        "two identical books into one of the next level (I + I = II, II + II = III), on your anvil. `/enchant info` lists your "
+        "two identical books into one of the next level (I + I = II, II + II = III…), on your anvil. Levels **IV to "
+        "VII** only come from combining, up to III + one level per dimension you unlocked (Nether IV … Shimmer VII); "
+        "each one adds half of what the level before added, and Protection IV+ raises the armor's damage reduction "
+        "cap instead. You can't apply a book above your maximum. `/enchant info` lists your "
         "books, your lapis and every effect.\n"
         "Enchantments stay on the piece when you trade or sell it, and are lost if it breaks: repair it in time! "
         "The Mage species makes every effect stronger.",

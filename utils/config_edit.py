@@ -79,7 +79,7 @@ CATEGORIES = {
 SECTION_OF = {category: section for section, (_, categories) in SECTIONS.items() for category in categories}
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-ROMAN = ("I", "II", "III")
+ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII")
 # Kinds typed in a text box. The others use pickers, buttons or editors.
 TYPED = ("int", "float", "percent", "text", "timezone")
 
@@ -117,9 +117,10 @@ def _b(dotted: str, category: str, label: str, help: str = "", kind: str = "int"
     return Field(dotted, category, label, _path(dotted), kind, min, max, help, **extra)
 
 
-def _per_level(dotted: str, category: str, label: str, help: str = "", kind: str = "int", **extra: Any) -> list[Field]:
-    """One field per value of a list with a value for level I, II and III."""
-    return [_b(f"{dotted}.{i}", category, f"{label} ({ROMAN[i]})", help, kind, **extra) for i in range(3)]
+def _per_level(dotted: str, category: str, label: str, help: str = "", kind: str = "int", levels: int = 3,
+               **extra: Any) -> list[Field]:
+    """One field per value of a list with a value for each level (I, II, III… up to `levels`)."""
+    return [_b(f"{dotted}.{i}", category, f"{label} ({ROMAN[i]})", help, kind, **extra) for i in range(levels)]
 
 
 def _pct(dotted: str, category: str, label: str, help: str = "", max: float = 1.0) -> Field:
@@ -418,7 +419,8 @@ FIELDS: list[Field] = [
     _pct("enchants.lapis_chance", "enchant_books", "Lapis chance per mining reward"),
     _b("enchants.lapis_amount.0", "enchant_books", "Lapis found: minimum", min=1, max=1000),
     _b("enchants.lapis_amount.1", "enchant_books", "Lapis found: maximum", min=1, max=1000),
-    *_per_level("enchants.apply_cost", "enchant_books", "Lapis to apply a book", "Lapis spent with /enchant apply.", max=1000),
+    *_per_level("enchants.apply_cost", "enchant_books", "Lapis to apply a book", "Lapis spent with /enchant apply.",
+                max=100_000, levels=7),
     *_per_level("enchants.book_weights", "enchant_books", "Book level weight", "Chances of each level for books "
                 "from drops and challenges (weight ÷ total).", max=10_000),
     *_per_level("enchants.boss_book_weights", "enchant_books", "Boss book level weight", "Chances of each level for "
@@ -427,18 +429,24 @@ FIELDS: list[Field] = [
     _b("enchants.challenges_book", "enchant_books", "Book for all weekly challenges", kind="bool", min=None,
        help="A random book for completing every challenge of the week."),
     _b("enchants.lapis_value", "enchant_books", "Lapis value (emeralds)", "Used for fortunes and fair prices."),
-    *_per_level("enchants.book_values", "enchant_books", "Book value (emeralds)", "Used for fortunes and fair prices."),
-    *_per_level("enchants.efficiency_seconds", "enchant_effects", "Efficiency: seconds less", "Shorter mining cooldown.", max=3600),
+    *_per_level("enchants.book_values", "enchant_books", "Book value (emeralds)", "Used for fortunes and fair prices.",
+                max=10_000_000, levels=7),
+    *_per_level("enchants.efficiency_seconds", "enchant_effects", "Efficiency: seconds less", "Shorter mining cooldown.",
+                kind="float", max=3600, levels=7),
     *_per_level("enchants.fortune_bonus", "enchant_effects", "Fortune: extra blocks",
-                "Pickaxe cobblestone, shovel gravel, axe sticks.", max=100),
-    *[_pct(f"enchants.fortune_hoe_xp.{i}", "enchant_effects", f"Fortune on a hoe: XP bonus ({ROMAN[i]})", max=10) for i in range(3)],
+                "Pickaxe cobblestone, shovel gravel, axe sticks (a fraction is a chance of one more).", kind="float",
+                max=100, levels=7),
+    *[_pct(f"enchants.fortune_hoe_xp.{i}", "enchant_effects", f"Fortune on a hoe: XP bonus ({ROMAN[i]})", max=10) for i in range(7)],
     *[_pct(f"enchants.unbreaking_chance.{i}", "enchant_effects", f"Unbreaking: chance to keep ({ROMAN[i]})",
-           "Chance that a use costs no durability.") for i in range(3)],
-    *_per_level("enchants.sharpness_damage", "enchant_effects", "Sharpness: max damage +", kind="float", max=1000),
-    *[_pct(f"enchants.looting_boss_bonus.{i}", "enchant_effects", f"Looting: boss reward bonus ({ROMAN[i]})", max=10)
-      for i in range(3)],
+           "Chance that a use costs no durability.") for i in range(7)],
+    *_per_level("enchants.sharpness_damage", "enchant_effects", "Sharpness: max damage +", kind="float", max=1000, levels=7),
+    *[_pct(f"enchants.looting_boss_bonus.{i}", "enchant_effects", f"Looting: gate boss bounty bonus ({ROMAN[i]})", max=10)
+      for i in range(7)],
     *_per_level("enchants.protection_points", "enchant_effects", "Protection: armor points", "Per enchanted piece.",
-                kind="float", max=100),
+                kind="float", max=100, levels=7),
+    *[_pct(f"enchants.protection_cap_bonus.{i}", "enchant_effects", f"Protection: reduction cap + ({ROMAN[i]})",
+           "Per enchanted piece: raises the most the armor can reduce the damage (Combat → max damage reduction). "
+           "Useful from IV on, where the armor points are already capped.", max=1) for i in range(7)],
     _b("enchants.mending_durability_per_xp", "enchant_effects", "Mending: durability per XP",
        "The XP a player gains repairs their equipped Mending pieces first, this much per XP.", kind="float", max=100),
     _b("enchants.mending_value", "enchant_books", "Mending book value (emeralds)",

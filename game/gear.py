@@ -153,9 +153,20 @@ def wear_shield(ctx: Ctx, piece: dict, blocks: int) -> bool:
     return left == 0
 
 
+def reduction_cap(equipped: dict[str, dict]) -> float:
+    """The most the armor can reduce the damage: max_damage_reduction, raised by Protection IV and above."""
+    cap = float(settings.get()["gear"]["max_damage_reduction"])
+    for slot in ARMOR:
+        piece = equipped.get(slot)
+        level = enchants.level_of(piece, "protection")
+        if level:
+            cap += enchants.protection_cap_bonus(level) * float(piece.get("enchant_boost", 1.0))
+    return min(0.95, cap)
+
+
 def damage_reduction(equipped: dict[str, dict]) -> float:
     g = settings.get()["gear"]
-    return min(g["max_damage_reduction"], armor_points(equipped) * g["damage_reduction_per_armor_point"])
+    return min(reduction_cap(equipped), armor_points(equipped) * g["damage_reduction_per_armor_point"])
 
 
 def mend(ctx: Ctx, user_id: int, xp: int) -> int:

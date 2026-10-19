@@ -14,14 +14,14 @@ class SettingsValidationTests(unittest.TestCase):
         problems = settings.problems({
             "mining": {"cooldown": 20, "cooldown_seconds": "fast"},
             "daily": {"base_reward": 12.5},
-            "enchants": {"apply_cost": [1, 2]},
+            "enchants": {"apply_cost": [1, 2, 3, 4, 5, 6, 7, 8]},
             "challenges": {"per_week": -1},
         })
         text = "\n".join(problems)
         self.assertIn("mining.cooldown` doesn't exist", text)
         self.assertIn("cooldown_seconds` must be a number", text)
         self.assertIn("base_reward` must be a whole number", text)
-        self.assertIn("apply_cost` must have 3 values", text)
+        self.assertIn("apply_cost` must have 7 values", text)
         self.assertIn("per_week` can't be negative", text)
 
     def test_not_a_number_and_chances(self):

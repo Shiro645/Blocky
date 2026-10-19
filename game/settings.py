@@ -233,19 +233,25 @@ DEFAULTS: dict[str, Any] = {
         # Lapis lazuli: found while mining, spent to apply books.
         "lapis_chance": 0.025,  # per mining reward (1 in 40)
         "lapis_amount": [1, 2],
-        "apply_cost": [2, 4, 8],  # lapis to apply a book of level I / II / III
+        # Levels I to VII. Random books are I to III; IV to VII are only made by combining two books, and only
+        # in a dimension that allows them (max level = 3 + the dimension: Nether IV … Shimmer VII). Beyond III each
+        # level adds half of what the level before added.
+        "apply_cost": [2, 4, 8, 16, 32, 64, 128],  # lapis to apply a book of level I … VII
         "book_weights": [60, 30, 10],  # chances of level I / II / III (drops, challenges)
         "boss_book_weights": [0, 70, 30],  # book of the top damage dealers (boss_book_top)
         "boss_book_top": 1,
         "challenges_book": True,  # a random book for completing every weekly challenge
         # Effects for level I / II / III.
-        "efficiency_seconds": [2, 4, 6],  # pickaxe: shorter mining cooldown
-        "fortune_bonus": [1, 2, 3],  # pickaxe blocks, shovel gravel, axe sticks
-        "fortune_hoe_xp": [0.05, 0.10, 0.15],
-        "unbreaking_chance": [0.25, 0.40, 0.50],  # chance a use costs no durability
-        "sharpness_damage": [1, 2, 3],
-        "looting_boss_bonus": [0.10, 0.20, 0.30],
-        "protection_points": [1, 2, 3],  # armor points per piece
+        "efficiency_seconds": [2.0, 4.0, 6.0, 7.0, 7.5, 7.75, 7.875],  # pickaxe: shorter mining cooldown
+        "fortune_bonus": [1.0, 2.0, 3.0, 3.5, 3.75, 3.875, 3.9375],  # pickaxe blocks, shovel gravel, axe sticks
+        "fortune_hoe_xp": [0.05, 0.10, 0.15, 0.175, 0.1875, 0.19375, 0.196875],
+        "unbreaking_chance": [0.25, 0.40, 0.50, 0.55, 0.575, 0.5875, 0.59375],  # chance a use costs no durability
+        "sharpness_damage": [1.0, 2.0, 3.0, 3.5, 3.75, 3.875, 3.9375],
+        "looting_boss_bonus": [0.10, 0.20, 0.30, 0.35, 0.375, 0.3875, 0.39375],  # gate bosses' bounty
+        # Armor points per piece. From IV on, Protection raises the cap of the damage reduction instead
+        # (gear.max_damage_reduction) by protection_cap_bonus per piece: the points are already capped there.
+        "protection_points": [1.0, 2.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        "protection_cap_bonus": [0.0, 0.0, 0.0, 0.01, 0.02, 0.03, 0.04],
         # Mending (one level, any gear): the XP a player gains repairs their equipped Mending pieces first,
         # this much durability per XP; only the XP left goes to the player.
         "mending_durability_per_xp": 2,
@@ -253,7 +259,7 @@ DEFAULTS: dict[str, Any] = {
         "boss_mending_chance": 0.05,  # the top damage dealer's book is Mending this often
         # Reference values in emeralds (fortune, fair auction prices).
         "lapis_value": 10,
-        "book_values": [50, 150, 400],
+        "book_values": [50, 150, 400, 800, 1600, 3200, 6400],
     },
     "villager": {
         # Every day from arrive_hour to leave_hour (local time), 3 offers, one of each.
@@ -594,6 +600,11 @@ def get() -> dict[str, Any]:
 # ---------------- validation ----------------
 # Dicts whose keys are free (not fixed by DEFAULTS): their values must look like the defaults' values.
 _FREE_KEYS = {("moderation", "warn_mutes"), ("villager", "buys")}
+# Lists that grew in an update (enchantments: levels I-III, then I-VII): an older, shorter override keeps its
+# values and gets the defaults for the rest.
+_GROWN = {("enchants", k) for k in ("apply_cost", "efficiency_seconds", "fortune_bonus", "fortune_hoe_xp",
+                                     "unbreaking_chance", "sharpness_damage", "looting_boss_bonus",
+                                     "protection_points", "book_values")}
 # Lists that can have any length (the others have one value per level and keep their length).
 _FREE_LENGTH = {
     ("seasons", "rewards"), ("teams", "season_rewards"), ("boss", "names"),
@@ -654,6 +665,8 @@ def _check(default: Any, value: Any, path: tuple[str, ...], problems: list[str])
         if not isinstance(value, list):
             problems.append(f"`{name}` must be a list [ ... ].")
             return _INVALID
+        if path in _GROWN and 0 < len(value) < len(default):
+            value = list(value) + list(default[len(value):])
         if path not in _FREE_LENGTH and len(value) != len(default):
             problems.append(f"`{name}` must have {len(default)} values.")
             return _INVALID

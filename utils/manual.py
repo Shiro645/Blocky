@@ -41,7 +41,7 @@ CATEGORIES: dict[str, tuple[str, bool]] = {
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-ROMAN = ("I", "II", "III")
+ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII")
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ def duration(seconds: float) -> str:
 
 def per_level(values: list, fmt: Callable[[float], str] = num) -> str:
     """[2, 4, 8] -> 'I 2 · II 4 · III 8'"""
-    return " · ".join(f"{ROMAN[i]} {fmt(v)}" for i, v in enumerate(values[:3]))
+    return " · ".join(f"{ROMAN[i]} {fmt(v)}" for i, v in enumerate(values[:len(ROMAN)]))
 
 
 def listing(mapping: dict, fmt: Callable[[Any], str] = num) -> str:
@@ -252,7 +252,8 @@ def _enchant_effects(s: Settings) -> list[str]:
         "unbreaking": f"{levels('unbreaking_chance', pct)} chance that a use costs no durability",
         "sharpness": f"+{levels('sharpness_damage')} maximum damage",
         "looting": f"+{levels('looting_boss_bonus', pct)} boss reward",
-        "protection": f"+{levels('protection_points')} armor points",
+        "protection": f"+{levels('protection_points')} armor points; from IV on, the damage reduction cap "
+        f"+{levels('protection_cap_bonus', pct)} per piece",
         "mending": f"the XP you gain repairs the equipped piece first: **{num(e['mending_durability_per_xp'])}** "
         "durability per XP, and only the XP left goes to you. One level; the rarest book (the villager's exclusive "
         f"offer, or now and then a boss's top damage dealer: {pct(e['boss_mending_chance'])})",
@@ -262,7 +263,7 @@ def _enchant_effects(s: Settings) -> list[str]:
         items = "any gear" if len(ench.items) > 4 else ", ".join(ench.items)
         if ench.key == "protection":
             items = "armor"
-        levels_text = " (I / II / III)" if ench.max_level > 1 else ""
+        levels_text = " (I to VII)" if ench.max_level > 1 else ""
         lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}{levels_text}")
     return lines
 
@@ -814,8 +815,11 @@ PAGES: list[Page] = [
     ),
     Page(
         "enchant combine", "gear",
-        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III), on your anvil "
-        "(`/craft item:anvil`; it wears out a little with each use). Level III is the maximum. It's free.",
+        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III…), on your anvil "
+        "(`/craft item:anvil`; it wears out a little with each use). It's free.\n"
+        "Levels **IV to VII** only come from combining, and only up to your maximum: **III** in the overworld, "
+        "**IV** with the Nether, **V** the End, **VI** the Deep Dark, **VII** the Shimmer. Beyond III each level adds "
+        "half of what the one before added. You can't apply a book above your maximum either.",
         examples=("/enchant combine book:Fortune I",),
         related=("enchant apply", "enchant info"),
     ),

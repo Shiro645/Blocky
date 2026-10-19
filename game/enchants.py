@@ -1,4 +1,4 @@
-"""Enchantments: books (levels I to III) applied to gear with lapis lazuli.
+"""Enchantments: books (levels I to VII) applied to gear with lapis lazuli.
 
 Books and lapis are stackable items (items table): ("book", "<enchant>:<level>")
 and ("lapis", "none"). Applying a book costs lapis and replaces a lower level
@@ -7,6 +7,8 @@ Mending has a single level and is rare: never a random book (drops, challenges),
 the villager's exclusive offer and, sometimes, a boss's top damage dealer.
 Enchantments belong to the piece of gear: they follow it in trades and
 auctions, and disappear when it breaks.
+Random books are levels I to III. Levels IV to VII only come from combining, and a
+player can only make or apply a level up to 3 + their dimension (Nether IV … Shimmer VII).
 """
 from __future__ import annotations
 
@@ -19,8 +21,9 @@ from game.catalog import ARMOR, GEAR_ITEMS
 from game.db import Ctx
 from game.errors import GameError
 
-MAX_LEVEL = 3
-ROMAN = {1: "I", 2: "II", 3: "III"}
+MAX_LEVEL = 7
+BASE_LEVEL = 3  # the highest level of random books, and of the overworld
+ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII"}
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,29 @@ def apply_cost(level: int) -> int:
     return int(_per_level(_cfg()["apply_cost"], level))
 
 
+def protection_cap_bonus(level: int) -> float:
+    """How much a piece's Protection raises the cap of the damage reduction (from IV on)."""
+    return _per_level(_cfg()["protection_cap_bonus"], level)
+
+
+def max_level_for(ctx: Ctx, user_id: int) -> int:
+    """The highest level a player can make or apply: III in the overworld, +1 per dimension."""
+    from game import dimensions  # dimensions depends on players, like this module
+
+    return min(MAX_LEVEL, BASE_LEVEL + dimensions.level(ctx, user_id))
+
+
+def _check_level(ctx: Ctx, user_id: int, level: int, what: str) -> None:
+    top = max_level_for(ctx, user_id)
+    if level > top:
+        from game import dimensions
+        from game.catalog import DIMENSIONS
+
+        need = DIMENSIONS[min(level - BASE_LEVEL, len(DIMENSIONS) - 1)]
+        raise GameError(f"You can't {what} a level {ROMAN[level]} book yet: your maximum is **{ROMAN[top]}**. "
+                        f"Level {ROMAN[level]} needs the {dimensions.label(need)}.")
+
+
 def label(name: str, level: int) -> str:
     if ENCHANTS[name].max_level == 1:
         return ENCHANTS[name].name
@@ -111,7 +137,8 @@ def effect_text(name: str, level: int) -> str:
         return f"+{v:.0%} boss reward"
     if name == "mending":
         return f"the XP you gain repairs it first ({v:g} durability per XP)"
-    return f"+{v:g} armor points"
+    cap = protection_cap_bonus(level)
+    return f"+{v:g} armor points" + (f", damage reduction cap +{cap:.0%}" if cap else "")
 
 
 def level_of(piece: dict | None, name: str) -> int:
@@ -209,7 +236,7 @@ def books(ctx: Ctx, user_id: int) -> list[tuple[str, int, int]]:
 
 
 def random_book(rng: random.Random, weights: list | None = None) -> tuple[str, int]:
-    weights = [float(w) for w in (weights if weights is not None else _cfg()["book_weights"])][:MAX_LEVEL]
+    weights = [float(w) for w in (weights if weights is not None else _cfg()["book_weights"])][:BASE_LEVEL]
     level = rng.choices(range(1, len(weights) + 1), weights=weights)[0]
     return rng.choice(RANDOM_BOOKS), level
 
@@ -236,6 +263,7 @@ def apply(ctx: Ctx, user_id: int, book: str, gear_id: int) -> dict:
         raise GameError(f"This {piece['material']} {piece['item']} already has **{label(name, current)}**.")
     if players.item_amount(ctx, user_id, "book", book_material(name, level)) < 1:
         raise GameError(f"You don't have a **{label(name, level)}** book.")
+    _check_level(ctx, user_id, level, "apply")
     cost = apply_cost(level)
     have = lapis(ctx, user_id)
     if have < cost:
@@ -256,6 +284,7 @@ def combine(ctx: Ctx, user_id: int, book: str) -> dict:
         raise GameError(f"**{ENCHANTS[name].name}** has only one level: it can't be combined.")
     if level >= top:
         raise GameError(f"Level {ROMAN[top]} is the maximum.")
+    _check_level(ctx, user_id, level + 1, "make")
     have = players.item_amount(ctx, user_id, "book", book_material(name, level))
     if have < 2:
         raise GameError(f"You need 2 **{label(name, level)}** books to combine them (you have {have}).")
