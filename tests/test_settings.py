@@ -38,7 +38,7 @@ class SettingsValidationTests(unittest.TestCase):
         self.assertTrue(settings.problems({"tournament": {"min_players": 40}}))  # above the maximum
         self.assertTrue(settings.problems({"tournament": {"prize_split": [80, 30, 10]}}))
         self.assertTrue(settings.problems({"villager": {"leave_hour": 18}}))
-        self.assertTrue(settings.problems({"villager": {"buys": {"dirt": 10}}}))
+        self.assertTrue(settings.problems({"villager": {"buys": {"sand": 10}}}))
         self.assertTrue(settings.problems({"moderation": {"warn_mutes": {"3": "soon"}}}))
         self.assertTrue(settings.problems({"drops": {"table": [{"weight": 1, "title": "x", "reward": {"cake": 1}}]}}))
 

@@ -190,30 +190,36 @@ class ArmorDurabilityTests(GameTestCase):
 
 class SellGearTests(GameTestCase):
     async def test_price_is_a_share_of_the_value_times_the_durability_left(self):
-        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "diamond")
         piece = await self.run_game(shop.owned_piece, ALICE, gid)
         offer = await self.run_game(shop.gear_offer, ALICE, piece)
-        self.assertEqual((offer["value"], offer["price"]), (600, 480))  # 2 netherite + 1 stick, × 80%
+        self.assertEqual((offer["value"], offer["price"]), (120, 96))  # 2 diamonds + 1 stick, × 80%
         await self.run_game(_wear, gid, piece["max_durability"] // 2)
         piece = await self.run_game(shop.owned_piece, ALICE, gid)
-        self.assertEqual((await self.run_game(shop.gear_offer, ALICE, piece))["price"], 240)
+        self.assertEqual((await self.run_game(shop.gear_offer, ALICE, piece))["price"], 48)
 
     async def test_books_count_and_go_with_the_piece(self):
-        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "diamond")
         await self.run_game(enchants.set_enchants, gid, {"sharpness": 2})
         await self.run_game(gear.equip, ALICE, gid)
         res = await self.run_game(shop.sell_gear, ALICE, gid)
-        self.assertEqual(res["price"], 600)  # (600.25 + 150) × 80%
-        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 600)
+        self.assertEqual(res["price"], 216)  # (120.25 + 150) × 80%
+        self.assertEqual(await self.run_game(players.get_emeralds, ALICE), 216)
         self.assertEqual(await self.run_game(shop.get_gear, ALICE), [])
         self.assertNotIn("sword", await self.run_game(gear.get_equipped, ALICE))
         self.assertEqual(await self.run_game(enchants.of_gear, [gid]), {})
 
     async def test_villagers_get_their_bonus(self):
         await self.run_game(species.choose, ALICE, "villager")
-        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "diamond")
         res = await self.run_game(shop.sell_gear, ALICE, gid)
-        self.assertEqual((res["base"], res["bonus"], res["price"]), (480, 24, 504))
+        self.assertEqual((res["base"], res["bonus"], res["price"]), (96, 5, 101))
+
+    async def test_netherite_is_never_sold(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "netherite")
+        with self.assertRaisesRegex(GameError, "can't be sold"):
+            await self.run_game(shop.sell_gear, ALICE, gid)
+        self.assertEqual(await self.run_game(shop.gear_offers, ALICE), [])
 
     async def test_refused_when_not_owned_or_the_price_changed(self):
         gid = await self.run_game(shop.create_gear, BOB, "sword", "iron")

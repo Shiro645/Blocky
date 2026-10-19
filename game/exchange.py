@@ -43,6 +43,9 @@ def trade(ctx: Ctx, a_id: int, b_id: int, a_key: str, a_amount: int, b_key: str 
     """A gives `a_amount` of `a_key` to B, and B gives `b_amount` of `b_key` to A (if any)."""
     if a_id == b_id:
         raise GameError("You can't trade with yourself.")
+    assets.check_tradeable(a_key)
+    if b_key:
+        assets.check_tradeable(b_key)
     loans.check_not_late(ctx, a_id, "trades")
     if b_key:
         loans.check_not_late(ctx, b_id, "trades")
@@ -68,6 +71,7 @@ def list_for_sale(ctx: Ctx, seller_id: int, key: str, amount: int, price: int) -
         raise GameError("You can't sell emeralds for emeralds.")
     if price <= 0:
         raise GameError("The price must be greater than 0.")
+    assets.check_tradeable(key)
     loans.check_not_late(ctx, seller_id, "auction listings")
     count = ctx.one("SELECT COUNT(*) AS n FROM auctions WHERE seller_id=?;", (seller_id,))["n"]
     if count >= int(a["max_listings"]):

@@ -13,7 +13,7 @@ from typing import Any, Callable
 
 from game import blockdle, enchants, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
-from game.catalog import RECIPES, TALENT_BRANCHES
+from game.catalog import DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, RECIPES, TALENT_BRANCHES, block_name
 from game.profiles import FRAMES
 from game.pve import DIFFICULTIES as DUNGEON
 from game.species import SPECIES
@@ -115,7 +115,18 @@ def hour(h: float) -> str:
 
 # ---------------- shared values ----------------
 def _block_values(s: Settings) -> str:
-    return "Block values: " + listing(s["block_values"])
+    return "Overworld block values: " + listing({block_name(b): s["block_values"][b] for b in DIMENSION_BLOCKS["overworld"]})
+
+
+def _dimensions(s: Settings) -> list[str]:
+    d = s["dimensions"]
+    lines = [f"{DIMENSION_NAMES[k]}: " + listing({block_name(b): s["block_values"][b] for b in DIMENSION_BLOCKS[k]})
+             for k in DIMENSIONS]
+    return lines + [
+        f"Ancient debris (Nether and beyond): **{pct(d['scrap_chance'])}** chance per mining reward, one netherite scrap",
+        f"Netherite ingot: **{num(d['scraps_per_ingot'])}** scraps + **{num(d['gold_per_ingot'])}** gold ingots · "
+        "netherite piece: a diamond piece + 1 netherite ingot",
+    ]
 
 
 def _cooldown(s: Settings) -> str:
@@ -626,6 +637,10 @@ PAGES: list[Page] = [
         "There is no command to mine: **every message you send mines blocks**, at most once per cooldown (only in "
         "the mining channels when the staff set some). "
         "It's silent: check what you got with /inventory.\n"
+        "Each **dimension** (/dimensions) has its own mining channels and blocks: the overworld's, then the Nether, "
+        "the End, the Deep Dark and the Shimmer, each worth more than the one before. The channels of a dimension "
+        "you haven't unlocked give nothing. From the Nether on, mining can find **Ancient debris**: a netherite "
+        "scrap (a ⛏️ reaction shows it).\n"
         "Your equipped tools add bonuses (/gear), your talents improve the odds (/talents), and teammates who "
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "
         "**drop** appear: the first player to click it gets the reward.\n\n"
@@ -633,8 +648,21 @@ PAGES: list[Page] = [
         "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons). Messages in your private "
         "guide channel, in DMs or in another server don't mine at all.",
         _mining,
-        related=("inventory", "sell", "gear", "talents"),
+        related=("inventory", "sell", "gear", "talents", "dimensions"),
         title="⛏️ Mining (chat)",
+    ),
+    Page(
+        "dimensions", "mining",
+        "Shows the 5 dimensions: their blocks and what each is worth, how much a message mines there on average, "
+        "their mining channels, which ones you unlocked, and your netherite (scraps, ingots, pieces).\n"
+        "Unlocking a dimension opens every one before it. Mine a dimension's blocks in its channels; the server can "
+        "give a role per dimension to show those channels only to the players who reached it.\n"
+        "**Netherite** is a goal of its own: it's only found in the Nether and beyond (Ancient debris, one scrap). "
+        "4 scraps + 4 gold ingots make a netherite ingot, and a diamond piece + 1 netherite ingot make the netherite "
+        "piece (/craft). It can't be bought, sold, traded or put up for auction.",
+        _dimensions,
+        examples=("/dimensions",),
+        related=("mining", "craft", "inventory"),
     ),
     Page(
         "inventory", "start",
@@ -710,11 +738,15 @@ PAGES: list[Page] = [
         "(except the shield: at 0 it stays, unusable until repaired).\n"
         "The **shield** is made of iron only (6 ingots). The **anvil** (iron only) is what you repair gear and "
         "combine books on; it wears out a little with each use. For both, leave out the material.\n"
+        "**Netherite**: `item:netherite_ingot` turns netherite scraps (found in the Nether) and gold ingots into a "
+        "netherite ingot; then `material:netherite` upgrades one of your **diamond** pieces (the worn one first) with "
+        "1 netherite ingot: it keeps its enchantments and is as good as new.\n"
         "Everyone in the channel sees what you crafted.",
         lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s),
                    f"Anvil: **{num(s['repair']['anvil_iron'])}** iron ingots", "Recipes and prices: /craftlist"],
-        examples=("/craft item:pickaxe material:iron", "/craft item:anvil"),
-        related=("craftlist", "market", "equip_best", "repair"),
+        examples=("/craft item:pickaxe material:iron", "/craft item:anvil", "/craft item:netherite_ingot",
+                  "/craft item:sword material:netherite"),
+        related=("craftlist", "market", "equip_best", "repair", "dimensions"),
     ),
     Page(
         "craftlist", "gear",
@@ -1576,6 +1608,17 @@ PAGES: list[Page] = [
         related=("take", "player level", "backup_now"),
     ),
     Page(
+        "rewind_gear", "staff_players",
+        "The 2.0 fresh start for gear, for **the whole server**: every piece of gear (weapons, armor, tools, shields, "
+        "worn or spare, auction listings of them too) and every netherite ingot is taken back and **paid back in "
+        "full**: the ingots and sticks of its recipe at the market prices, plus the books on it (a netherite ingot "
+        "at its value). Repairs aren't paid back, and the refund doesn't count for the seasons.\n"
+        "You see what it would take and pay first, then confirm twice. A backup of the database is made just before "
+        "(restore it to undo), the staff channel gets a summary and each player gets a DM with their refund.",
+        examples=("/rewind_gear",),
+        related=("reset", "player dimension"),
+    ),
+    Page(
         "player xp_add", "staff_players",
         "Gives XP to a member: levels and talent points follow, like normal XP. The member gets a DM.",
         examples=("/player xp_add member:@Steve amount:1000",),
@@ -1614,6 +1657,15 @@ PAGES: list[Page] = [
         _species,
         examples=("/player species member:@Steve species:🪓 Dwarf",),
         related=("species choose",),
+    ),
+    Page(
+        "player dimension", "staff_players",
+        "Sets the furthest dimension a member reached: they get every dimension up to it (and lose the ones after "
+        "it; the Overworld locks them all). Their dimension roles follow. The member gets a DM. Until the gate "
+        "bosses arrive, it's the only way to unlock a dimension.",
+        _dimensions,
+        examples=("/player dimension member:@Steve dimension:🔥 Nether",),
+        related=("dimensions", "rewind_gear"),
     ),
     Page(
         "player title", "staff_players",

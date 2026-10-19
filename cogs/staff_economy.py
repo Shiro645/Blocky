@@ -9,11 +9,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, backups, cooldowns, players, profiles, reset, settings, species
+from game import assets, backups, cooldowns, dimensions, players, profiles, reset, rewind, settings, species
+from game.catalog import DIMENSIONS
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
 from utils.checks import staff_only
-from utils.ui import BaseView, ConfirmView, asset_icon, dm, report_error
+from utils.ui import BaseView, ConfirmView, asset_icon, dm, em, report_error
 
 log = logging.getLogger("staff_economy")
 
@@ -29,7 +30,7 @@ def what(key: str, amount: int) -> str:
 class StaffEconomyCog(commands.Cog):
     """Staff: give and take anything, change a member's XP, level and talents. Members get a DM."""
 
-    player = app_commands.Group(name="player", description="STAFF: Change a member's XP, level, talents and species.")
+    player = app_commands.Group(name="player", description="STAFF: Change a member's XP, level, talents, species and dimension.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -207,6 +208,22 @@ class StaffEconomyCog(commands.Cog):
         if cog is not None:
             await cog.sync_roles(member.id)  # type: ignore[attr-defined]
 
+    @player.command(name="dimension", description="STAFF: Set the furthest dimension a member reached (the ones before it too).")
+    @app_commands.describe(member="Whose dimensions to set", dimension="Their furthest dimension (Overworld = locks the others)")
+    @app_commands.choices(dimension=[app_commands.Choice(name=dimensions.label(d), value=d) for d in DIMENSIONS])
+    @staff_only()
+    async def set_dimension(self, interaction: discord.Interaction, member: discord.Member, dimension: str):
+        res = await self.bot.db.run(dimensions.set_highest, member.id, dimension)
+        opened = ", ".join(dimensions.label(d) for d in res["unlocked"])
+        await self.answer(
+            interaction, f"✅ {member.mention}: {dimensions.label(res['before'])} → **{dimensions.label(dimension)}** "
+                         f"(unlocked: {opened}).",
+            member, f"🌍 The staff set your dimensions: you can now mine in {opened}",
+        )
+        cog = self.bot.get_cog("DimensionsCog")
+        if cog is not None:
+            await cog.sync_roles(member.id)  # type: ignore[attr-defined]
+
     @player.command(name="title", description="STAFF: Give a member a custom title (shown on their profile card).")
     @app_commands.describe(member="Who gets the title", title="The title (40 characters at most)")
     @staff_only()
@@ -280,18 +297,23 @@ class StaffEconomyCog(commands.Cog):
         await interaction.response.send_message(embed=view.embed(), view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
-    async def do_reset(self, interaction: discord.Interaction, member: discord.Member | None, parts: list[str]) -> discord.Embed:
-        """Back up the database, then reset. Nothing is reset if the backup fails."""
+    async def backup_first(self, what: str):
+        """A backup of the database before something that can't be undone. Raises if it fails."""
         tools = self.bot.get_cog("AdminToolsCog")
         if tools is None:
-            raise GameError("Backups aren't available right now: nothing was reset.")
+            raise GameError(f"Backups aren't available right now: nothing was {what}.")
         now = datetime.now(ZoneInfo(settings.get()["timezone"]))
         target = backups.manual_path(backups.backup_dir(self.bot.db.path), now)
         try:
             await tools.make_backup(target)  # type: ignore[attr-defined]
         except Exception:
-            log.exception("Backup before /reset failed")
-            raise GameError("The backup failed, so nothing was reset. Check the bot logs.")
+            log.exception("Backup before %s failed", what)
+            raise GameError(f"The backup failed, so nothing was {what}. Check the bot logs.")
+        return target
+
+    async def do_reset(self, interaction: discord.Interaction, member: discord.Member | None, parts: list[str]) -> discord.Embed:
+        """Back up the database, then reset. Nothing is reset if the backup fails."""
+        target = await self.backup_first("reset")
         user_id = member.id if member else None
 
         def run(ctx):
@@ -312,6 +334,9 @@ class StaffEconomyCog(commands.Cog):
         if "levels" in parts:
             # Level roles follow the level: everyone is level 1 again.
             asyncio.create_task(self.sync_roles_of(user_ids))
+        dims = self.bot.get_cog("DimensionsCog")
+        if "progress" in parts and dims is not None:  # back to the overworld: the dimension roles go
+            asyncio.create_task(dims.sync_roles(user_id))  # type: ignore[attr-defined]
         seasons_cog = self.bot.get_cog("SeasonsCog")
         if "progress" in parts and member is None and seasons_cog is not None:
             # The past seasons are gone: nobody is champion anymore.
@@ -322,6 +347,70 @@ class StaffEconomyCog(commands.Cog):
         embed = summary()
         log.warning("%s reset %s for %s", interaction.user, ", ".join(parts), member or "the whole server")
         return embed
+
+    # ---------- /rewind_gear ----------
+    @app_commands.command(name="rewind_gear", description="STAFF: Take back every piece of gear and netherite ingot and pay them back in full.")
+    @staff_only()
+    async def rewind_gear(self, interaction: discord.Interaction):
+        plan = await self.bot.db.run(rewind.plan)
+        total = rewind.summary(plan)
+        if not total["players"]:
+            raise GameError("Nobody has gear or netherite ingots: nothing to rewind.")
+        text = (
+            "♻️ **Rewind the gear of the whole server?**\n"
+            f"Every piece of gear (weapons, armor, tools, shields, worn or not) and every netherite ingot is taken back "
+            f"and paid back in full (recipe + books), auction listings of them too:\n"
+            f"• **{total['players']}** player(s) · **{total['pieces']}** piece(s) · **{total['ingots']}** netherite "
+            f"ingot(s) · **{total['listings']}** listing(s)\n"
+            f"• **{em(total['emeralds'])}** paid back in all\n"
+            "A backup is made first. Each player gets a DM with their refund."
+        )
+
+        async def sure(i: discord.Interaction) -> None:
+            await i.response.edit_message(
+                content=text + "\n\n⚠️ **Last check**: this can only be undone by restoring the backup.",
+                view=ConfirmView(interaction.user.id, "Yes, rewind everything", go))
+
+        async def go(i: discord.Interaction) -> None:
+            await i.response.edit_message(content="♻️ Backing up, then rewinding…", view=None)
+            try:
+                target = await self.backup_first("rewound")
+            except GameError as error:
+                await i.edit_original_response(content=f"❌ {error}")
+                return
+            done = await self.bot.db.run(rewind.apply)
+            result = rewind.summary(done)
+            summary = (f"**{result['players']}** player(s) · **{result['pieces']}** piece(s) · **{result['ingots']}** "
+                       f"netherite ingot(s) · **{result['listings']}** listing(s) · **{em(result['emeralds'])}** paid back.")
+            await i.edit_original_response(content=f"✅ Gear rewound. {summary}\nBackup: `{target.name}`.")
+            embed = discord.Embed(title="♻️ Gear rewound", description=summary, color=discord.Color.dark_red())
+            embed.add_field(name="Backup made just before", value=f"`{target.name}` (restore it to undo)", inline=False)
+            embed.add_field(name="By", value=f"{interaction.user.mention} (`{interaction.user}`)", inline=False)
+            await self.bot.announcer.send(embed=embed, channel="staff_log")
+            log.warning("%s rewound the gear: %s", interaction.user, result)
+            asyncio.create_task(self.dm_refunds(done))
+
+        await interaction.response.send_message(text, view=ConfirmView(interaction.user.id, "Rewind", sure),
+                                                ephemeral=True)
+
+    async def dm_refunds(self, refunds: dict[int, dict]) -> None:
+        """Tell each player what the rewind took and paid back (in the background: DMs are slow)."""
+        for uid, e in refunds.items():
+            try:
+                user = self.bot.get_user(uid) or await self.bot.fetch_user(uid)
+                parts = []
+                if e["pieces"]:
+                    parts.append(f"{e['pieces']} piece(s) of gear")
+                if e["ingots"]:
+                    parts.append(f"{e['ingots']} netherite ingot(s)")
+                if e["listings"]:
+                    parts.append(f"{e['listings']} auction listing(s)")
+                await dm(user, f"♻️ **New season, new gear!** Your {', '.join(parts)} were taken back and paid back "
+                               f"in full: **+{em(e['emeralds'])}**. Craft your new gear with `/craft`; netherite is "
+                               "now found in the Nether (`/dimensions`).")
+            except Exception:  # one closed DM must not stop the others
+                log.warning("Could not DM the rewind refund to %s", uid, exc_info=True)
+            await asyncio.sleep(1)
 
     async def sync_roles_of(self, user_ids: list[int]) -> None:
         try:

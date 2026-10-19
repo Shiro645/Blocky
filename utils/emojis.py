@@ -10,7 +10,13 @@ import re
 from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS, materials_for
 
 # Fallbacks when no custom emoji is set for a block.
-BLOCK_FALLBACK = {"cobblestone": "🪨", "gravel": "🟫", "deepslate": "⬛", "bedrock": "🟪", "obsidian": "🟣"}
+BLOCK_FALLBACK = {
+    "dirt": "🟫", "cobblestone": "🪨", "gravel": "🟫", "deepslate": "⬛", "bedrock": "🟪", "obsidian": "🟣",
+    "netherrack": "🟥", "blackstone": "⬛", "nether_bricks": "🧱", "gilded_blackstone": "🟨",
+    "end_stone": "🟨", "end_bricks": "🧱", "purpur": "🟪",
+    "sculk": "🟦", "sculk_shrieker": "💀",
+    "shimmer_stone": "✨",
+}
 
 _CUSTOM_EMOJI = re.compile(r"^<a?:\w{2,32}:\d{15,25}>$")
 
@@ -20,7 +26,7 @@ def gear_key(item: str, material: str) -> str:
 
 
 EXPECTED_NAMES: tuple[str, ...] = (
-    ("emerald", "stick", "xp", "lapis", "enchanted_book")
+    ("emerald", "stick", "xp", "lapis", "enchanted_book", "netherite_scrap")
     + ("potion_strength", "potion_speed", "potion_healing", "potion_harming")
     + MATERIALS
     + BLOCK_TYPES

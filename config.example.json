@@ -12,7 +12,11 @@
     "updates": 0,
     "robberies": 0,
     "spam": [],
-    "mining": []
+    "mining": [],
+    "mining_nether": [],
+    "mining_end": [],
+    "mining_deep_dark": [],
+    "mining_shimmer": []
   },
   "roles": {
     "level_roles": {
@@ -31,7 +35,11 @@
     "species_mage": 0,
     "species_miner": 0,
     "event_ping": 0,
-    "untouchable": 0
+    "untouchable": 0,
+    "dimension_nether": 0,
+    "dimension_end": 0,
+    "dimension_deep_dark": 0,
+    "dimension_shimmer": 0
   },
   "emojis": {},
   "minecraft": {

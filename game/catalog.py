@@ -3,7 +3,36 @@ from __future__ import annotations
 
 from game import settings
 
-BLOCK_TYPES = ("cobblestone", "gravel", "deepslate", "obsidian", "bedrock")  # rarest last
+# Dimensions, in the order they unlock. Each one has its blocks (most common first, rarest last) and pays
+# more per message than the one before (see the block values and odds in settings).
+DIMENSIONS = ("overworld", "nether", "end", "deep_dark", "shimmer")
+DIMENSION_NAMES = {"overworld": "Overworld", "nether": "Nether", "end": "End", "deep_dark": "Deep Dark",
+                   "shimmer": "Shimmer"}
+DIMENSION_ICONS = {"overworld": "🌳", "nether": "🔥", "end": "🌌", "deep_dark": "🦇", "shimmer": "✨"}
+DIMENSION_BLOCKS = {
+    "overworld": ("dirt", "cobblestone", "gravel", "deepslate", "obsidian", "bedrock"),
+    "nether": ("netherrack", "blackstone", "nether_bricks", "gilded_blackstone"),
+    "end": ("end_stone", "end_bricks", "purpur"),
+    "deep_dark": ("sculk", "sculk_shrieker"),
+    "shimmer": ("shimmer_stone",),
+}
+BLOCK_TYPES = tuple(b for d in DIMENSIONS for b in DIMENSION_BLOCKS[d])
+BLOCK_DIMENSION = {b: d for d in DIMENSIONS for b in DIMENSION_BLOCKS[d]}
+# The overworld's dirt is extra flavour (worth as much as cobblestone): the other ranks are the same in every
+# dimension. Rank 0 = the common block (pickaxe bonus), 1 = gravel's rank (shovel, Miner), 2 = deepslate's
+# (Miner), 3-4 = the rare ones (Lucky). A dimension with fewer blocks gives the missing ranks to its rarest one.
+RANKS = 5
+
+
+def rank_block(dimension: str, rank: int) -> str:
+    blocks = [b for b in DIMENSION_BLOCKS[dimension] if b != "dirt"]
+    return blocks[min(rank, len(blocks) - 1)]
+
+
+def block_name(block: str) -> str:
+    return block.replace("_", " ")
+
+
 MATERIALS = ("gold", "iron", "diamond", "netherite")
 TOOLS = ("sword", "pickaxe", "axe", "shovel", "hoe")
 ARMOR = ("helmet", "chestplate", "leggings", "boots")

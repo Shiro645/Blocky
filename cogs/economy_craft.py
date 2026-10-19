@@ -7,10 +7,13 @@ from discord.ext import commands
 from game import anvil, enchants, gear, settings, shop
 from game.catalog import GEAR_ITEMS, MATERIALS, RECIPES, gear_effect, materials_for
 from game.db import Ctx
-from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar
+from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar, scrap_icon
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
-CRAFT_CHOICES = ITEM_CHOICES + [app_commands.Choice(name="anvil (to repair and combine books)", value="anvil")]
+CRAFT_CHOICES = ITEM_CHOICES + [
+    app_commands.Choice(name="anvil (to repair and combine books)", value="anvil"),
+    app_commands.Choice(name="netherite ingot (netherite scraps + gold ingots)", value="netherite_ingot"),
+]
 MATERIAL_CHOICES = [app_commands.Choice(name=m, value=m) for m in MATERIALS]
 
 
@@ -24,8 +27,9 @@ class EconomyCraftCog(commands.Cog):
         if key.startswith(("gear.durability", "gear.armor_durability_share", "gear.shield_durability")):
             await self.bot.db.run(shop.sync_max_durability)
 
-    @app_commands.command(name="craft", description="Craft tools, armor, a shield or an anvil with ingots and sticks.")
-    @app_commands.describe(item="What to craft", material="Which material (you need its ingots; not for the shield or the anvil)")
+    @app_commands.command(name="craft", description="Craft tools, armor, a shield, an anvil or a netherite ingot.")
+    @app_commands.describe(item="What to craft", material="Its material (netherite upgrades a diamond piece; not for the "
+                                                          "shield, anvil or ingot)")
     @app_commands.choices(item=CRAFT_CHOICES, material=MATERIAL_CHOICES)
     async def craft(self, interaction: discord.Interaction, item: str, material: str | None = None):
         res = await self.bot.db.run(shop.craft, interaction.user.id, item, material)
@@ -35,7 +39,17 @@ class EconomyCraftCog(commands.Cog):
                 "Use it to `/repair` your gear with ingots and to `/enchant combine` books. It wears out a little "
                 "with each use."
             )
+        if res.get("netherite_ingot"):
+            return await interaction.response.send_message(
+                f"🔥 Crafted a **netherite ingot** from {scrap_icon()} {res['scraps']} netherite scraps and "
+                f"{mat('gold')} {res['gold']} gold ingots! You have **{res['have']}** now. Use it to upgrade a diamond "
+                "piece: `/craft item:<piece> material:netherite`."
+            )
         material = res["material"]
+        if res.get("upgraded"):
+            text = (f"🔥 Upgraded your diamond {item} to {gear_icon(item, 'netherite')} **netherite {item}**! "
+                    f"Cost: {mat('netherite')} 1 netherite ingot. It keeps its enchantments and is as good as new.")
+            return await interaction.response.send_message(text)
 
         cost = []
         if res["ingots"]:
@@ -63,6 +77,10 @@ class EconomyCraftCog(commands.Cog):
             lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost) + note)
         iron = int(settings.get()["repair"]["anvil_iron"])
         lines.append(f"🔨 **anvil** → {iron} ingot(s) *(iron only; needed to /repair and to combine books)*")
+        d = settings.get()["dimensions"]
+        lines.append(f"🔥 **netherite ingot** → {scrap_icon()} {d['scraps_per_ingot']} netherite scraps + "
+                     f"{d['gold_per_ingot']} gold ingots *(scraps: Ancient debris, mined in the Nether)*")
+        lines.append("🔥 **netherite gear** → a diamond piece + 1 netherite ingot *(keeps its enchantments)*")
 
         embed = discord.Embed(title="Crafting Recipes", description="\n".join(lines))
         embed.set_footer(text="Materials: " + ", ".join(MATERIALS))

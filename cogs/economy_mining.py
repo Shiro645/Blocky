@@ -6,12 +6,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import enchants, mining, players, settings, shop
-from game.catalog import BLOCK_TYPES
+from game import dimensions, enchants, mining, players, settings, shop
+from game.catalog import BLOCK_TYPES, DIMENSION_BLOCKS, DIMENSIONS, block_name
 from game.db import Ctx
 from game.errors import GameError
 from utils.config import channel_ids
-from utils.ui import EMOJI, ConfirmView, block_icon, em, gear_label, item_label, join_lines
+from utils.ui import EMOJI, ConfirmView, block_icon, em, gear_label, item_label, join_lines, scrap_icon
 
 
 def _inventory(ctx: Ctx, user_id: int) -> dict:
@@ -20,7 +20,19 @@ def _inventory(ctx: Ctx, user_id: int) -> dict:
         "items": players.get_items(ctx, user_id),
         "gear": shop.get_gear(ctx, user_id),
         "emeralds": players.get_emeralds(ctx, user_id),
+        "dimension_blocks": {b for d in dimensions.unlocked(ctx, user_id) for b in DIMENSION_BLOCKS[d]},
     }
+
+
+def channel_dimension(channel: discord.abc.GuildChannel | discord.Thread) -> str | None:
+    """The dimension a channel mines in (None: not a mining channel). A channel of a dimension's list mines that
+    dimension; any other channel mines the overworld when channels.mining is empty or lists it."""
+    ids = {channel.id, getattr(channel, "parent_id", None)}
+    for dimension in DIMENSIONS[1:]:
+        if ids & channel_ids(dimensions.channel_key(dimension)):
+            return dimension
+    overworld = channel_ids("mining")  # none set: every other channel mines the overworld
+    return "overworld" if not overworld or ids & overworld else None
 
 
 class EconomyMiningCog(commands.Cog):
@@ -53,8 +65,8 @@ class EconomyMiningCog(commands.Cog):
         if spam and (channel.id in spam or getattr(channel, "parent_id", None) in spam):
             # No blocks, XP, drops or challenge progress here: only a tiny reward.
             return await self.spam_mine(user_id, now)
-        mining_channels = channel_ids("mining")  # none set: every channel mines
-        if mining_channels and channel.id not in mining_channels and getattr(channel, "parent_id", None) not in mining_channels:
+        dimension = channel_dimension(channel)
+        if dimension is None:
             return  # not a mining channel: nothing
         if now < self._next_mine.get(user_id, 0.0):
             return
@@ -62,12 +74,20 @@ class EconomyMiningCog(commands.Cog):
         self._next_mine[user_id] = now + 3600
 
         try:
-            result = await self.bot.db.run(mining.mine, user_id)
+            result = await self.bot.db.run(mining.mine, user_id, dimension)
+        except GameError:  # a dimension they haven't unlocked: nothing, and no cooldown
+            self._next_mine.pop(user_id, None)
+            return
         except Exception:
             self._next_mine.pop(user_id, None)
             raise
         self._next_mine[user_id] = now + result["cooldown"]
         self.bot.dispatch("blocky_mined", message, result)
+        if result["scrap"]:
+            try:  # Ancient debris: rare enough to show
+                await message.add_reaction(scrap_icon())
+            except discord.HTTPException:
+                pass
 
     @app_commands.command(name="inventory", description="Show your blocks, emeralds, items and gear.")
     async def inventory(self, interaction: discord.Interaction):
@@ -75,9 +95,11 @@ class EconomyMiningCog(commands.Cog):
 
         lines, total_value = [], 0
         for block, amount in inv["blocks"].items():
+            if not amount and block not in inv["dimension_blocks"]:
+                continue  # blocks of dimensions they haven't reached
             value = players.block_value(block)
             total_value += amount * value
-            lines.append(f"{block_icon(block)} **{block}**: {amount} ({em(value)} each)")
+            lines.append(f"{block_icon(block)} **{block_name(block)}**: {amount} ({em(value)} each)")
 
         embed = discord.Embed(
             title=f"{interaction.user.display_name}'s Inventory",
@@ -113,7 +135,7 @@ class EconomyMiningCog(commands.Cog):
     @app_commands.describe(block="Only this kind of block (empty = every kind)",
                            amount="How many (empty = all; more than you have = all you have)",
                            gear="Or a piece of gear: sold for part of its value, less when it's worn")
-    @app_commands.choices(block=[app_commands.Choice(name=b, value=b) for b in BLOCK_TYPES])
+    @app_commands.choices(block=[app_commands.Choice(name=block_name(b), value=b) for b in BLOCK_TYPES])
     @app_commands.autocomplete(gear=gear_autocomplete)
     async def sell(self, interaction: discord.Interaction, block: str | None = None,
                    amount: app_commands.Range[int, 1] | None = None, gear: int | None = None):
@@ -124,7 +146,7 @@ class EconomyMiningCog(commands.Cog):
         res = await self.bot.db.run(players.sell_blocks, interaction.user.id, block, amount)
 
         lines = [
-            f"{block_icon(b)} **{b}** ×{amt} → +{em(amt * players.block_value(b))}"
+            f"{block_icon(b)} **{block_name(b)}** ×{amt} → +{em(amt * players.block_value(b))}"
             for b, amt in res["sold"].items()
         ]
         embed = discord.Embed(title="Sale complete", description="\n".join(lines), color=discord.Color.green())

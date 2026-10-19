@@ -12,7 +12,7 @@ PARTS: dict[str, str] = {
     "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans
     "gear": "Gear, enchantments and the anvil",
     "levels": "Levels, XP and talents",
-    "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak
+    "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak, dimensions
 }
 
 
@@ -91,8 +91,8 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             r["user_id"] for r in ctx.all("SELECT user_id FROM profiles WHERE title IS NOT NULL OR frame IS NOT NULL;")]
         for uid in targets:
             profiles.check_worn(ctx, uid)
-        # The streak goes back to 0 but today's daily stays claimed (no free second claim).
-        ctx.execute(f"UPDATE users SET daily_streak=0{where};", args)
+        # The streak goes back to 0 but today's daily stays claimed (no free second claim). Back to the overworld.
+        ctx.execute(f"UPDATE users SET daily_streak=0, dimension_level=0{where};", args)
     return out
 
 

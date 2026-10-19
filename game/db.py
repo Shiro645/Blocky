@@ -622,6 +622,10 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_chance_games_active ON chance_games(status, deadline);
     CREATE INDEX idx_chance_games_user ON chance_games(user_id, kind, status);
     """,
+    # 33: dimensions: how far each player went (0 = overworld, 1 = Nether… see catalog.DIMENSIONS)
+    """
+    ALTER TABLE users ADD COLUMN dimension_level INTEGER NOT NULL DEFAULT 0;
+    """,
 ]
 
 

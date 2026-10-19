@@ -157,7 +157,7 @@ class AssetTests(GameTestCase):
         self.assertEqual(owned, {"emeralds": 3, "block:gravel": 2, "stick": 4, "gear:gold:axe": 2})
 
     def test_parse_rejects_garbage(self):
-        for key in ("gold", "ingot:wood", "gear:iron", "block:dirt", "emeralds:1"):
+        for key in ("gold", "ingot:wood", "gear:iron", "block:sand", "emeralds:1", "scrap:1"):
             with self.assertRaises(GameError):
                 assets.parse(key)
 
