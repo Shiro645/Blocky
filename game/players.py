@@ -169,7 +169,7 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     golden = live_events.sell_bonus(ctx)  # a Golden Hour
     biome = biomes.multiplier(ctx, "sell") - 1.0  # the week's biome (can be a malus)
     extra = (trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
-             + beacon.sell_bonus(ctx, user_id) + biome)
+             + beacon.sell_bonus(ctx, user_id) + biome + prestige_bonus(user))
     bonus = int(round(base * extra))  # below 0 when the biome's malus is bigger than the bonuses
     for b, n in sold.items():
         take_blocks(ctx, user_id, b, n)
@@ -181,6 +181,28 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     return {"sold": sold, "base": base, "bonus": bonus, "golden": golden, "biome": biome,
             "balance": get_emeralds(ctx, user_id),
             "left": left}
+
+
+def prestige_bonus(user: dict) -> float:
+    """The permanent mining XP and /sell bonus of every prestige (game/prestige.py)."""
+    return float(settings.get()["prestige"]["bonus"]) * int(user.get("prestige") or 0)
+
+
+def prestige_stars(n: int) -> str:
+    """'⭐⭐' for Prestige II, '⭐×4' from Prestige IV ('' without one)."""
+    if n <= 0:
+        return ""
+    return "⭐" * n if n <= 3 else f"⭐×{n}"
+
+
+def prestige_marks(ctx: Ctx, user_ids: list[int]) -> dict[int, str]:
+    """user_id -> their prestige stars (players without a prestige are left out)."""
+    ids = list(dict.fromkeys(user_ids))
+    if not ids:
+        return {}
+    rows = ctx.all(f"SELECT user_id, prestige FROM users WHERE prestige > 0 AND user_id IN ({','.join('?' * len(ids))});",
+                   tuple(ids))
+    return {r["user_id"]: prestige_stars(r["prestige"]) for r in rows}
 
 
 def sell_all_blocks(ctx: Ctx, user_id: int) -> dict:

@@ -101,6 +101,12 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - Branches (each has a cap): **Miner** (better blocks), **Trader** (sell bonus), **Lucky** (bedrock chance), **Efficiency** (shorter cooldown).
 - Level-ups are announced, and configurable **level roles** are given automatically.
 
+### 🌟 Prestige
+- `/prestige` — Prestige I needs level **50**, every achievement, every dimension (up to the Shimmer) and the server's Beacon lit; each next one needs **10 more levels** (II at 60, III at 70… X at 140, the highest). It shows the conditions (✅/❌, the achievements still missing), what starts over and what you get; the **Become Prestige** button asks to confirm.
+- **What starts over** (`balance.prestige.reset`, each switch in `/config`): `wealth` (emeralds, blocks, items; auction listings, loans and the bounties put are cancelled), `gear` (with its enchantments and the anvil), `achievements` (with the stats and the challenges: earned titles and frames go until earned again; with `wealth` too, achievement rewards are paid again), `dimensions` (back to the overworld, dimension roles taken back). The **level and the talents always stay**, and so do the team, the bought cosmetics and the Minecraft link.
+- **What you get**: **+5%** mining XP and `/sell` per prestige, for good (`balance.prestige.bonus`); ⭐ stars before the name in the leaderboards, the season and team lists and on the profile (⭐, ⭐⭐, ⭐⭐⭐, then ⭐×4…; the card shows "Level 52 · Prestige I"); the **Prestige role** (`roles.prestige`, given and taken back by the bot); the titles **Reborn** (Prestige I) and **Mythic** (Prestige V) and the **Prestige** frame (Prestige I). Announced to everyone.
+- Staff: `/player prestige <member> <0-10>` sets it (nothing reset). `/reset` of the levels resets the prestige too. All in `balance.prestige` (`/config` → Progress → 🌟 Prestige).
+
 ### 🧬 Species
 
 - `/species choose <species>` — Pick a species for a small bonus. The first choice is free; changing costs 1,000 emeralds (you confirm first) and is possible once every 7 days.
@@ -595,6 +601,7 @@ game/                        # game rules, no Discord code
 ├── war.py                   # gang wars: team chests, the weekly war, raids
 ├── bounty.py                # bounties on players' heads
 ├── biomes.py                # the biome of the week
+├── prestige.py              # prestige: start over for good bonuses
 ├── live_events.py           # timed events (Gambling Frenzy, Mining Rush, Golden Hour, Lucky Hour, Market Sale)
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature

@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from cogs.player_profile import card_file
-from game import leaderboard, players, profiles, species
+from game import leaderboard, players, prestige, profiles, species
 from game.catalog import TALENT_BRANCHES
 from utils.ui import em, gear_label, join_lines, progress_bar, tag_prefix
 
@@ -56,7 +56,7 @@ class LeaderboardCog(commands.Cog):
         data = await self.bot.db.run(leaderboard.leaderboard, board, interaction.user.id)
 
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'])}<@{uid}> — **{format_value(board, value)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'], data.get('stars'))}<@{uid}> — **{format_value(board, value)}**"
             for i, (uid, value) in enumerate(data["top"], start=1)
         ]
         embed = discord.Embed(
@@ -103,6 +103,8 @@ class LeaderboardCog(commands.Cog):
                 title = f"[{p['team']['tag']}] " + title
             if p["is_champion"]:
                 title = "👑 " + title + " — Season champion"
+            if u.get("prestige"):
+                title = f"{players.prestige_stars(u['prestige'])} {title}"
             label = profiles.title_label(p["custom"]["title"])
             embed = discord.Embed(
                 title=title,
@@ -115,6 +117,9 @@ class LeaderboardCog(commands.Cog):
                 color=color,
             )
             embed.set_thumbnail(url=target.display_avatar.url)
+        if u.get("prestige"):
+            embed.add_field(name="🌟 Prestige", value=f"**{prestige.roman(u['prestige'])}** · +"
+                            f"{prestige.bonus(u):.0%} mining XP and /sell", inline=True)
         embed.add_field(name="Emeralds", value=em(u["emeralds"]), inline=True)
         embed.add_field(name="Fortune", value=f"{em(p['fortune'])} ({rank_text(p['fortune_rank'])})", inline=True)
         if p["link"] and p["link"]["status"] == "approved":

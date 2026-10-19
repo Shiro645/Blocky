@@ -12,7 +12,7 @@ from game.db import Ctx
 PARTS: dict[str, str] = {
     "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans, bounties
     "gear": "Gear, enchantments and the anvil",
-    "levels": "Levels, XP and talents",
+    "levels": "Levels, XP, talents and prestige",
     "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak, dimensions,
     # and for the whole server the Beacon
 }
@@ -67,7 +67,7 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
     if "levels" in parts:
         ctx.execute(
             f"""
-            UPDATE users SET level=1, xp=0, talent_points=0,
+            UPDATE users SET level=1, xp=0, talent_points=0, prestige=0,
                 miner_points=0, trader_points=0, lucky_points=0, efficiency_points=0{where};
             """,
             args,

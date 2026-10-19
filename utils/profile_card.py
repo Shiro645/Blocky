@@ -50,8 +50,10 @@ class CardData:
     banner: dict | None = None  # {"base": dye, "layers": [(pattern, dye), ...]}
     team_name: str | None = None
     champion: bool = False
+    prestige: int = 0
 
 
+PRESTIGE_ROMAN = ("", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
 FONT_DIR = "/usr/share/fonts/truetype/dejavu/"
 _fonts: dict[tuple[int, bool], object] = {}
 # What the font can draw: Latin (accents included), Greek, Cyrillic, punctuation, currencies. Emoji are dropped.
@@ -283,7 +285,7 @@ def render_card(c: CardData) -> bytes:
         d.text((x, 92), title, font=f, fill=GOLD)
 
     y = 135
-    lvl = f"Level {c.level}"
+    lvl = f"Level {c.level}" + (f" · Prestige {PRESTIGE_ROMAN[c.prestige]}" if 0 < c.prestige < len(PRESTIGE_ROMAN) else "")
     d.text((x, y), lvl, font=font(24, True), fill=TEXT)
     bar_x = x + d.textlength(lvl, font=font(24, True)) + 16
     xp_text = f"{c.xp:,} / {c.xp_needed:,} XP"

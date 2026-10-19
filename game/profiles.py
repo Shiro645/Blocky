@@ -79,6 +79,8 @@ FRAMES: dict[str, Frame] = {f.key: f for f in (
           "stat:bosses_defeated", lambda n: f"Survive {_plural(n, 'a gate boss victory', 'gate boss victories')}"),
     Frame("champion", "Champion", ((200, 160, 40), (255, 240, 170), (120, 80, 10)), "stripes",
           "stat:seasons_won", lambda n: f"Win {_plural(n, 'a weekly season', 'weekly seasons')}"),
+    Frame("prestige", "Prestige", ((45, 25, 80), (255, 215, 90), (110, 60, 170)), "stars",
+          "prestige", lambda n: f"Reach Prestige {n:,}"),
 )}
 
 
@@ -86,7 +88,7 @@ FRAMES: dict[str, Frame] = {f.key: f for f in (
 class Title:
     key: str
     name: str
-    what: str  # "stat:<name>", "level" or "dummy" (best dummy series); the goal is in profiles.title_goals
+    what: str  # "stat:<name>", "level", "prestige" or "dummy" (best dummy series); the goal is in title_goals
     text: Callable[[int], str]  # how to earn it, for a goal
 
     @property
@@ -123,6 +125,8 @@ TITLES: dict[str, Title] = {t.key: t for t in (
     Title("heavy_hitter", "Heavy Hitter", "dummy", lambda n: f"Deal {n:,} damage in one /dummy hit series"),
     Title("veteran", "Veteran", "level", lambda n: f"Reach level {n:,}"),
     Title("legend", "Legend", "level", lambda n: f"Reach level {n:,}"),
+    Title("reborn", "Reborn", "prestige", lambda n: f"Reach Prestige {n:,}"),
+    Title("mythic", "Mythic", "prestige", lambda n: f"Reach Prestige {n:,}"),
 )}
 
 # Team banner patterns (Minecraft names), drawn by utils/profile_card.py.
@@ -151,6 +155,8 @@ def _met(ctx: Ctx, user_id: int, unlock: str) -> bool:
         return players.get_stat(ctx, user_id, stat) >= int(n)
     if kind == "level":
         return players.get_user(ctx, user_id)["level"] >= int(rest)
+    if kind == "prestige":
+        return players.get_user(ctx, user_id)["prestige"] >= int(rest)
     if kind == "dummy":
         row = ctx.one("SELECT best_total FROM dummy_scores WHERE user_id=?;", (user_id,))
         return bool(row) and row["best_total"] >= float(rest)

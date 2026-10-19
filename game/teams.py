@@ -506,6 +506,7 @@ def overview(ctx: Ctx, team_id: int) -> dict:
         "members": rows,
         "banner": {"base": banner["base"], "layers": json.loads(banner["layers"])} if banner else None,
         "species": species.emojis(ctx, [m["user_id"] for m in rows]),
+        "stars": players.prestige_marks(ctx, [m["user_id"] for m in rows]),
         "max_members": max_members(),
         "rank": rank,
         "teams_ranked": len(table),

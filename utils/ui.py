@@ -120,11 +120,13 @@ def gear_label(g: dict, show_durability: bool = True) -> str:
     return text
 
 
-def tag_prefix(tags: dict[int, str], user_id: int, species: dict[int, str] | None = None) -> str:
-    """The species emoji and '`[ABC]` ' (team tag) shown before a player's name ('' when neither)."""
+def tag_prefix(tags: dict[int, str], user_id: int, species: dict[int, str] | None = None,
+               stars: dict[int, str] | None = None) -> str:
+    """The prestige stars, the species emoji and '`[ABC]` ' (team tag) shown before a player's name ('' when none)."""
     tag = tags.get(user_id)
     emoji = (species or {}).get(user_id)
-    return (f"{emoji} " if emoji else "") + (f"`[{tag}]` " if tag else "")
+    star = (stars or {}).get(user_id)
+    return (f"{star} " if star else "") + (f"{emoji} " if emoji else "") + (f"`[{tag}]` " if tag else "")
 
 
 def join_lines(lines: list[str], limit: int = 1024, empty: str = "—") -> str:

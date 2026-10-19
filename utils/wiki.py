@@ -99,8 +99,13 @@ SECTIONS: tuple[Section, ...] = (
         "**Lucky** (more obsidian and bedrock) and **Efficiency** (shorter mining cooldown). `/talents` shows your "
         "points and what each branch does. Changed your mind? `/talent_reset` gives all your points back, for some "
         "emeralds.\n"
-        "`/xp` shows your level, your XP bar and your talent points.",
-        ("xp", "talents"),
+        "`/xp` shows your level, your XP bar and your talent points.\n\n"
+        "**🌟 Prestige** (`/prestige`): the end of the game. At level 50, with every achievement, every dimension "
+        "and the server's Beacon lit, you can start over: by default your emeralds, items, gear, achievements and "
+        "dimensions go, but you keep your level and your talents. In return: +5% mining XP and /sell for good per "
+        "prestige, a ⭐ next to your name, the Prestige role and exclusive cosmetics. The next one needs 10 more "
+        "levels, up to Prestige X.",
+        ("xp", "talents", "prestige"),
     ),
     Section(
         "gear", "🛠️ Crafting and gear",

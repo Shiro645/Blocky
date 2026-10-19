@@ -99,6 +99,13 @@ class Announcer:
             await dm(borrower, f"✅ Your late loan to {name}{where} is fully paid (collected automatically). "
                                "You can use /pay, /trade, the auction and loans again.")
 
+    async def on_PrestigeReached(self, notice: n.PrestigeReached) -> None:
+        from game import prestige  # here: the game imports this module's notices
+
+        await self.send(f"🌟 <@{notice.user_id}> reached **Prestige {prestige.roman(notice.prestige)}** "
+                        f"{prestige.stars(notice.prestige)} and starts over, stronger for good! `/prestige`")
+        self.bot.dispatch("blocky_prestige", notice.user_id)  # the roles (cogs/player_prestige.py)
+
     async def on_BountyPlaced(self, notice: n.BountyPlaced) -> None:
         """Public and anonymous; the target gets a private message; only the staff log names the payer."""
         more = f" (**{em(notice.total)}** on their head now)" if notice.total > notice.amount else ""
