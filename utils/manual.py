@@ -241,30 +241,27 @@ def _gear(s: Settings) -> list[str]:
 def _enchant_effects(s: Settings) -> list[str]:
     e = s["enchants"]
 
-    def levels(key: str, fmt: Callable[[float], str] = num) -> str:
-        return " / ".join(fmt(v) for v in e[key][: enchants.MAX_LEVEL])
+    def levels(key: str, fmt: Callable[[float], str] = num, start: int = 0) -> str:
+        return " / ".join(fmt(round(v, 3)) for v in e[key][start: enchants.MAX_LEVEL])
 
-    fortune = levels("fortune_bonus")
     effects = {
         "efficiency": f"mining cooldown -{levels('efficiency_seconds')} s",
-        "fortune": f"pickaxe +{fortune} cobblestone, shovel +{fortune} gravel, axe +{fortune} sticks, "
+        "fortune": f"+{levels('fortune_bonus')} blocks (pickaxe cobblestone, shovel gravel, axe sticks), "
         f"hoe +{levels('fortune_hoe_xp', pct)} XP",
         "unbreaking": f"{levels('unbreaking_chance', pct)} chance that a use costs no durability",
         "sharpness": f"+{levels('sharpness_damage')} maximum damage",
         "looting": f"+{levels('looting_boss_bonus', pct)} gate boss bounty",
-        "protection": f"+{levels('protection_points')} armor points; from IV on, the damage reduction cap "
-        f"+{levels('protection_cap_bonus', pct)} per piece",
-        "mending": f"the XP you gain repairs the equipped piece first: **{num(e['mending_durability_per_xp'])}** "
-        "durability per XP, and only the XP left goes to you. One level; the rarest book (the villager's exclusive "
-        f"offer, or now and then a gate boss's book: {pct(e['boss_mending_chance'])})",
+        "protection": f"+{levels('protection_points')} armor points; IV to VII raise the damage reduction cap "
+        f"+{levels('protection_cap_bonus', pct, 3)} per piece",
+        "mending": f"your XP repairs it first (**{num(e['mending_durability_per_xp'])}** durability per XP); one level, "
+        f"from the villager or a gate boss ({pct(e['boss_mending_chance'])})",
     }
-    lines = []
+    lines = ["Effects, levels I to VII:"]
     for ench in enchants.ENCHANTS.values():
         items = "any gear" if len(ench.items) > 4 else ", ".join(ench.items)
         if ench.key == "protection":
             items = "armor"
-        levels_text = " (I to VII)" if ench.max_level > 1 else ""
-        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}{levels_text}")
+        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}")
     return lines
 
 

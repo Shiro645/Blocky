@@ -76,7 +76,7 @@ FRAMES: dict[str, Frame] = {f.key: f for f in (
     Frame("ender", "Ender", ((25, 15, 45), (190, 110, 240), (60, 30, 100)), "stars",
           "stat:pve_clears_nightmare", lambda n: f"Clear the Nightmare dungeon{'' if n == 1 else f' {n:,} times'}"),
     Frame("nether", "Nether Flames", ((120, 30, 10), (255, 160, 30), (200, 60, 10)), "flames",
-          "stat:bosses_defeated", lambda n: f"Help defeat {_plural(n, 'a boss', 'bosses')}"),
+          "stat:bosses_defeated", lambda n: f"Survive {_plural(n, 'a gate boss victory', 'gate boss victories')}"),
     Frame("champion", "Champion", ((200, 160, 40), (255, 240, 170), (120, 80, 10)), "stripes",
           "stat:seasons_won", lambda n: f"Win {_plural(n, 'a weekly season', 'weekly seasons')}"),
 )}
@@ -105,7 +105,8 @@ TITLES: dict[str, Title] = {t.key: t for t in (
     Title("blacksmith", "Blacksmith", "stat:items_crafted", lambda n: f"Craft {_plural(n, 'piece', 'pieces')} of gear"),
     Title("duelist", "Duelist", "stat:duels_won", lambda n: f"Win {_plural(n, 'duel', 'duels')}"),
     Title("gladiator", "Gladiator", "stat:duels_won", lambda n: f"Win {_plural(n, 'duel', 'duels')}"),
-    Title("boss_slayer", "Boss Slayer", "stat:bosses_defeated", lambda n: f"Help defeat {_plural(n, 'a boss', 'bosses')}"),
+    Title("boss_slayer", "Boss Slayer", "stat:bosses_defeated",
+          lambda n: f"Survive {_plural(n, 'a gate boss victory', 'gate boss victories')}"),
     Title("season_champion", "Season Champion", "stat:seasons_won",
           lambda n: f"Win {_plural(n, 'a weekly season', 'weekly seasons')}"),
     Title("arena_champion", "Arena Champion", "stat:tournaments_won",

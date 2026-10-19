@@ -256,4 +256,22 @@ UPDATES: tuple[Update, ...] = (
              "back in full in emeralds (check your DMs). Time to craft!"),
         ),
     ),
+    Update(
+        "2026-10-gate-bosses", "2026-10-19", "Gate bosses",
+        "The dimensions now open by fighting! The old server boss is gone: meet the **gate bosses**.",
+        (
+            ("🔥 The Nether",
+             "Clear the 💀 **Nightmare** dungeon (`/pve start`): everyone still standing at the end of wave 5 reaches "
+             "the Nether."),
+            ("🖤 🐉 👁️ Wither, Ender Dragon, Warden",
+             "`/boss fight` calls a group of up to 4: turn by turn, each player drinks a potion if they want, then "
+             "attacks or blocks with their shield, then the boss strikes back. The Wither opens the End, the Dragon "
+             "the Deep Dark, the Warden the Shimmer. Each survivor of a victory opens the next dimension and wins a "
+             "bounty, a strong book and XP. They're made for 4 well-geared, well-prepared players: bring shields "
+             "and potions. `/boss info` shows them all."),
+            ("✨ Enchantments up to VII",
+             "Combine two books to go beyond III: IV with the Nether, V the End, VI the Deep Dark, VII the Shimmer. "
+             "Protection IV and above lets your armor stop more damage."),
+        ),
+    ),
 )

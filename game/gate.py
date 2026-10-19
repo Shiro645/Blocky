@@ -259,8 +259,8 @@ class Fight:
                 if p.withered > 0:
                     p.withered -= 1
                     loss = min(float(c["wither_damage"]), p.hp)
-                    p.hp -= loss
-                    self.log.append(f"🖤 <@{p.user_id}> withers: -{loss:.1f} HP")
+                    p.hp = max(0.0, p.hp - loss)
+                    self.log.append(f"🖤 <@{p.user_id}> withers: -{max(loss, 0.1):.1f} HP")
             parts = []
             for p in [p for p in alive if p.alive]:
                 dealt = self._strike(rng, p, float(c["min_damage"]), float(c["max_damage"]))
@@ -269,7 +269,8 @@ class Fight:
                     parts.append(f"<@{p.user_id}> -{dealt:.1f}")
                 else:
                     parts.append(f"<@{p.user_id}> 🛡️ blocked")
-            self.log.append(f"{b.emoji} The Wither blasts everyone: " + ", ".join(parts))
+            if parts:
+                self.log.append(f"{b.emoji} The Wither blasts everyone: " + ", ".join(parts))
         elif self.boss == "ender_dragon":
             if self.rounds % int(c["breath_every"]) == 0:
                 parts = [f"<@{p.user_id}> -{self._strike(rng, p, float(c['breath_min']), float(c['breath_max']), blockable=False):.1f}"
