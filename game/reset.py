@@ -12,7 +12,8 @@ PARTS: dict[str, str] = {
     "wealth": "Emeralds, blocks and items",  # + auction listings, robberies in progress, loans
     "gear": "Gear, enchantments and the anvil",
     "levels": "Levels, XP and talents",
-    "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak, dimensions
+    "progress": "Stats, achievements and seasons",  # + challenges, team season scores, daily streak, dimensions,
+    # and for the whole server the Beacon
 }
 
 
@@ -77,6 +78,10 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             # week must stay who it was (the champion role follows the latest winner).
             ctx.execute("DELETE FROM season_results;")
             ctx.execute("DELETE FROM team_season_results;")
+            # The server's Beacon goes out and starts over (the next Wither victory lights it again).
+            ctx.execute("UPDATE beacon SET lit_at=NULL, lit_by=NULL, step=0, progress=0, upkeep_week=NULL, "
+                        "upkeep_paid=0 WHERE id=1;")
+            ctx.execute("DELETE FROM beacon_gifts;")
         # The guide checklist starts over (its steps are read from the stats).
         ctx.execute(f"UPDATE guides SET done='', completed_at=NULL{where};", args)
         # Rewards already paid (achievements, the guide) are only paid again after a reset of the emeralds too:

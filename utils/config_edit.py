@@ -31,7 +31,7 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
     "economy": ("💰 Economy", ("mining", "mining_odds", "dimensions", "market", "trading", "loans", "villager")),
     "progress": ("⭐ Progress", ("xp", "seasons", "challenges", "achievements", "species", "profiles", "titles", "guide",
-                                 "teams")),
+                                 "teams", "beacon")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
     "games": ("🎉 Games & events", ("live_events", "chance", "minigames", "rob", "drops")),
@@ -47,6 +47,7 @@ CATEGORIES = {
     "mining": "⛏️ Mining & block values",
     "mining_odds": "📊 Mining odds",
     "dimensions": "🌋 Dimensions & netherite",
+    "beacon": "🔆 Beacon",
     "market": "🛒 Market & daily",
     "trading": "🤝 Trading & auction",
     "loans": "💳 Loans",
@@ -159,6 +160,7 @@ _ACHIEVEMENT_NAMES = {
     "team_champion": "Squad Goals", "tycoon": "Emerald Tycoon", "wear_and_tear": "Wear and Tear",
     "lucky_100": "Feeling Lucky", "wheel_100": "Spin Doctor", "bullseye": "Bullseye", "blockdle_10": "Block Detective", "quiz_10": "Know-It-All", "thief_10": "Master Thief", "watch_5": "Neighborhood Watch", "dungeon_hard": "Into the Depths", "dungeon_hardcore": "Hardcore Hero", "dungeon_nightmare": "Nightmare Slayer", "challenger_10": "Challenger", "challenger_50": "Challenge Master", "high_roller": "High Roller", "enchanter_10": "Enchanter", "handyman_10": "Handyman", "regular_20": "Regular Customer", "moneylender": "Moneylender",
     "wither_slayer": "Wither Slayer", "dragon_slayer": "Dragon Slayer", "warden_slayer": "Warden Slayer",
+    "beacon_builder": "Beacon Builder",
 }
 _CHALLENGE_NAMES = {
     "mine_blocks": "Mine blocks", "find_bedrock": "Find bedrock", "sell_blocks": "Earn emeralds by selling",
@@ -457,6 +459,24 @@ FIELDS: list[Field] = [
     _b("drops.claim_seconds", "drops", "Seconds to claim a drop", min=5, max=840),
     _b("drops.table", "drops", "Drop table", "What a drop can be, and how often (weight ÷ total).", "table", None,
        item="drops"),
+    # ---- beacon ----
+    *[_b(f"beacon.level_ingots.{i}", "beacon", f"Level {i + 1}: ingots", "Ingots for this level in one material "
+         "(a multiple of 9: whole blocks).", min=9, max=1_000_000) for i in range(4)],
+    *[_b(f"beacon.multipliers.{m}", "beacon", f"{m.capitalize()}: effect ×", "A level built in this material gives "
+         "its effects times this.", kind="float", max=100) for m in ("gold", "iron", "diamond", "netherite")],
+    _pct("beacon.haste", "beacon", "Level 1: mining cooldown -", "In gold (times the material's multiplier)."),
+    _pct("beacon.xp", "beacon", "Level 1: mining XP +", "In gold (times the material's multiplier)."),
+    _pct("beacon.sell", "beacon", "Level 2: /sell +", "Blocks sold. In gold (times the material's multiplier)."),
+    _pct("beacon.strength", "beacon", "Level 3: damage +", "In the dungeon and against the gate bosses. In gold "
+         "(times the material's multiplier)."),
+    _pct("beacon.resistance", "beacon", "Level 4: damage taken -", "In the dungeon and against the gate bosses. In "
+         "gold (times the material's multiplier)."),
+    _pct("beacon.upkeep", "beacon", "Weekly upkeep", "Share of the last step needed every week (rounded up to whole "
+         "blocks); not given by Monday, that step is undone. 0 = none."),
+    _b("beacon.contributor_value", "beacon", "Contributor: emeralds' worth a week", "Giving this much this week also "
+       "gives the contributor bonus. 0 = none.", max=1_000_000),
+    _pct("beacon.contributor_xp", "beacon", "Contributor: mining XP +"),
+    _pct("beacon.contributor_sell", "beacon", "Contributor: /sell +"),
     # ---- gate bosses ----
     _b("gate_bosses.max_players", "bosses", "Players per group (max)", "A boss is made for this many.", min=1, max=10),
     _b("gate_bosses.hp", "bosses", "Each player's health", min=1, max=1000),

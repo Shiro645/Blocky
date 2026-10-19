@@ -226,6 +226,23 @@ SECTIONS: tuple[Section, ...] = (
         ("boss fight", "boss info"),
     ),
     Section(
+        "beacon", "🔆 The Beacon",
+        "The server has **one Beacon**, built by everyone and helping everyone. It's lit by the **Nether Star** of the "
+        "first victory against the 🖤 Wither (`/boss fight`).\n\n"
+        "**Building it**: `/beacon give` gives ingots, by whole blocks (multiples of 9). It's a pyramid of 4 levels "
+        "(81, 225, 441 and 729 ingots), built **all in gold first**, then each level again in **iron**, then "
+        "**diamond**, then **netherite**: 16 steps. A level rebuilt in a better material keeps working the whole "
+        "time.\n"
+        "**What it gives everyone**: level 1 makes mining faster and gives more mining XP, level 2 makes `/sell` "
+        "pay more, level 3 adds damage and level 4 lowers the damage taken, in the dungeon and against the gate "
+        "bosses. Each level's effects are ×1.5 in iron, ×2 in diamond and ×3 in netherite.\n"
+        "**Upkeep**: every week the Beacon needs a little of its last step (5%, in whole blocks): what you give "
+        "fills it first, and building a step covers it for the week. Not given by Monday, that step crumbles.\n"
+        "**Builders**: giving enough in a week gives you a little more mining XP and `/sell` until the week ends. "
+        "The 🔆 leaderboard and the Beacon Builder achievement count what you gave. `/beacon info` shows it all.",
+        ("beacon info", "beacon give"),
+    ),
+    Section(
         "events", "🐉 Timed events, drops and the wandering villager",
         "**Timed events** (`/events`): for an hour, a bonus for everyone: 🎰 **Gambling Frenzy** (bigger bets and "
         "daily limit at the Lucky Block and the wheel), ⛏️ **Mining Rush** (more mining XP), 💰 **Golden Hour** "

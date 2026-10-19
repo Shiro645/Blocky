@@ -164,8 +164,11 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     # Imported here: species depends on this module.
     from game import species
 
+    from game import beacon  # beacon depends on this module
+
     golden = live_events.sell_bonus(ctx)  # a Golden Hour
-    extra = trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
+    extra = (trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
+             + beacon.sell_bonus(ctx, user_id))
     bonus = int(round(base * extra))
     for b, n in sold.items():
         take_blocks(ctx, user_id, b, n)

@@ -23,6 +23,7 @@ PROFILE_STATS = [
     ("duels_lost", "💀 Duels lost"),
     ("tournaments_won", "🏟️ Tournaments won"),
     ("boss_damage", "🐉 Boss damage"),
+    ("beacon_value", "🔆 Given to the Beacon"),
     ("drops_claimed", "🎁 Drops claimed"),
     ("best_streak", "🔥 Best daily streak"),
     ("seasons_won", "👑 Seasons won"),

@@ -391,6 +391,22 @@ DEFAULTS: dict[str, Any] = {
                    "boom_every": 4, "boom_min": 15.0, "boom_max": 24.1, "bounty": 12000, "xp": 800,
                    "small_group_hp": [0.14, 0.38, 0.69]},
     },
+    # The server's Beacon (/beacon, game/beacon.py): lit by the first Wither victory, then built by everyone. A
+    # pyramid of 4 levels (level_ingots each), first all in gold, then each level in iron, diamond and netherite.
+    # Each level gives its effects to everyone, times the multiplier of its material.
+    "beacon": {
+        "level_ingots": [81, 225, 441, 729],  # 9, 25, 49 and 81 blocks of 9 ingots
+        "multipliers": {"gold": 1.0, "iron": 1.5, "diamond": 2.0, "netherite": 3.0},
+        # Effects of each level in gold. Level 1: haste (mining cooldown) and mining XP; 2: /sell of blocks;
+        # 3: strength (damage) and 4: resistance (damage taken) in the dungeon and against the gate bosses. Combat
+        # is calibrated: a beacon fully in netherite takes a prepared group from ~35% to ~45-60% against a boss.
+        "haste": 0.05, "xp": 0.05, "sell": 0.05, "strength": 0.015, "resistance": 0.015,
+        # Every week the Beacon needs this share of its last step (in that material, rounded up to whole blocks):
+        # not given by Monday, that step is undone.
+        "upkeep": 0.05,
+        # A player who gave at least contributor_value emeralds' worth this week: mining XP and /sell bonus too.
+        "contributor_value": 200, "contributor_xp": 0.05, "contributor_sell": 0.05,
+    },
     # Profile customization (/customize) and team banners (/team banner).
     "profiles": {
         "bio_max": 150,
@@ -586,6 +602,7 @@ DEFAULTS: dict[str, Any] = {
         "wither_slayer": {"reward": 1000},
         "dragon_slayer": {"reward": 2000},
         "warden_slayer": {"reward": 4000},
+        "beacon_builder": {"goal": 5000, "reward": 500},
     },
 }
 
@@ -804,6 +821,9 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
             if isinstance(odds, dict) and pile in odds and sum(float(w) for w in odds[pile].values()) <= 0:
                 out.append((f"`balance.dimensions.{dim}.{pile}`: at least one block needs a weight above 0.",
                             [("dimensions", dim, pile)]))
+    if any(int(n) <= 0 or int(n) % 9 for n in merged["beacon"]["level_ingots"]):
+        out.append(("`balance.beacon.level_ingots`: each level is whole blocks, a multiple of 9 ingots.",
+                    [("beacon", "level_ingots")]))
     d = merged["dimensions"]
     if int(d["scraps_per_ingot"]) < 1:
         out.append(("`balance.dimensions.scraps_per_ingot` must be 1 or more.", [("dimensions", "scraps_per_ingot")]))

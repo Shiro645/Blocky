@@ -24,7 +24,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import cooldowns, dimensions, duel, enchants, gear, players, potions, settings
+from game import beacon, cooldowns, dimensions, duel, enchants, gear, players, potions, settings
 from game.catalog import ARMOR, DIMENSIONS, SHIELD
 from game.db import Ctx
 from game.errors import GameError
@@ -319,8 +319,11 @@ def boss_hp(key: str, group: int) -> float:
 
 
 def make_player(ctx: Ctx, user_id: int) -> Player:
+    """A player as they go in: their gear and species like in a duel, and the Beacon's strength and resistance."""
     f, equipped = duel.make_fighter(ctx, user_id)
-    p = Player(user_id, f.attack, f.min_attack, f.reduction, float(_cfg()["hp"]), potion_boost=f.potion_boost,
+    strength, resistance = beacon.combat(ctx)
+    p = Player(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
+               1 - (1 - f.reduction) * (1 - resistance), float(_cfg()["hp"]), potion_boost=f.potion_boost,
                blocks_left=f.blocks_left)
     p.gear_ids = dict(f.gear_ids)
     return p
@@ -559,9 +562,12 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
         players.bump_stat(ctx, p.user_id, f"{row['boss']}_defeated")
         rewards[p.user_id] = {"opened": b.opens if opened else None, "bounty": bounty, "looting": looting,
                               "book": enchants.label(*book), "xp": int(c["xp"])}
+    # The first Wither ever beaten leaves a Nether Star: it lights the server's Beacon.
+    lit = bool(fight.result == "won" and row["boss"] == "wither" and rewards
+               and beacon.light(ctx, next(iter(rewards))))
     ctx.execute("UPDATE gate_fights SET status=?, state=?, ended_at=? WHERE fight_id=?;",
                 (fight.result, fight.to_json(), int(ctx.now), row["fight_id"]))
-    return {**get(ctx, row["fight_id"]), "rewards": rewards}
+    return {**get(ctx, row["fight_id"]), "rewards": rewards, "beacon_lit": lit}
 
 
 def expire(ctx: Ctx) -> list[dict]:

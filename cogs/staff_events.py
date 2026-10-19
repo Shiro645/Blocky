@@ -14,7 +14,7 @@ from utils.checks import staff_only
 class StaffEventsCog(commands.Cog):
     """/event: start the server events now. The work is done by each event's own cog."""
 
-    event = app_commands.Group(name="event", description="STAFF: Start an event now: timed event, drop, quiz, tournament, villager.")
+    event = app_commands.Group(name="event", description="STAFF: Start an event now: timed event, drop, quiz, tournament, villager, Beacon.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -38,6 +38,12 @@ class StaffEventsCog(commands.Cog):
     @staff_only()
     async def stop(self, interaction: discord.Interaction):
         await self.cog("LiveEventsCog").staff_stop(interaction)
+
+    @event.command(name="beacon", description="STAFF: Light or put out the server's Beacon, or set its steps built.")
+    @app_commands.describe(lit="Lit (as if the Wither was beaten) or not", step="Steps built, 0-16 (empty = unchanged)")
+    @staff_only()
+    async def beacon(self, interaction: discord.Interaction, lit: bool, step: app_commands.Range[int, 0, 16] | None = None):
+        await self.cog("BeaconCog").staff_set(interaction, lit, step)
 
     @event.command(name="drop", description="STAFF: Make a drop appear in this channel now.")
     @staff_only()
