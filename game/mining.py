@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import dimensions, enchants, gear, live_events, players, settings, species, teams
+from game import beacon, dimensions, enchants, gear, live_events, players, settings, species, teams
 from game.catalog import DIMENSION_BLOCKS, rank_block
 from game.db import Ctx
 from game.errors import GameError
@@ -169,6 +169,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     rush = live_events.xp_multiplier(ctx)  # a Mining Rush
     if rush != 1:
         xp = int(round(xp * rush))
+    glow = beacon.mining_xp_bonus(ctx, user_id)  # the Beacon, and giving to it this week
+    if glow:
+        xp = int(round(xp * (1 + glow)))
 
     players.add_blocks(ctx, user_id, block, amount)
     players.add_blocks(ctx, user_id, common, bonus)
@@ -202,6 +205,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     speed = species.bonus(ctx, user_id, "miner")
     if speed and cooldown > 0:
         cooldown = max(1, round(cooldown * (1 - speed)))  # even below the minimum
+    haste = beacon.effect(ctx, "haste")
+    if haste and cooldown > 0:
+        cooldown = max(1, round(cooldown * (1 - haste)))
     return {
         "dimension": dimension,
         "block": block,

@@ -651,6 +651,28 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_gate_members_user ON gate_members(user_id);
     """,
+    # 35: the server's Beacon (one row) and the ingots each player gave to it
+    """
+    CREATE TABLE beacon (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        lit_at INTEGER,                        -- the first Wither victory lit it (NULL = not lit)
+        lit_by INTEGER,
+        step INTEGER NOT NULL DEFAULT 0,       -- steps built (0-16: gold levels 1-4, then iron… see game/beacon.py)
+        progress INTEGER NOT NULL DEFAULT 0,   -- ingots given to the next step
+        upkeep_week TEXT,                      -- the week whose upkeep is counted
+        upkeep_paid INTEGER NOT NULL DEFAULT 0 -- ingots given to that week's upkeep
+    );
+    INSERT INTO beacon(id) VALUES(1);
+    CREATE TABLE beacon_gifts (
+        user_id INTEGER NOT NULL,
+        week_id TEXT NOT NULL,
+        material TEXT NOT NULL,
+        ingots INTEGER NOT NULL,
+        value INTEGER NOT NULL,                -- emeralds (market value of the ingots)
+        given_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_beacon_gifts_week ON beacon_gifts(week_id, user_id);
+    """,
 ]
 
 

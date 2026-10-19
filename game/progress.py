@@ -83,6 +83,8 @@ _ACHIEVEMENTS: list[tuple[str, str, str, str, Callable[[int], str]]] = [
     ("dragon_slayer", "🐉", "Dragon Slayer", "stat:ender_dragon_defeated",
      lambda n: "Survive a victory against the Ender Dragon"),
     ("warden_slayer", "👁️", "Warden Slayer", "stat:warden_defeated", lambda n: "Survive a victory against the Warden"),
+    ("beacon_builder", "🔆", "Beacon Builder", "stat:beacon_value",
+     lambda n: f"Give {_plural(n, 'emerald')}' worth of ingots to the Beacon"),
 ]
 ACHIEVEMENT_CODES = [a[0] for a in _ACHIEVEMENTS]
 

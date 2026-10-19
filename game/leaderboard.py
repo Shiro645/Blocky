@@ -18,6 +18,7 @@ BOARDS: dict[str, tuple[str, str]] = {
     "sent": ("Top senders (/pay + loans)", "emerald"),
     "tournaments_won": ("Tournaments won", ""),
     "boss_damage": ("Boss damage", ""),
+    "beacon_value": ("Beacon builders (emeralds' worth given)", "emerald"),
     "achievements": ("Achievements", ""),
 }
 

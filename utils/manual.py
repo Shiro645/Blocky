@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
+from game import beacon, blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, RECIPES, TALENT_BRANCHES, block_name
 from game.profiles import FRAMES
@@ -409,6 +409,22 @@ def _gate(s: Settings) -> list[str]:
                  + per_level(s["enchants"]["looting_boss_bonus"], pct) + " more · a book (Mending "
                  f"**{pct(s['enchants']['boss_mending_chance'])}**)")
     return lines
+
+
+def _beacon(s: Settings) -> list[str]:
+    b = s["beacon"]
+    mult = " · ".join(f"{m} ×{num(b['multipliers'][m])}" for m in beacon.ORDER)
+    return [
+        "Levels: " + " · ".join(f"{i + 1}: **{num(n)}** ingots" for i, n in enumerate(b["level_ingots"]))
+        + " (each in gold, then iron, diamond and netherite)",
+        f"Materials: {mult}",
+        f"In gold: level 1 mining cooldown -{pct(b['haste'])} and mining XP +{pct(b['xp'])} · level 2 /sell "
+        f"+{pct(b['sell'])} · level 3 damage +{pct(b['strength'])} · level 4 damage taken -{pct(b['resistance'])} "
+        "(dungeon and gate bosses)",
+        f"Weekly upkeep: **{pct(b['upkeep'])}** of the last step, in whole blocks",
+        f"Contributor (≥ {em(b['contributor_value'])} given this week): mining XP +{pct(b['contributor_xp'])}, /sell "
+        f"+{pct(b['contributor_sell'])}",
+    ]
 
 
 def _tournament(s: Settings) -> list[str]:
@@ -1138,6 +1154,29 @@ PAGES: list[Page] = [
         related=("boss info", "dimensions", "pve start", "enchant combine"),
     ),
     Page(
+        "beacon info", "progress",
+        "Shows the server's **Beacon**: its 4 levels and what each one is made of, the effects everyone gets now, the "
+        "step being built and how far it is, this week's upkeep, this week's builders and your contributor bonus.\n"
+        "The Beacon is lit by the first victory against the 🖤 Wither (its Nether Star). Then everyone builds it "
+        "together: the 4 levels in gold first, then each level again in iron, diamond and netherite. Each level gives "
+        "its effects to the **whole server**, stronger with a better material. Every week it needs a little upkeep, "
+        "or its last step crumbles.",
+        _beacon,
+        examples=("/beacon info",),
+        related=("beacon give", "boss fight"),
+    ),
+    Page(
+        "beacon give", "progress",
+        "Gives ingots to the Beacon, by whole blocks (**multiples of 9**), of the material it needs now (the step "
+        "being built, or the week's upkeep, which is filled first). A step is built as soon as it has all its ingots; "
+        "extra ingots of the same material go on to the next one. Giving enough this week also gives you the "
+        "contributor bonus until the week ends, and everything you give counts for the 🔆 leaderboard and the "
+        "Beacon Builder achievement. Netherite can be given too.",
+        _beacon,
+        examples=("/beacon give material:gold ingots:81", "/beacon give material:iron ingots:27"),
+        related=("beacon info", "leaderboard"),
+    ),
+    Page(
         "boss info", "combat",
         "Shows the gate bosses: where each one lives, what it opens, its entry and bounty, the ones you already "
         "beat, how each one fights, and when you can fight again. The Nether opens by clearing the **Nightmare** "
@@ -1703,6 +1742,15 @@ PAGES: list[Page] = [
         related=("rob", "daily", "pve start"),
     ),
     # ---- staff: events ----
+    Page(
+        "event beacon", "staff_events",
+        "Lights or puts out the server's Beacon, and can set how many of its 16 steps are built (0 = nothing, 4 = "
+        "all gold, 8 = all iron, 12 = all diamond, 16 = all netherite). Lighting it announces it like the Wither's "
+        "Nether Star. Handy to test, or to fix the Beacon after a problem.",
+        _beacon,
+        examples=("/event beacon lit:True", "/event beacon lit:True step:4"),
+        related=("beacon info",),
+    ),
     Page(
         "event drop", "staff_events",
         "Makes a drop appear in this channel right now: the first player to click it gets the reward.",

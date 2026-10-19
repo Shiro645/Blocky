@@ -274,4 +274,21 @@ UPDATES: tuple[Update, ...] = (
              "Protection IV and above lets your armor stop more damage."),
         ),
     ),
+    Update(
+        "2026-10-beacon", "2026-10-20", "The Beacon",
+        "The server gets its own **Beacon**, built by everyone and helping everyone!",
+        (
+            ("🌟 Lighting it",
+             "The first group to beat the 🖤 Wither brings back a **Nether Star**: it lights the Beacon."),
+            ("🧱 Building it together",
+             "`/beacon give` gives ingots, by whole blocks (9, 18, 27…). The 4 levels are built in gold first, then "
+             "again in iron, diamond and netherite: each better material makes the level's effects stronger."),
+            ("✨ What it gives everyone",
+             "Faster mining and more mining XP, more emeralds with `/sell`, then more damage and less damage taken "
+             "in the dungeon and against the gate bosses."),
+            ("🔧 Keeping it up",
+             "Every week it needs a little upkeep, or its last step crumbles. Giving enough in a week also gives you "
+             "a small bonus of your own. `/beacon info` shows it all."),
+        ),
+    ),
 )

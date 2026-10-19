@@ -24,7 +24,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import cooldowns, dimensions, duel, gear, players, potions, settings
+from game import beacon, cooldowns, dimensions, duel, gear, players, potions, settings
 from game.db import Ctx
 from game.errors import GameError
 
@@ -153,7 +153,9 @@ def make_hero(ctx: Ctx, user_id: int) -> Hero:
     """A player as a hero: their gear and species, like in a duel."""
     f, equipped = duel.make_fighter(ctx, user_id)
     hp = float(_cfg()["hp"])
-    return Hero(user_id, f.attack, f.min_attack, f.reduction, hp, hp, f.potion_boost,
+    strength, resistance = beacon.combat(ctx)  # the server's Beacon
+    return Hero(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
+                1 - (1 - f.reduction) * (1 - resistance), hp, hp, f.potion_boost,
                 gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
 
 

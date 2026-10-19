@@ -79,6 +79,8 @@ def fight_embed(row: dict) -> discord.Embed:
             if r["opened"]:
                 text += f" · **the {dimensions.label(r['opened'])} opens!**"
             lines.append(text)
+    if row.get("beacon_lit"):
+        lines.append("🌟 **The Wither drops a Nether Star: the server's Beacon is lit!** (`/beacon info`)")
     embed = discord.Embed(title=f"{b.emoji} Gate boss — {b.name}", description=join_lines(lines, 4000),
                           color=COLORS.get(row["status"]))
     plist = {p.user_id: p for p in fight.players} if fight else {}
@@ -260,6 +262,10 @@ class GateBossCog(commands.Cog):
         """Once a message showed the log, start a new one; when a fight ends, the openers get their roles."""
         if row["status"] == "active":
             await self.bot.db.run(gate.clear_log, row["fight_id"])
+        if row.get("beacon_lit"):
+            cog_b = self.bot.get_cog("BeaconCog")
+            if cog_b is not None:
+                await cog_b.announce_lit(next(iter(row["rewards"])))  # type: ignore[attr-defined]
         opened = [uid for uid, r in (row.get("rewards") or {}).items() if r["opened"]]
         cog = self.bot.get_cog("DimensionsCog")
         for uid in opened:
