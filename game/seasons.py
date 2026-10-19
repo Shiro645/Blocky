@@ -84,6 +84,7 @@ def overview(ctx: Ctx, user_id: int, limit: int = 10) -> dict:
         "top": rows[:limit],
         "tags": teams.tags_of(ctx, [uid for uid, _ in rows[:limit]]),
         "species": species.emojis(ctx, [uid for uid, _ in rows[:limit]]),
+        "stars": players.prestige_marks(ctx, [uid for uid, _ in rows[:limit]]),
         "rank": rank,
         "score": rows[rank - 1][1] if rank else 0,
         "champion": current_champion(ctx),

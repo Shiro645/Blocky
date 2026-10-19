@@ -34,7 +34,7 @@ def card_data(member: discord.abc.User, p: dict, avatar: bytes | None, override:
     team = p["team"]
     kind = u.get("species")
     return profile_card.CardData(
-        name=member.display_name, level=u["level"], xp=u["xp"], xp_needed=players.xp_required_for_level(u["level"]),
+        name=member.display_name, level=u["level"], prestige=int(u.get("prestige") or 0), xp=u["xp"], xp_needed=players.xp_required_for_level(u["level"]),
         emeralds=u["emeralds"], accent=profiles.color_rgb(custom["color"]), tag=team["tag"] if team else None,
         title=profiles.title_label(custom["title"]), fortune_rank=p["fortune_rank"],
         species=species.SPECIES[kind].name if kind in species.SPECIES else None, bio=custom["bio"],

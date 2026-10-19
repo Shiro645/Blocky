@@ -208,6 +208,15 @@ class StaffEconomyCog(commands.Cog):
         if cog is not None:
             await cog.sync_roles(member.id)  # type: ignore[attr-defined]
 
+    @player.command(name="prestige", description="STAFF: Set a member's prestige (nothing is reset).")
+    @app_commands.describe(member="Whose prestige to set", prestige="0 = none, up to the highest prestige")
+    @staff_only()
+    async def set_prestige(self, interaction: discord.Interaction, member: discord.Member,
+                           prestige: app_commands.Range[int, 0, 10]):
+        cog = self.bot.get_cog("PrestigeCog")
+        if cog is not None:
+            await cog.staff_set(interaction, member, prestige)  # type: ignore[attr-defined]
+
     @player.command(name="dimension", description="STAFF: Set the furthest dimension a member reached (the ones before it too).")
     @app_commands.describe(member="Whose dimensions to set", dimension="Their furthest dimension (Overworld = locks the others)")
     @app_commands.choices(dimension=[app_commands.Choice(name=dimensions.label(d), value=d) for d in DIMENSIONS])

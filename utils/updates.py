@@ -339,4 +339,19 @@ UPDATES: tuple[Update, ...] = (
              "Each biome has a challenge of its own, worth 250 emeralds, on top of the weekly challenges."),
         ),
     ),
+    Update(
+        "2026-10-prestige", "2026-10-20", "Prestige",
+        "The end of the game… and a new beginning: Prestige!",
+        (
+            ("🌟 Becoming Prestige",
+             "Level 50, every achievement, every dimension and the Beacon lit: `/prestige` lets you start over. Your "
+             "wealth, gear, achievements and dimensions go, your talents are given back to spend again, and your level "
+             "stays."),
+            ("💪 Stronger for good",
+             "Each prestige gives +5% mining XP and /sell forever, a ⭐ next to your name, the Prestige role and "
+             "exclusive cosmetics: the titles Reborn and Mythic and the Prestige frame."),
+            ("🔟 Up to Prestige X",
+             "Each next prestige needs 10 more levels: Prestige II at 60, III at 70… X at 140."),
+        ),
+    ),
 )

@@ -732,6 +732,10 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_bounties_target ON bounties(target_id, status);
     CREATE INDEX idx_bounties_status ON bounties(status, expires_at);
     """,
+    # 38: prestige (game/prestige.py): how many times a player started over
+    """
+    ALTER TABLE users ADD COLUMN prestige INTEGER NOT NULL DEFAULT 0;
+    """,
 ]
 
 

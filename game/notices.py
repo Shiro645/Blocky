@@ -89,3 +89,9 @@ class BountyExpired:
     target_id: int
     amount: int
     refund: int
+
+
+@dataclass(frozen=True)
+class PrestigeReached:
+    user_id: int
+    prestige: int

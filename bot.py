@@ -80,6 +80,7 @@ EXTENSIONS = [
     "cogs.competition_war",
     "cogs.competition_bounty",
     "cogs.events_biomes",
+    "cogs.player_prestige",
     "cogs.games_dummy",
     "cogs.help_command",
 ]

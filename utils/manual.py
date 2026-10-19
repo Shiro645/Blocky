@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import beacon, biomes, blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
+from game import beacon, biomes, blockdle, prestige, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, RECIPES, TALENT_BRANCHES, block_name
 from game.profiles import FRAMES
@@ -424,6 +424,18 @@ def _beacon(s: Settings) -> list[str]:
         f"Weekly upkeep: **{pct(b['upkeep'])}** of the last step, in whole blocks",
         f"Contributor (≥ {em(b['contributor_value'])} given this week): mining XP +{pct(b['contributor_xp'])}, /sell "
         f"+{pct(b['contributor_sell'])}",
+    ]
+
+
+def _prestige(s: Settings) -> list[str]:
+    p = s["prestige"]
+    steps = " · ".join(f"{prestige.roman(n)}: {num(int(p['base_level']) + int(p['level_step']) * (n - 1))}"
+                       for n in range(1, min(int(p["max"]), 10) + 1))
+    on = [k for k, v in p["reset"].items() if v]
+    return [
+        f"Levels: {steps}",
+        f"Bonus: **+{pct(p['bonus'])}** mining XP and /sell per prestige, for good",
+        "Starts over: " + (", ".join(on) if on else "nothing") + " · the level stays",
     ]
 
 
@@ -1171,7 +1183,21 @@ PAGES: list[Page] = [
         "achievements", "progress",
         "Shows the achievements unlocked and the ones left: permanent milestones that pay emeralds once.",
         examples=("/achievements", "/achievements member:@Steve"),
-        related=("challenges", "profile"),
+        related=("challenges", "profile", "prestige"),
+    ),
+    Page(
+        "prestige", "progress",
+        "**Prestige**: the end of the game, and a new start. Shows what the next prestige needs (a level, every "
+        "achievement, every dimension up to the Shimmer, the server's Beacon lit), what you start over and what you "
+        "get. When you meet everything, the **Become Prestige** button asks to confirm, then the parts set by the "
+        "staff start over (by default your emeralds, blocks and items, your gear, your talents (every point given "
+        "back to spend again), your achievements with their stats and challenges, and your dimensions). You keep "
+        "your **level**, so no talent point is lost: the next prestige needs a higher level. Each prestige gives a bonus to mining XP and /sell **for good**, a ⭐ next to "
+        "your name (profile, leaderboards), the Prestige role and earned cosmetics (titles Reborn and Mythic, the "
+        "Prestige frame). Announced to everyone.",
+        _prestige,
+        examples=("/prestige",),
+        related=("achievements", "dimensions", "beacon info", "customize list"),
     ),
     # ---- events ----
     Page(
@@ -1818,6 +1844,14 @@ PAGES: list[Page] = [
         _species,
         examples=("/player species member:@Steve species:🪓 Dwarf",),
         related=("species choose",),
+    ),
+    Page(
+        "player prestige", "staff_players",
+        "Sets a member's prestige (0 = none). Nothing is reset or given back: it only changes the prestige, so "
+        "its bonus, its stars, the Prestige role and the cosmetics it unlocks. Handy to fix a mistake.",
+        _prestige,
+        examples=("/player prestige member:@Steve prestige:1",),
+        related=("prestige",),
     ),
     Page(
         "player dimension", "staff_players",

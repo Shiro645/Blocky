@@ -172,6 +172,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     glow = beacon.mining_xp_bonus(ctx, user_id)  # the Beacon, and giving to it this week
     if glow:
         xp = int(round(xp * (1 + glow)))
+    reborn = players.prestige_bonus(user)  # every prestige, for good
+    if reborn:
+        xp = int(round(xp * (1 + reborn)))
     biome_xp = biomes.multiplier(ctx, "mining_xp")  # the week's biome
     if biome_xp != 1:
         xp = int(round(xp * biome_xp))

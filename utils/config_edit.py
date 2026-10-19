@@ -32,7 +32,7 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
     "economy": ("💰 Economy", ("mining", "mining_odds", "dimensions", "market", "trading", "loans", "villager")),
     "progress": ("⭐ Progress", ("xp", "seasons", "challenges", "achievements", "species", "profiles", "titles", "guide",
-                                 "teams", "beacon")),
+                                 "teams", "beacon", "prestige")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
     "games": ("🎉 Games & events", ("live_events", "biomes", "chance", "minigames", "rob", "war", "bounty",
@@ -63,6 +63,7 @@ CATEGORIES = {
     "species": "🧬 Species",
     "profiles": "🎨 Profiles",
     "titles": "🏷️ Titles & earned frames",
+    "prestige": "🌟 Prestige",
     "guide": "📘 Guide",
     "teams": "🛡️ Teams",
     "duels": "🤺 Duels & dummy",
@@ -252,6 +253,8 @@ FIELDS: list[Field] = [
                "question in Channels & Roles) and is deleted if they lose it. Not set = no guide channels."),
     Field("role_team_leader", "roles", "Team leader role", ("roles", "team_leader"), "role",
           help="Given to every team leader, and taken back when they no longer lead a team.", item="assign"),
+    Field("role_prestige", "roles", "Prestige role", ("roles", "prestige"), "role",
+          help="Given to every player who reached a prestige (/prestige).", item="assign"),
     Field("role_untouchable", "roles", "Untouchables role", ("roles", "untouchable"), "role",
           help="Members with this role are out of the robberies: nobody can /rob them and they can't /rob anyone. "
                "The staff gives and takes it by hand. Not set = nobody is untouchable."),
@@ -730,6 +733,19 @@ FIELDS: list[Field] = [
     *[_b(f"profiles.title_goals.{key}", "titles", f"Title: {title.name}"[:45],
          f"Earned when: {_with_n(title.text)}.", min=1, max=10_000_000)
       for key, title in _profile_titles()],
+    # ---- prestige ----
+    _b("prestige.base_level", "prestige", "Level for Prestige I", min=1, max=10_000),
+    _b("prestige.level_step", "prestige", "Levels more for each prestige", "Prestige II needs Prestige I's level + "
+       "this, and so on.", max=1000),
+    _b("prestige.max", "prestige", "Highest prestige", min=1, max=10),
+    _pct("prestige.bonus", "prestige", "Bonus of each prestige", "Mining XP and /sell, for good, per prestige."),
+    *[_b(f"prestige.reset.{key}", "prestige", f"Reset: {label}", f"On: a prestige resets {text}. The level always "
+         "stays.", kind="bool", min=None)
+      for key, label, text in (("wealth", "wealth", "emeralds, blocks and items"),
+                               ("gear", "gear", "gear, enchantments and the anvil"),
+                               ("talents", "talents", "the talents (every spent point given back)"),
+                               ("achievements", "achievements", "achievements, stats and challenges"),
+                               ("dimensions", "dimensions", "the dimensions (back to the overworld)"))],
     # ---- guide ----
     _b("guide.reward", "guide", "Checklist reward", "Emeralds for doing every step of the guide, paid once per player."),
     _b("guide.delete_after_days", "guide", "Days before a finished guide is deleted",

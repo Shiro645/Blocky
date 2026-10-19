@@ -118,7 +118,7 @@ class SeasonsCog(commands.Cog):
     async def season(self, interaction: discord.Interaction):
         data = await self.bot.db.run(seasons.overview, interaction.user.id)
         lines = [
-            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'])}<@{uid}> — **{em(score)}**"
+            f"{MEDALS.get(i, f'`#{i}`')} {tag_prefix(data['tags'], uid, data['species'], data.get('stars'))}<@{uid}> — **{em(score)}**"
             for i, (uid, score) in enumerate(data["top"], start=1)
         ]
         rewards = " · ".join(f"{MEDALS.get(i, f'#{i}')} {em(r)}" for i, r in enumerate(data["rewards"], start=1))

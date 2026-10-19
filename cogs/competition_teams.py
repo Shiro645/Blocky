@@ -558,7 +558,7 @@ class TeamsCog(commands.Cog):
         data = await self.bot.db.run(load)
         t = data["team"]
         lines = [
-            ("👑 " if m["is_leader"] else "") + tag_prefix({}, m["user_id"], data["species"])
+            ("👑 " if m["is_leader"] else "") + tag_prefix({}, m["user_id"], data["species"], data.get("stars"))
             + f"<@{m['user_id']}> — {em(m['score'])} this week" + (" ⛏️" if m["active"] else "")
             for m in data["members"]
         ]

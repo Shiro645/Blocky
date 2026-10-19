@@ -444,6 +444,16 @@ DEFAULTS: dict[str, Any] = {
         "challenges": {"desert": 30, "mountains": 1500, "badlands": 6, "forest": 3, "dark_forest": 3, "jungle": 20,
                        "swamp": 3, "ocean": 3, "mushroom": 250, "tundra": 900},
     },
+    # Prestige (/prestige, game/prestige.py): Prestige n needs level base_level + level_step × (n - 1), every
+    # achievement, every dimension and the Beacon lit. The level stays; the parts switched on in
+    # "reset" start over. Each prestige: +bonus mining XP and /sell for good.
+    "prestige": {
+        "base_level": 50,
+        "level_step": 10,
+        "max": 10,
+        "bonus": 0.05,
+        "reset": {"wealth": True, "gear": True, "talents": True, "achievements": True, "dimensions": True},
+    },
     # Bounties (/bounty): fixed tiers that add up on the same head, claimed by beating the target in a duel,
     # a /rob or a raid. Unclaimed after `days`, the payer gets it back minus refund_tax.
     "bounty": {
@@ -462,12 +472,12 @@ DEFAULTS: dict[str, Any] = {
         # Frames sold for emeralds (the others are earned, see game/profiles.py).
         "frame_prices": {"stone": 100, "gold": 250, "redstone": 400, "lapis": 500, "diamond": 1000, "emerald": 1500},
         # What it takes to earn the other frames and the titles (game/profiles.py says what is counted).
-        "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1},
+        "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1, "prestige": 1},
         "title_goals": {
             "miner": 1000, "quarry_master": 50000, "bedrock_hunter": 100, "blacksmith": 50, "duelist": 25,
             "gladiator": 100, "boss_slayer": 10, "season_champion": 1, "arena_champion": 1, "team_champion": 1,
             "dungeon_crawler": 1, "nightmare_survivor": 1, "tycoon": 100000, "banker": 10000, "merchant": 50,
-            "heavy_hitter": 150, "veteran": 50, "legend": 100,
+            "heavy_hitter": 150, "veteran": 50, "legend": 100, "reborn": 1, "mythic": 5,
         },
     },
     # The guide: a private channel for every new player (in channels.guide_category) with
