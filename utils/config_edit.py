@@ -35,8 +35,8 @@ SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
                                  "teams", "beacon", "prestige")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
                              "pve_monsters", "bosses", "tournament")),
-    "games": ("🎉 Games & events", ("live_events", "biomes", "chance", "minigames", "rob", "war", "bounty",
-                                       "drops")),
+    "games": ("🎉 Games & events", ("live_events", "biomes", "night", "chance", "minigames", "rob", "war",
+                                       "bounty", "drops")),
 }
 
 CATEGORIES = {
@@ -78,6 +78,7 @@ CATEGORIES = {
     "tournament": "🏟️ Tournament",
     "live_events": "⏱️ Timed events",
     "biomes": "🗺️ Biomes of the week",
+    "night": "🌙 Day & night",
     "chance": "🎰 Games of chance",
     "minigames": "🧩 Blockdle & quiz",
     "rob": "🦹 Robberies",
@@ -504,6 +505,28 @@ FIELDS: list[Field] = [
          "set it with /event biome).", kind="bool", min=None) for b in BIOMES.values()],
     *[_b(f"biomes.challenges.{b.key}", "biomes", f"{b.label}: challenge target", "What to reach for its challenge.",
          min=1, max=1_000_000) for b in BIOMES.values()],
+    # ---- day and night ----
+    _b("night.monsters", "night", "Monsters a night", "Plus a Phantom, for a player who didn't sleep for a while. The "
+       "night's hours are the robberies' (Robberies).", max=48),
+    _b("night.margin_minutes", "night", "No monster this close to dusk/dawn", "Minutes.", max=240),
+    _b("night.fight_minutes", "night", "Minutes to fight a monster", "Not fought by then: the target loses emeralds.",
+       min=1, max=240),
+    _b("night.min_level", "night", "Level to be attacked", max=1000),
+    *[_b(f"night.strength.{k}", "night", f"{k.capitalize()}: strength ×", "Its dungeon health and damage times this "
+         "(alone: ~80% won in iron gear at 10.3).", kind="float", min=0.1, max=100) for k in ("zombie", "skeleton",
+                                                                                           "spider", "creeper")],
+    *[_b(f"night.phantom.{k}", "night", f"Phantom: {label}", kind="float", min=0.1 if k == "hp" else 0, max=1000)
+      for k, label in (("hp", "health"), ("min_damage", "smallest hit"), ("max_damage", "biggest hit"))],
+    *[_b(f"night.rewards.{k}", "night", f"{k.capitalize()}: emeralds if beaten", max=1_000_000)
+      for k in ("zombie", "skeleton", "spider", "creeper", "phantom")],
+    _b("night.xp", "night", "XP for beating a monster", max=100_000),
+    _pct("night.loss", "night", "Lost to a monster", "Of the target's emeralds, if they lose or don't fight."),
+    _b("night.loss_max", "night", "Most emeralds lost to a monster", max=1_000_000),
+    _pct("night.phantom_loss", "night", "Lost to a Phantom", "Of the target's emeralds."),
+    _b("night.phantom_loss_max", "night", "Most emeralds lost to a Phantom", max=1_000_000),
+    _b("night.phantom_nights", "night", "Nights without sleep for a Phantom", min=1, max=60),
+    _pct("night.sleep_daily_bonus", "night", "/daily bonus after /sleep", "The /daily of the day after a night slept.",
+         max=10),
     # ---- bounties ----
     *[_b(f"bounty.tiers.{i}", "bounty", f"Tier {i + 1}: emeralds", "One of the fixed amounts a bounty can be.",
          min=1, max=10_000_000) for i in range(4)],

@@ -59,6 +59,7 @@ MONSTERS: dict[str, Kind] = {k.key: k for k in (
     Kind("spider", "Spider", "🕷️", bites=2),
     Kind("creeper", "Creeper", "🟩", fuse=2),
     Kind("ravager", "Ravager", "🐂"),
+    Kind("phantom", "Phantom", "👻"),  # only at night (game/night.py), never in the dungeon's waves
 )}
 WAVES: tuple[tuple[tuple[str, int], ...], ...] = (
     (("zombie", 3),),
@@ -178,12 +179,14 @@ def _target(monsters: list[Monster]) -> Monster | None:
     return min(alive, key=lambda m: (m.fuse == 0, m.fuse, m.hp))
 
 
-def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: str) -> dict:
-    """Play one wave. Heroes are changed in place. Returns {"cleared", "log", "deaths"}."""
+def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: str,
+               monsters: list[Monster] | None = None) -> dict:
+    """Play one wave (or these `monsters`: the night's, game/night.py). Heroes are changed in place.
+    Returns {"cleared", "log", "deaths"}."""
     d = settings.get()["duel"]
     crit_chance, crit_mult = float(d["crit_chance"]), float(d["crit_multiplier"])
     fighting = [h for h in heroes if h.alive]
-    monsters = spawn(wave, difficulty, len(fighting))
+    monsters = spawn(wave, difficulty, len(fighting)) if monsters is None else monsters
     log: list[str] = []
     deaths: list[int] = []
     kills: dict[int, int] = {h.user_id: 0 for h in fighting}

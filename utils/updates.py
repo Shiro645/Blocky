@@ -354,4 +354,17 @@ UPDATES: tuple[Update, ...] = (
              "Each next prestige needs 10 more levels: Prestige II at 60, III at 70… X at 140."),
         ),
     ),
+    Update(
+        "2026-10-day-night", "2026-10-20", "Day and night",
+        "The sun now sets on the server… and monsters come out!",
+        (
+            ("🌙 The night",
+             "From 22:00 to 06:00 it's night: `/time` tells you. Every night, monsters attack players who aren't "
+             "asleep. Beat them with your gear for emeralds, or they take some of yours."),
+            ("👻 Phantoms",
+             "Haven't slept for 3 nights? A Phantom comes for you: tougher, it pays more… and takes more."),
+            ("🛏️ /sleep",
+             "Sleep at night to be safe from monsters until the morning, and your next `/daily` pays 25% more."),
+        ),
+    ),
 )

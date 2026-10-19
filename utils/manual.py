@@ -427,6 +427,20 @@ def _beacon(s: Settings) -> list[str]:
     ]
 
 
+def _night(s: Settings) -> list[str]:
+    n, r = s["night"], s["rob"]
+    rewards = " · ".join(f"{k} {em(v)}" for k, v in n["rewards"].items())
+    return [
+        f"Night: **{int(r['night_start_hour']):02d}:00 → {int(r['night_end_hour']):02d}:00** · {num(n['monsters'])} "
+        f"monsters a night + a Phantom · level {num(n['min_level'])}+ · {num(n['fight_minutes'])} min to fight",
+        f"Beaten: {rewards} · +{num(n['xp'])} XP",
+        f"Lost or ignored: **{pct(n['loss'])}** of your emeralds ({em(n['loss_max'])} max) · Phantom "
+        f"**{pct(n['phantom_loss'])}** ({em(n['phantom_loss_max'])} max), after {num(n['phantom_nights'])} nights "
+        "without sleep",
+        f"/sleep: safe until morning · next /daily **+{pct(n['sleep_daily_bonus'])}**",
+    ]
+
+
 def _prestige(s: Settings) -> list[str]:
     p = s["prestige"]
     steps = " · ".join(f"{prestige.roman(n)}: {num(int(p['base_level']) + int(p['level_step']) * (n - 1))}"
@@ -1289,6 +1303,27 @@ PAGES: list[Page] = [
         _live_events,
         examples=("/events",),
         related=("luckyblock", "wheel", "sell", "market"),
+    ),
+    Page(
+        "time", "events",
+        "Says whether it's **day or night** on the server and when it changes, whether you slept, and whether a "
+        "monster is attacking you. The night is the hours when robberies and raids are closed. Every night a few "
+        "**monsters** come at random times and each attacks a random player who didn't `/sleep`: they're pinged "
+        "with a **Fight** button and fight it alone with their gear (like the dungeon). Beat it for emeralds and "
+        "XP; lose, or don't come in time, and it takes a few of your emeralds. A 👻 **Phantom** also comes for a "
+        "player who hasn't slept for a few nights: stronger, it pays and takes more. Dusk and dawn are announced.",
+        _night,
+        examples=("/time",),
+        related=("sleep", "daily"),
+    ),
+    Page(
+        "sleep", "events",
+        "Goes to bed, at night only (once a night): no monster or Phantom attacks you until the morning, and your "
+        "next `/daily` pays more. You can't sleep while a monster is attacking you: fight it first. Sleeping also "
+        "keeps the Phantoms away (they hunt the ones who don't sleep).",
+        _night,
+        examples=("/sleep",),
+        related=("time", "daily"),
     ),
     Page(
         "biome", "events",

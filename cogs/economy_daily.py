@@ -22,6 +22,9 @@ class DailyCog(commands.Cog):
             f"+{em(res['emeralds'])}  ·  +{res['xp']} XP {EMOJI['xp']}".rstrip(),
             f"Streak: **{res['streak']} day{'s' if res['streak'] > 1 else ''}** {flames}",
         ]
+        if res.get("rested"):
+            lines.append(f"🛏️ Well rested: **+{float(settings.get()['night']['sleep_daily_bonus']):.0%}** for sleeping "
+                         "last night (`/sleep`).")
         if res["bonus_item"]:
             lines.append(f"🎁 7-day bonus: {mat(res['bonus_item'])} **1 {res['bonus_item']} ingot**!")
         if res["lost_streak"]:
