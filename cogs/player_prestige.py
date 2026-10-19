@@ -43,7 +43,7 @@ def status_embed(st: dict) -> discord.Embed:
                         inline=False)
     lost = [prestige.PARTS[p] for p in st["resets"]]
     embed.add_field(name="You start over", value=join_lines([f"• {x}" for x in lost], empty="Nothing.")
-                    + "\nYou keep your level, your talents, your team and the cosmetics you bought.", inline=False)
+                    + "\nYou keep your level, your team and the cosmetics you bought.", inline=False)
     embed.add_field(name="You get", value=f"+{bonus:.0%} mining XP and /sell for good (each prestige adds "
                     f"{bonus:.0%}), a ⭐ next to your name, the Prestige role and earned cosmetics (`/customize list`).",
                     inline=False)

@@ -739,10 +739,11 @@ FIELDS: list[Field] = [
        "this, and so on.", max=1000),
     _b("prestige.max", "prestige", "Highest prestige", min=1, max=10),
     _pct("prestige.bonus", "prestige", "Bonus of each prestige", "Mining XP and /sell, for good, per prestige."),
-    *[_b(f"prestige.reset.{key}", "prestige", f"Reset: {label}", f"On: a prestige resets {text}. The level and the "
-         "talents always stay.", kind="bool", min=None)
+    *[_b(f"prestige.reset.{key}", "prestige", f"Reset: {label}", f"On: a prestige resets {text}. The level always "
+         "stays.", kind="bool", min=None)
       for key, label, text in (("wealth", "wealth", "emeralds, blocks and items"),
                                ("gear", "gear", "gear, enchantments and the anvil"),
+                               ("talents", "talents", "the talents (every spent point given back)"),
                                ("achievements", "achievements", "achievements, stats and challenges"),
                                ("dimensions", "dimensions", "the dimensions (back to the overworld)"))],
     # ---- guide ----

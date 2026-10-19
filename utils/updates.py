@@ -345,7 +345,8 @@ UPDATES: tuple[Update, ...] = (
         (
             ("🌟 Becoming Prestige",
              "Level 50, every achievement, every dimension and the Beacon lit: `/prestige` lets you start over. Your "
-             "wealth, gear, achievements and dimensions go; your level and your talents stay."),
+             "wealth, gear, achievements and dimensions go, your talents are given back to spend again, and your level "
+             "stays."),
             ("💪 Stronger for good",
              "Each prestige gives +5% mining XP and /sell forever, a ⭐ next to your name, the Prestige role and "
              "exclusive cosmetics: the titles Reborn and Mythic and the Prestige frame."),

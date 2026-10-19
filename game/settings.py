@@ -445,14 +445,14 @@ DEFAULTS: dict[str, Any] = {
                        "swamp": 3, "ocean": 3, "mushroom": 250, "tundra": 900},
     },
     # Prestige (/prestige, game/prestige.py): Prestige n needs level base_level + level_step × (n - 1), every
-    # achievement, every dimension and the Beacon lit. The level and the talents stay; the parts switched on in
+    # achievement, every dimension and the Beacon lit. The level stays; the parts switched on in
     # "reset" start over. Each prestige: +bonus mining XP and /sell for good.
     "prestige": {
         "base_level": 50,
         "level_step": 10,
         "max": 10,
         "bonus": 0.05,
-        "reset": {"wealth": True, "gear": True, "achievements": True, "dimensions": True},
+        "reset": {"wealth": True, "gear": True, "talents": True, "achievements": True, "dimensions": True},
     },
     # Bounties (/bounty): fixed tiers that add up on the same head, claimed by beating the target in a duel,
     # a /rob or a raid. Unclaimed after `days`, the payer gets it back minus refund_tax.

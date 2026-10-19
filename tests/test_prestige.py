@@ -53,17 +53,20 @@ class AscendTests(PrestigeTestCase):
         await self.run_game(players.give_emeralds, ALICE, 5000)
         await self.run_game(players.add_blocks, ALICE, "cobblestone", 100)
         await self.run_game(players.bump_stat, ALICE, "blocks_mined", 100)
+        await self.run_game(players.buy_talent, ALICE, "miner", 2)
+        points = await self.run_game(lambda ctx: players.get_user(ctx, ALICE)["talent_points"])
         res = await self.run_game(prestige.ascend, ALICE)
         self.assertEqual(res["prestige"], 1)
         user = await self.run_game(players.get_user, ALICE)
         self.assertEqual((user["level"], user["prestige"], user["emeralds"], user["dimension_level"]), (50, 1, 0, 0))
+        self.assertEqual((user["miner_points"], user["talent_points"]), (0, points + 2))  # every point given back
         self.assertFalse(any((await self.run_game(players.get_blocks, ALICE)).values()))
         self.assertEqual(await self.run_game(progress.unlocked_codes, ALICE), {})
         self.assertEqual(await self.run_game(players.get_stat, ALICE, "blocks_mined"), 0)
         self.assertIn(PrestigeReached(ALICE, 1), self.notices)
 
     async def test_the_reset_follows_the_settings(self):
-        settings.load({"prestige": {"reset": {"wealth": False, "gear": True, "achievements": False,
+        settings.load({"prestige": {"reset": {"wealth": False, "gear": True, "talents": False, "achievements": False,
                                               "dimensions": False}}})
         await self.make_ready()
         await self.run_game(players.give_emeralds, ALICE, 5000)

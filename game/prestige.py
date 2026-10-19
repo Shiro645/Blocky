@@ -2,10 +2,10 @@
 
 - Prestige n+1 needs level prestige.base_level + prestige.level_step × n (50, 60, 70…), every achievement,
   every dimension (up to the Shimmer) and the server's Beacon lit.
-- The level stays (and the talents: their points come from it). The parts switched on in prestige.reset start
-  over: wealth (emeralds, blocks, items, auction listings, loans, bounties put), gear (and its enchantments, the
-  anvil), achievements (with the stats and the challenges they come from) and dimensions (back to the
-  overworld). With both wealth and achievements reset, achievement rewards are paid again (like /reset).
+- The level stays. The parts switched on in prestige.reset start over: wealth (emeralds, blocks, items, auction
+  listings, loans, bounties put), gear (and its enchantments, the anvil), talents (every spent point is given back
+  to spend again: they come from the level, so none is lost), achievements (with the stats and the challenges
+  they come from) and dimensions (back to the overworld). With both wealth and achievements reset, achievement rewards are paid again (like /reset).
 - Each prestige: +prestige.bonus mining XP and /sell for good, a ⭐ next to the name, the Prestige role, and
   earned cosmetics (game/profiles.py: the titles Reborn and Mythic, the Prestige frame).
 """
@@ -20,6 +20,7 @@ ROMAN = ("", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
 PARTS = {
     "wealth": "emeralds, blocks and items (auction listings, loans and the bounties you put are cancelled)",
     "gear": "gear, its enchantments and the anvil",
+    "talents": "talents (every spent point is given back to spend again)",
     "achievements": "achievements, stats and challenges",
     "dimensions": "dimensions (back to the overworld)",
 }
@@ -88,6 +89,8 @@ def ascend(ctx: Ctx, user_id: int) -> dict:
             ctx.execute(f"DELETE FROM {table} WHERE user_id=?;", (user_id,))
         if "wealth" in parts:  # their rewards are earned again (like /reset)
             ctx.execute("DELETE FROM rewards_paid WHERE user_id=?;", (user_id,))
+    if "talents" in parts:
+        players.reset_talents(ctx, user_id)
     if "dimensions" in parts:
         ctx.execute("UPDATE users SET dimension_level=0 WHERE user_id=?;", (user_id,))
     n = st["next"]
