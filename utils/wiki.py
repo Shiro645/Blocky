@@ -62,7 +62,7 @@ SECTIONS: tuple[Section, ...] = (
         "piles are dirt and cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come "
         "in smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
         "messages in between give nothing, so spamming doesn't help. Each reward also gives **XP**, sometimes "
-        "**lapis lazuli**, and sometimes makes a **drop** appear (see Bosses, drops and the villager).\n"
+        "**lapis lazuli**, and sometimes makes a **drop** appear (see Timed events, drops and the villager).\n"
         "**Spam channels** (set by the staff) give only a tiny emerald reward: no blocks, XP, drops or challenge "
         "progress.\n\n"
         "**Dimensions**: after the overworld come the **Nether**, the **End**, the **Deep Dark** and the "
@@ -115,7 +115,8 @@ SECTIONS: tuple[Section, ...] = (
         "lowers the damage you take (duels, tournament, dungeon).\n"
         "**The shield** (iron only): in a duel, on your turn, **Attack + block** attacks, then blocks the "
         "opponent's whole next attack, a few times per duel. Nobody sees it coming: the duel only says how much it "
-        "blocked. It isn't used in the tournament, the dungeon or against bosses.\n\n"
+        "blocked. Against the gate bosses it stops the boss's next strike on you. It isn't used in the tournament or "
+        "the dungeon.\n\n"
         "**Durability**: gear wears out when you use it and **breaks at 0**: the piece is gone, with its "
         "enchantments. Tools lose 1 each mining reward where they help, the sword 1 per attack, and every armor "
         "piece 1 per hit you take in a duel (in the dungeon, each hit wears only one piece). Like in Minecraft, "
@@ -130,10 +131,10 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "enchanting", "✨ Enchanting",
         "**Lapis lazuli** is found while mining and in drops. **Enchanted books** (levels I to III) come from "
-        "drops, bosses (the top damage dealers get a strong one), completing every weekly challenge, the wandering "
+        "drops, gate bosses (each survivor gets a strong one), completing every weekly challenge, the wandering "
         "villager (level III) and other players.\n"
-        "**Mending** is the rarest book (one level): only the villager's exclusive offer, or now and then the top "
-        "damage dealer of a boss. On any piece, the XP you gain repairs your equipped Mending gear first, and only the "
+        "**Mending** is the rarest book (one level): only the villager's exclusive offer, or now and then the book "
+        "of a gate boss's survivor. On any piece, the XP you gain repairs your equipped Mending gear first, and only the "
         "XP left goes to you.\n\n"
         "`/enchant apply <book> <piece>` puts a book on a piece for some lapis. A piece can carry several different "
         "enchantments; a higher level replaces a lower one of the same enchantment. `/enchant combine <book>` merges "
@@ -181,7 +182,7 @@ SECTIONS: tuple[Section, ...] = (
         "**How damage works**: each hit deals a random amount between the minimum and your sword's maximum, "
         "sometimes a **critical hit** (double damage). Armor lowers the damage you take, and the player who strikes "
         "second gets a few extra HP. Better gear wins more often, but not always: luck matters.\n\n"
-        "**Potions** (`/potions`): at most one per turn and a few per duel. Found in drops and on bosses; "
+        "**Potions** (`/potions`): at most one per turn and a few per duel. Found in drops and sold by the villager; "
         "**reinforced** potions (II) are stronger (only a few per duel) and sold by the wandering villager. "
         "Witches make potions stronger.\n\n"
         "**Training dummy**: `/dummy hit` hits a dummy with your gear and shows every hit, your total and your "
@@ -206,21 +207,38 @@ SECTIONS: tuple[Section, ...] = (
         ("pve start",),
     ),
     Section(
-        "events", "🐉 Timed events, bosses, drops and the wandering villager",
+        "gate_bosses", "🚪 Gate bosses",
+        "The **dimensions** after the Nether are opened by **gate bosses**. The Nether itself opens by clearing the "
+        "💀 **Nightmare** dungeon (`/pve start`): the players still there at the end of wave 5 reach it. Then the 🖤 "
+        "**Wither** (in the Nether) opens the End, the 🐉 **Ender Dragon** (in the End) the Deep Dark, and the 👁️ "
+        "**Warden** (in the Deep Dark) the Shimmer.\n\n"
+        "`/boss fight <boss>` calls a group (up to 4 players who reached the boss's dimension; each pays the entry, "
+        "given back if the group never starts). It's **turn by turn**: each player in order may drink a potion (a "
+        "couple per fight), then **Attack** or **Attack + block** with a shield (the boss's next strike on you is "
+        "stopped), then the boss plays. The **Wither** blasts everyone and withers them for a few turns, the "
+        "**Ender Dragon** strikes at random and breathes fire on everyone now and then, and the **Warden** smashes "
+        "one player very hard, with a **Sonic Boom** that ignores armor and shields every few turns.\n\n"
+        "A boss is made for a full group of 4 in the best gear of its dimension: even then, a prepared group "
+        "(shields, potions) wins about a third of the time, and an unprepared one rarely. A smaller group faces less "
+        "health, but it's much harder. Each **survivor** of a victory opens the next dimension and gets the bounty "
+        "(Looting adds to it), a strong book (sometimes Mending) and XP; the fallen get nothing, and a boss you "
+        "already beat pays less. One fight every few hours. `/boss info` shows them all.",
+        ("boss fight", "boss info"),
+    ),
+    Section(
+        "events", "🐉 Timed events, drops and the wandering villager",
         "**Timed events** (`/events`): for an hour, a bonus for everyone: 🎰 **Gambling Frenzy** (bigger bets and "
         "daily limit at the Lucky Block and the wheel), ⛏️ **Mining Rush** (more mining XP), 💰 **Golden Hour** "
         "(`/sell` pays more), 🍀 **Lucky Hour** (more obsidian and bedrock) or 🏷️ **Market Sale** (cheaper "
         "`/market`). One comes every day at a random time, announced in the events channel.\n\n"
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
-        "**Bosses**: a boss with shared health. Everyone can attack (`/attack` or the button) once in a while; when "
-        "it's defeated, the rewards are shared by damage dealt and the top damage dealers get a bonus, a book and potions. "
-        "If nobody defeats it in time, it escapes. `/boss` shows the current one.\n\n"
+
         "**The wandering villager** comes every day at the same hours in the events channel, with 3 offers: a sale "
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "
         "reinforced potion). Each offer exists **once**: the first to click gets it. `/villager` says when he's "
         "next here.",
-        ("events", "boss", "villager"),
+        ("events", "villager"),
     ),
     Section(
         "competition", "🏆 Seasons, challenges, achievements and leaderboards",

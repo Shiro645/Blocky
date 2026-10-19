@@ -2,7 +2,7 @@
 
 What is never touched: Minecraft links, moderation (warnings, mutes, bans),
 teams themselves, the settings, the closed seasons list (so old seasons are
-never paid twice), bosses, tournaments, the villager and the Blockdle.
+never paid twice), gate boss fights, tournaments, the villager and the Blockdle.
 """
 from __future__ import annotations
 

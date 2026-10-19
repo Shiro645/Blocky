@@ -2,7 +2,7 @@
 
 Potions are stackable items (items table): ("potion", "<kind>") for level I
 and ("potion", "<kind>:2") for the reinforced level II, sold only by the
-villager. They are found in drops and on bosses, and can be traded like any item.
+villager. They are found in drops and sold by the villager, and can be traded like any item.
 """
 from __future__ import annotations
 

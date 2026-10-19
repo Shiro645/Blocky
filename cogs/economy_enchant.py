@@ -86,7 +86,7 @@ class EnchantCog(commands.Cog):
                 "Two identical books combine into the next level with `/enchant combine` (on an anvil). Levels IV to "
                 f"VII only come from combining, up to your maximum: **{ROMAN[data['max_level']]}** (III, +1 per "
                 "dimension you unlocked).\n"
-                "Books come from drops, bosses (top damage), completing every weekly challenge, "
+                "Books come from drops, gate bosses (each survivor), completing every weekly challenge, "
                 "the wandering villager and other players (`/trade`, `/auction`)."
             ),
             color=discord.Color.purple(),
@@ -95,7 +95,7 @@ class EnchantCog(commands.Cog):
         embed.add_field(name="Your books", value=join_lines(books, empty="No books yet."), inline=False)
         for e in ENCHANTS.values():
             if e.max_level == 1:
-                effects = enchants.effect_text(e.key, 1) + " · the rarest book: only from the villager or a boss"
+                effects = enchants.effect_text(e.key, 1) + " · the rarest book: only from the villager or a gate boss"
             else:
                 effects = " · ".join(f"{ROMAN[lvl]}: {enchants.effect_text(e.key, lvl)}" for lvl in range(1, e.max_level + 1))
             on = "all gear" if len(e.items) > 5 else ", ".join(e.items)

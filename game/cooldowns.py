@@ -18,7 +18,7 @@ TIMERS: dict[str, str] = {
     "rob_protection": "Protection after being robbed",
     "dungeon": "Dungeon",
     "dummy": "Training dummy",
-    "boss": "Boss attack",
+    "boss": "Gate boss fight",
     "duel": "Duels",
     "games": "Games of chance (Lucky Block, wheel, blackjack, mines)",
     "mining": "Mining",
@@ -51,15 +51,11 @@ def reset(ctx: Ctx, user_id: int, timers: list[str]) -> list[str]:
     players.ensure_user(ctx, user_id)
     done = []
     for timer in timers:
-        if timer in ("rob", "rob_protection", "dungeon"):
+        if timer in ("rob", "rob_protection", "dungeon", "boss"):
             _note(ctx, user_id, timer)
             done.append(timer)
         elif timer == "dummy":
             if ctx.execute("UPDATE dummy_scores SET last_at=0 WHERE user_id=? AND last_at>0;", (user_id,)).rowcount:
-                done.append(timer)
-        elif timer == "boss":
-            if ctx.execute("UPDATE boss_damage SET last_attack_at=0 WHERE user_id=? AND last_attack_at>0;",
-                           (user_id,)).rowcount:
                 done.append(timer)
         elif timer == "species":
             if ctx.execute("UPDATE users SET species_changed_at=NULL WHERE user_id=? AND species_changed_at IS NOT NULL;",

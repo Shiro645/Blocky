@@ -124,18 +124,15 @@ class ManualTests(unittest.TestCase):
                     self.assertLessEqual(len(line), 400)
         mining = manual.BY_NAME["mining"]
         self.assertIn("**30 s**", mining.current_values(settings.get())[0])
-        settings.load({"mining": {"cooldown_seconds": 15}, "boss": {"auto_spawn_hours": 72}})
+        settings.load({"mining": {"cooldown_seconds": 15}, "gate_bosses": {"cooldown_hours": 6}})
         self.assertIn("**15 s**", mining.current_values(settings.get())[0])
-        self.assertIn("every **72 h**", manual.BY_NAME["boss"].current_values(settings.get())[0])
+        self.assertIn("every **6 h**", manual.BY_NAME["boss fight"].current_values(settings.get())[0])
         settings.load({"tournament": {"opens_day": 5, "opens_hour": 9}})
         self.assertIn("**Saturday 09:00**", manual.BY_NAME["tournament join"].current_values(settings.get())[0])
 
-    def test_boss_challenge_hidden_without_automatic_bosses(self):
+    def test_no_boss_challenge(self):
         lines = manual.BY_NAME["challenges"].current_values(settings.get())
         self.assertFalse(any("bosses" in line for line in lines))
-        settings.load({"boss": {"auto_spawn_hours": 24}})
-        lines = manual.BY_NAME["challenges"].current_values(settings.get())
-        self.assertTrue(any("bosses" in line for line in lines))
 
     def test_find_and_search(self):
         self.assertEqual(manual.find("/Team  Create", staff=False).name, "team create")

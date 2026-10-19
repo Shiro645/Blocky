@@ -64,7 +64,6 @@ EXTENSIONS = [
     "cogs.competition_teams",
     "cogs.events_progress",
     "cogs.events_drops",
-    "cogs.events_boss",
     "cogs.events_tournament",
     "cogs.events_villager",
     "cogs.events_live",
@@ -76,6 +75,7 @@ EXTENSIONS = [
     "cogs.games_quiz",
     "cogs.games_rob",
     "cogs.games_pve",
+    "cogs.games_boss",
     "cogs.games_dummy",
     "cogs.help_command",
 ]

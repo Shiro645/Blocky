@@ -626,6 +626,31 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN dimension_level INTEGER NOT NULL DEFAULT 0;
     """,
+    # 34: gate bosses (/boss): a group's fight against the Wither, the Ender Dragon or the Warden
+    """
+    CREATE TABLE gate_fights (
+        fight_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        boss TEXT NOT NULL,
+        leader_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'lobby',  -- lobby | active | won | lost | cancelled
+        state TEXT,                            -- JSON: the fight, once started (game/gate.py Fight)
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        deadline INTEGER NOT NULL,             -- lobby: start before; active: the current player plays before
+        ended_at INTEGER,
+        channel_id INTEGER,
+        message_id INTEGER
+    );
+    CREATE INDEX idx_gate_fights_status ON gate_fights(status, deadline);
+    CREATE TABLE gate_members (
+        fight_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        joined_at INTEGER NOT NULL,
+        entry INTEGER NOT NULL,                -- emeralds paid (given back if the group never starts)
+        PRIMARY KEY (fight_id, user_id)
+    );
+    CREATE INDEX idx_gate_members_user ON gate_members(user_id);
+    """,
 ]
 
 

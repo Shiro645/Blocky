@@ -150,14 +150,22 @@ class EffectTests(EnchantTestCase):
         self.assertIn(res["lapis"], (1, 2))
         self.assertEqual(await self.run_game(enchants.lapis, ALICE), res["lapis"])
 
+    async def win_gate_boss(self) -> dict:
+        from game import dimensions, gate
+        from tests.test_gate import set_boss_hp
+
+        await self.run_game(players.give_emeralds, ALICE, 1500)
+        await self.run_game(dimensions.set_highest, ALICE, "nether")
+        row = await self.run_game(gate.create, ALICE, "wither")
+        await self.run_game(gate.start, row["fight_id"], ALICE)
+        await self.run_game(set_boss_hp, row["fight_id"], 0.5)
+        return (await self.run_game(gate.attack, row["fight_id"], ALICE))["rewards"][ALICE]
+
     async def test_looting_and_book_on_bosses(self):
         await self.piece(ALICE, "sword", "netherite", looting=3)
         await self.run_game(gear.equip_best, ALICE)
-        await self.run_game(events.spawn_boss, "Test", 1)
-        res = await self.run_game(events.attack_boss, ALICE)
-        reward = res["defeat"]["rewards"][0]
-        self.assertEqual(reward["looting"], int(750 * 0.3))
-        self.assertEqual(reward["reward"], 750 + int(750 * 0.3))
+        reward = await self.win_gate_boss()
+        self.assertEqual((reward["bounty"], reward["looting"]), (3000, int(3000 * 0.3)))
         self.assertTrue(reward["book"])
         self.assertEqual(len(await self.run_game(enchants.books, ALICE)), 1)
 
@@ -258,12 +266,8 @@ class MendingTests(EnchantTestCase):
         settings.load({"villager": {"exclusive_mending_chance": 1.0}, "enchants": {"boss_mending_chance": 1.0}})
         offer = await self.run_game(villager._exclusive_offer)
         self.assertEqual((offer["asset"], offer["price"]), ("book:mending:1", 600))
-        await self.run_game(events.spawn_boss, "Test", 1000)
-        await self.run_game(events.attack_boss, ALICE)
-        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
-        self.advance(120)
-        rewards = (await self.run_game(events.attack_boss, ALICE))["defeat"]["rewards"]
-        self.assertEqual(rewards[0]["book"], "Mending")
+        reward = await EffectTests.win_gate_boss(self)
+        self.assertEqual(reward["book"], "Mending")
         self.assertIn(("mending", 1, 1), await self.run_game(enchants.books, ALICE))
 
 

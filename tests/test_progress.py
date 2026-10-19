@@ -68,17 +68,12 @@ class ChallengeTests(GameTestCase):
         self.assertEqual(len(a), 3)
         self.assertEqual(len({c.code for c in a}), 3)
 
-    def test_no_boss_challenge_without_automatic_bosses(self):
-        from game import settings
-
+    def test_no_boss_challenge(self):
         weeks = [f"2026-W{w:02d}" for w in range(1, 53)]
-        settings.load()  # bosses only from /boss_spawn
-        for week in weeks:
+        for week in weeks:  # gate bosses need a group and a dimension: not a challenge for everyone
             picks = progress.pick("week", week)
             self.assertEqual(len(picks), 3)
             self.assertNotIn("boss_damage", [c.code for c in picks])
-        settings.load({"boss": {"auto_spawn_hours": 24}})
-        self.assertTrue(any("boss_damage" in [c.code for c in progress.pick("week", w)] for w in weeks))
 
     def test_no_challenge_for_a_game_that_is_off(self):
         from game import settings

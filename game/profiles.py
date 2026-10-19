@@ -4,7 +4,7 @@
 - Colors: the 16 Minecraft dye colors, bought once each (`color_price`), or any
   #hex color once `hex_price` is paid. The default color is free.
 - Frames (the patterned border of the profile card): some are sold
-  (`frame_prices`), the rarest are earned (tournament, dungeon, bosses...).
+  (`frame_prices`), the rarest are earned (tournament, dungeon, gate bosses...).
 - Titles are earned by playing (see TITLES); the staff can also give a custom one.
 - Team banners, like Minecraft banners: a base color and up to 3 patterns, each
   with its color. The leader changes it for `banner_cost` emeralds.
