@@ -301,6 +301,9 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
     players.bump_stat(ctx, winner.user_id, "duel_winnings", stake)
     players.add_xp(ctx, winner.user_id, int(d["xp_win"]))
     players.add_xp(ctx, loser.user_id, int(d["xp_loss"]))
+    from game import war  # war depends on this module
+
+    war_points = war.on_duel(ctx, winner.user_id, loser.user_id)
 
     broken: list[tuple[int, str]] = []
     for fighter in fight.fighters:
@@ -324,6 +327,7 @@ def finish(ctx: Ctx, duel_id: int, fight: Fight) -> dict:
         "max_hp": float(d["hp"]),
         "rounds": fight.rounds,
         "broken": broken,
+        "war_points": war_points,
     }
 
 

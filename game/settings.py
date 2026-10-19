@@ -407,6 +407,29 @@ DEFAULTS: dict[str, Any] = {
         # A player who gave at least contributor_value emeralds' worth this week: mining XP and /sell bonus too.
         "contributor_value": 200, "contributor_xp": 0.05, "contributor_sell": 0.05,
     },
+    # Gang wars (game/war.py): every week all teams of at least min_members fight each other for points. Each
+    # Monday `levy` of every team chest goes into the week's pot; the top teams share it (prizes) after `tax`.
+    "war": {
+        "min_members": 2,
+        "levy": 0.05,
+        "tax": 0.10,
+        "prizes": [0.5, 0.3, 0.2],
+        "points": {"duel": 1, "rob": 2, "rob_stopped": 1, "raid": 5, "raid_defended": 3},
+        "duel_pair_cap": 3,  # duel wins a day of one player over the same enemy that score
+        # Raids on a team's chest: min_attackers to max_attackers members gather (gather_minutes), then the
+        # target's members have defend_minutes to come and defend; then the fight. Won (or nobody defended):
+        # the attackers take raid_steal of the chest (raid_steal_max at most) into their own chest.
+        "raid_min_attackers": 2,
+        "raid_max_attackers": 4,
+        "raid_max_defenders": 4,
+        "raid_gather_minutes": 5,
+        "raid_defend_minutes": 30,
+        "raid_steal": 0.15,
+        "raid_steal_max": 5000,
+        "raids_per_day": 1,  # raids a team can launch a day
+        "raid_protection_hours": 24,  # a raided chest is safe for this long
+        "raid_max_rounds": 40,
+    },
     # Profile customization (/customize) and team banners (/team banner).
     "profiles": {
         "bio_max": 150,
@@ -603,6 +626,8 @@ DEFAULTS: dict[str, Any] = {
         "dragon_slayer": {"reward": 2000},
         "warden_slayer": {"reward": 4000},
         "beacon_builder": {"goal": 5000, "reward": 500},
+        "warlord": {"reward": 1000},
+        "raider_5": {"goal": 5, "reward": 300},
     },
 }
 
@@ -821,6 +846,12 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
             if isinstance(odds, dict) and pile in odds and sum(float(w) for w in odds[pile].values()) <= 0:
                 out.append((f"`balance.dimensions.{dim}.{pile}`: at least one block needs a weight above 0.",
                             [("dimensions", dim, pile)]))
+    w = merged["war"]
+    if sum(float(x) for x in w["prizes"]) > 1:
+        out.append(("`balance.war.prizes`: the podium can't share more than the whole pot.", [("war", "prizes")]))
+    if int(w["raid_min_attackers"]) > int(w["raid_max_attackers"]):
+        out.append(("`balance.war`: a raid's minimum attackers can't be above its maximum.",
+                    [("war", "raid_min_attackers"), ("war", "raid_max_attackers")]))
     if any(int(n) <= 0 or int(n) % 9 for n in merged["beacon"]["level_ingots"]):
         out.append(("`balance.beacon.level_ingots`: each level is whole blocks, a multiple of 9 ingots.",
                     [("beacon", "level_ingots")]))

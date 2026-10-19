@@ -128,7 +128,10 @@ def stop(ctx: Ctx, rob_id: int, user_id: int) -> dict:
     ctx.execute("UPDATE robberies SET status='stopped', fine=? WHERE rob_id=?;", (fine, rob_id))
     players.bump_stat(ctx, rob["victim_id"], "robs_stopped")
     players.bump_stat(ctx, rob["thief_id"], "robs_failed")
-    return {**rob, "status": "stopped", "fine": fine}
+    from game import war  # war depends on this module
+
+    out = {**rob, "status": "stopped", "fine": fine}
+    return {**out, "war_points": war.on_rob(ctx, out)}
 
 
 def finish_due(ctx: Ctx) -> list[dict]:
@@ -140,5 +143,8 @@ def finish_due(ctx: Ctx) -> list[dict]:
         ctx.execute("UPDATE robberies SET status='done', stolen=? WHERE rob_id=?;", (stolen, rob["rob_id"]))
         players.bump_stat(ctx, rob["thief_id"], "robs_succeeded")
         players.bump_stat(ctx, rob["thief_id"], "emeralds_stolen", stolen)
-        done.append({**rob, "status": "done", "stolen": stolen})
+        from game import war  # war depends on this module
+
+        out = {**rob, "status": "done", "stolen": stolen}
+        done.append({**out, "war_points": war.on_rob(ctx, out)})
     return done

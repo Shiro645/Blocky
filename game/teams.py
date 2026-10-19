@@ -295,6 +295,10 @@ def _drop_team(ctx: Ctx, team: dict) -> None:
         "INSERT OR REPLACE INTO team_archive(team_id, name, tag) VALUES(?, ?, ?);",
         (team["team_id"], team["name"], team["tag"]),
     )
+    # The chest goes back to the leader (not earned: it came from the members).
+    left = ctx.one("SELECT chest FROM teams WHERE team_id=?;", (team["team_id"],))
+    if left and left["chest"]:
+        players.give_emeralds(ctx, team["leader_id"], int(left["chest"]))
     ctx.execute("DELETE FROM team_season_scores WHERE team_id=? AND season_id=?;", (team["team_id"], ctx.week_id))
     ctx.execute("DELETE FROM teams WHERE team_id=?;", (team["team_id"],))
     ctx.execute("DELETE FROM team_banners WHERE team_id=?;", (team["team_id"],))

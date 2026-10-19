@@ -301,8 +301,17 @@ SECTIONS: tuple[Section, ...] = (
         "each member brought. Team leaders can get a role.\n\n"
         "**Your team's own category**: the leader unlocks it once with `/team category`. Only the members and the "
         "staff see it (members get a team role). The leader manages its text and voice channels: "
-        "`/team channel create`, `/team channel rename` and `/team channel delete`.",
-        ("team create", "team banner", "team category"),
+        "`/team channel create`, `/team channel rename` and `/team channel delete`.\n\n"
+        "**🏴 The gang war** (`/war`): every week, all the teams of at least 2 members are at war with each other. "
+        "Each team has a **chest** (`/team chest deposit`, the leader `/team chest withdraw`, `/team chest view`): "
+        "a personal /rob can't reach it, but every Monday a share of it goes into the war's **pot**, and other teams "
+        "can **raid** it. Points come from **duels** won against members of other teams (a few a day for the same "
+        "pair), **robberies** on them (and stopping theirs) and **raids**. `/team raid <team>` opens a raid: a few "
+        "of your teammates join, then the target's members are pinged and have a while to **Defend**; then both "
+        "sides fight it out with their gear. Won, or nobody defended: you take a share of their chest. When the "
+        "week ends, the top teams share the pot, into their chests. No raids at night, one raid a day per team, "
+        "and a raided chest is safe for a day.",
+        ("team create", "team banner", "team category", "war", "team chest deposit", "team raid"),
     ),
     Section(
         "profile", "🎨 Your profile and customization",

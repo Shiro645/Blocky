@@ -77,6 +77,7 @@ EXTENSIONS = [
     "cogs.games_pve",
     "cogs.games_boss",
     "cogs.player_beacon",
+    "cogs.competition_war",
     "cogs.games_dummy",
     "cogs.help_command",
 ]
