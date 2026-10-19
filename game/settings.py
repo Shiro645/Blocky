@@ -444,6 +444,28 @@ DEFAULTS: dict[str, Any] = {
         "challenges": {"desert": 30, "mountains": 1500, "badlands": 6, "forest": 3, "dark_forest": 3, "jungle": 20,
                        "swamp": 3, "ocean": 3, "mushroom": 250, "tundra": 900},
     },
+    # Day and night (/time, /sleep, game/night.py): the night is rob.night_start_hour to rob.night_end_hour.
+    # Every night `monsters` monsters (and a Phantom) attack random players of min_level+ who didn't /sleep;
+    # the target fights alone within fight_minutes. Won: rewards[kind] and xp. Lost or ignored: loss of their
+    # emeralds (loss_max at most; the Phantom: phantom_loss, phantom_loss_max). The Phantom only goes after players
+    # who didn't sleep the phantom_nights nights before. Monsters: the dungeon's (pve.monsters) × strength[kind]
+    # (calibrated alone: ~80% won in iron gear, ~95% in diamond); the Phantom: its own (~50% iron, ~80% diamond).
+    "night": {
+        "monsters": 4,
+        "margin_minutes": 30,  # no monster in the first and last minutes of the night
+        "fight_minutes": 15,
+        "min_level": 10,
+        "strength": {"zombie": 10.3, "skeleton": 10.3, "spider": 10.3, "creeper": 12.8},
+        "phantom": {"hp": 37.1, "min_damage": 2.09, "max_damage": 6.84},
+        "rewards": {"zombie": 40, "skeleton": 50, "spider": 60, "creeper": 80, "phantom": 200},
+        "xp": 15,
+        "loss": 0.01,
+        "loss_max": 200,
+        "phantom_loss": 0.02,
+        "phantom_loss_max": 500,
+        "phantom_nights": 3,
+        "sleep_daily_bonus": 0.25,
+    },
     # Prestige (/prestige, game/prestige.py): Prestige n needs level base_level + level_step × (n - 1), every
     # achievement, every dimension and the Beacon lit. The level stays; the parts switched on in
     # "reset" start over. Each prestige: +bonus mining XP and /sell for good.

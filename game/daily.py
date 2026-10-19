@@ -33,6 +33,11 @@ def claim(ctx: Ctx, user_id: int) -> dict:
     yesterday = (today - timedelta(days=1)).isoformat()
     streak = user["daily_streak"] + 1 if user["last_daily"] == yesterday else 1
     emeralds = reward_for_streak(streak)
+    from game import night  # here: night imports a lot of the game
+
+    rested = night.slept_before(user, today)  # slept last night (/sleep)
+    if rested:
+        emeralds = int(round(emeralds * (1 + float(settings.get()["night"]["sleep_daily_bonus"]))))
     bonus_item = None
     if streak % max(1, int(d["bonus_every_days"])) == 0 and d.get("weekly_bonus_item"):
         bonus_item = d["weekly_bonus_item"]
@@ -49,6 +54,7 @@ def claim(ctx: Ctx, user_id: int) -> dict:
     return {
         "streak": streak,
         "emeralds": emeralds,
+        "rested": rested,
         "xp": int(d["xp"]),
         "bonus_item": bonus_item,
         "next_reward": reward_for_streak(streak + 1),

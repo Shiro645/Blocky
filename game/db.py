@@ -736,6 +736,26 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN prestige INTEGER NOT NULL DEFAULT 0;
     """,
+    # 39: day and night (game/night.py): the night each player last slept, and the night monsters' attacks
+    """
+    ALTER TABLE users ADD COLUMN last_sleep TEXT;
+    CREATE TABLE night_attacks (
+        attack_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        night TEXT NOT NULL,                   -- the date of the night's evening
+        slot INTEGER NOT NULL,                 -- its place in the night (the Phantom is the last one)
+        kind TEXT NOT NULL,                    -- zombie | skeleton | spider | creeper | phantom
+        target_id INTEGER,
+        status TEXT NOT NULL,                  -- waiting | won | lost | fled | nobody | missed
+        created_at INTEGER NOT NULL,
+        deadline INTEGER,
+        amount INTEGER NOT NULL DEFAULT 0,     -- the reward won, or the emeralds lost
+        log TEXT,                              -- JSON: the fight's story
+        channel_id INTEGER,
+        message_id INTEGER,
+        UNIQUE (night, slot)
+    );
+    CREATE INDEX idx_night_attacks_status ON night_attacks(status, deadline);
+    """,
 ]
 
 
