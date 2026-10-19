@@ -475,6 +475,10 @@ DEFAULTS: dict[str, Any] = {
         "max": 10,
         "bonus": 0.05,
         "reset": {"wealth": True, "gear": True, "talents": True, "achievements": True, "dimensions": True},
+        # Achievements a prestige doesn't need (on = left out): the ones only one player or team wins each time,
+        # and level 100 (the level a prestige needs is its own condition).
+        "skip_achievements": {"champion": True, "arena_champion": True, "team_champion": True, "warlord": True,
+                              "level_100": True},
     },
     # Bounties (/bounty): fixed tiers that add up on the same head, claimed by beating the target in a duel,
     # a /rob or a raid. Unclaimed after `days`, the payer gets it back minus refund_tax.

@@ -35,6 +35,19 @@ class ConditionTests(PrestigeTestCase):
         await self.run_game(lambda ctx: beacon.staff_set(ctx, False))
         self.assertFalse((await self.run_game(prestige.status, ALICE))["ready"])  # the Beacon went out
 
+    async def test_one_winner_achievements_and_level_100_are_not_needed(self):
+        await self.make_ready()
+        skipped = ("champion", "arena_champion", "team_champion", "warlord", "level_100")
+        await self.run_game(lambda ctx: ctx.execute(
+            f"DELETE FROM achievements WHERE code IN ({','.join('?' * len(skipped))});", skipped))
+        st = await self.run_game(prestige.status, ALICE)
+        self.assertTrue(st["ready"])
+        self.assertEqual(st["checks"]["achievements"][1], len(progress.achievements()) - len(skipped))
+        settings.load({"prestige": {"skip_achievements": {"champion": False}}})
+        st = await self.run_game(prestige.status, ALICE)
+        self.assertFalse(st["ready"])
+        self.assertEqual([a.code for a in st["missing"]], ["champion"])
+
     async def test_each_prestige_needs_ten_more_levels_up_to_ten(self):
         self.assertEqual([prestige.level_needed(n) for n in (1, 2, 3, 10)], [50, 60, 70, 140])
         await self.run_game(prestige.set_prestige, ALICE, 1)
@@ -98,3 +111,4 @@ class AscendTests(PrestigeTestCase):
         await self.run_game(reset.apply, {"levels"}, ALICE)
         self.assertEqual((await self.run_game(players.get_user, ALICE))["prestige"], 0)
         self.assertEqual(await self.run_game(prestige.holders), [])
+
