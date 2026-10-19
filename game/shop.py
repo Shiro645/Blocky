@@ -22,6 +22,8 @@ def market_offers() -> dict[str, dict]:
         }
     }
     for material in MATERIALS:
+        if material == "netherite":
+            continue  # only found in the Nether
         offers[f"{material}_ingot"] = {
             "label": f"{material.capitalize()} Ingot",
             "item": "ingot",
@@ -72,7 +74,10 @@ def stick_value() -> float:
 
 
 def craft_cost(item: str, material: str) -> float:
-    """Value in emeralds of the resources used to craft a piece of gear."""
+    """Value in emeralds of the resources used to craft a piece of gear (netherite: the diamond piece it was
+    and one netherite ingot)."""
+    if material == "netherite":
+        return craft_cost(item, "diamond") + ingot_value("netherite")
     ingots, sticks = RECIPES[item]
     return ingots * ingot_value(material) + sticks * stick_value()
 
@@ -86,6 +91,10 @@ def item_value(item: str, material: str) -> float:
     e = settings.get()["enchants"]
     if item == "lapis":
         return float(e["lapis_value"])
+    if item == "scrap":  # a netherite ingot is its scraps and its gold
+        d = settings.get()["dimensions"]
+        gold = int(d["gold_per_ingot"]) * ingot_value("gold")
+        return max(0.0, (ingot_value("netherite") - gold) / max(1, int(d["scraps_per_ingot"])))
     if item == "potion":
         return potions.value(material)
     name, level = enchants.parse_book(material)
@@ -151,8 +160,10 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str | None = None) -> dic
     """Craft a piece of gear (or the anvil). Without a material, the item's only material is used."""
     if item == "anvil":
         return {**anvil.craft(ctx, user_id), "anvil": True}
+    if item == "netherite_ingot":
+        return {**craft_netherite_ingot(ctx, user_id), "netherite_ingot": True}
     if item not in RECIPES:
-        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}, anvil.")
+        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}, anvil, netherite_ingot.")
     if material is None:
         if len(materials_for(item)) != 1:
             raise GameError(f"Choose the `material` of your {item}: {', '.join(materials_for(item))}.")
@@ -161,6 +172,8 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str | None = None) -> dic
         raise GameError(f"Unknown material. Allowed: {', '.join(MATERIALS)}.")
     if material not in materials_for(item):
         raise GameError(f"A {item} can only be made of {', '.join(materials_for(item))}.")
+    if material == "netherite":
+        return upgrade_to_netherite(ctx, user_id, item)
     ingots, sticks = RECIPES[item]
 
     missing = []
@@ -185,6 +198,53 @@ def craft(ctx: Ctx, user_id: int, item: str, material: str | None = None) -> dic
     if auto_equipped:
         gear.equip(ctx, user_id, gear_id)
     return {"gear_id": gear_id, "material": material, "ingots": ingots, "sticks": sticks, "equipped": auto_equipped}
+
+
+def craft_netherite_ingot(ctx: Ctx, user_id: int) -> dict:
+    """Netherite scraps (found in the Nether) and gold ingots make a netherite ingot."""
+    d = settings.get()["dimensions"]
+    scraps, gold = int(d["scraps_per_ingot"]), int(d["gold_per_ingot"])
+    have_scraps = players.item_amount(ctx, user_id, "scrap", "none")
+    have_gold = players.item_amount(ctx, user_id, "ingot", "gold")
+    missing = []
+    if have_scraps < scraps:
+        missing.append(f"- **{scraps - have_scraps} netherite scrap(s)** (Ancient debris, mined in the Nether)")
+    if have_gold < gold:
+        missing.append(f"- **{gold - have_gold} gold ingot(s)**")
+    if missing:
+        raise GameError("Not enough resources. Missing:\n" + "\n".join(missing))
+    players.take_item(ctx, user_id, "scrap", "none", scraps)
+    players.take_item(ctx, user_id, "ingot", "gold", gold)
+    players.add_item(ctx, user_id, "ingot", "netherite", 1)
+    players.bump_stat(ctx, user_id, "netherite_ingots_made")
+    return {"scraps": scraps, "gold": gold, "have": players.item_amount(ctx, user_id, "ingot", "netherite")}
+
+
+def upgrade_to_netherite(ctx: Ctx, user_id: int, item: str) -> dict:
+    """A diamond piece and a netherite ingot make the same piece in netherite: it keeps its enchantments and is
+    as good as new. The worn piece goes first, else the most enchanted spare one."""
+    if "netherite" not in materials_for(item):
+        raise GameError(f"A {item} can't be made of netherite.")
+    rows = enchants.attach(ctx, [dict(r) for r in ctx.all(
+        "SELECT * FROM gear WHERE user_id=? AND item=? AND material='diamond';", (user_id, item))])
+    if not rows:
+        raise GameError(f"Netherite gear is a **diamond {item}** upgraded with a netherite ingot: you have no "
+                        f"diamond {item}.")
+    piece = max(rows, key=lambda g: (g["equipped"], sum(g["enchants"].values()), g["durability"], -g["gear_id"]))
+    if players.item_amount(ctx, user_id, "ingot", "netherite") < 1:
+        raise GameError("Not enough resources. Missing:\n- **1 netherite ingot** (4 netherite scraps + 4 gold ingots: "
+                        "`/craft item:netherite_ingot`)")
+    players.take_item(ctx, user_id, "ingot", "netherite", 1)
+    dura = max_durability("netherite", item)
+    ctx.execute("UPDATE gear SET material='netherite', durability=?, max_durability=?, repairs=0 WHERE gear_id=?;",
+                (dura, dura, piece["gear_id"]))
+    players.bump_stat(ctx, user_id, "items_crafted")
+    if piece["equipped"]:
+        from game import progress  # progress depends on this module
+
+        progress.check_achievements(ctx, user_id)  # a worn upgraded piece can complete the netherite set
+    return {"gear_id": piece["gear_id"], "material": "netherite", "ingots": 1, "sticks": 0,
+            "equipped": bool(piece["equipped"]), "upgraded": piece}
 
 
 def get_gear(ctx: Ctx, user_id: int) -> list[dict]:
@@ -221,14 +281,17 @@ def gear_offer(ctx: Ctx, user_id: int, piece: dict) -> dict:
 
 
 def gear_offers(ctx: Ctx, user_id: int) -> list[tuple[dict, dict]]:
-    """Every piece of the player with what /sell pays for it."""
-    return [(piece, gear_offer(ctx, user_id, piece)) for piece in get_gear(ctx, user_id)]
+    """Every piece the player can sell, with what /sell pays for it (netherite can't be sold)."""
+    return [(piece, gear_offer(ctx, user_id, piece)) for piece in get_gear(ctx, user_id)
+            if piece["material"] != "netherite"]
 
 
 def sell_gear(ctx: Ctx, user_id: int, gear_id: int, price: int | None = None) -> dict:
     """Sell a piece of gear back (taken off first when it is worn). `price`: what the player agreed to pay
     for it, refused when the piece changed since."""
     piece = owned_piece(ctx, user_id, gear_id)
+    if piece["material"] == "netherite":
+        raise GameError("🔥 Netherite gear can't be sold: it's yours for good.")
     offer = gear_offer(ctx, user_id, piece)
     if price is not None and offer["price"] != price:
         raise GameError(f"The price changed: it now sells for **{offer['price']:,}** emeralds. Use `/sell` again.")

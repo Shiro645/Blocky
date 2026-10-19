@@ -59,12 +59,22 @@ SECTIONS: tuple[Section, ...] = (
         "**Chat to mine.** When you write a message in the server (not in your private guide channel; only in the "
         "mining channels when the staff set some), you get a "
         "**mining reward**: a pile of **1 to 6 blocks**. Big "
-        "piles are cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come in "
-        "smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
+        "piles are dirt and cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come "
+        "in smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
         "messages in between give nothing, so spamming doesn't help. Each reward also gives **XP**, sometimes "
         "**lapis lazuli**, and sometimes makes a **drop** appear (see Bosses, drops and the villager).\n"
         "**Spam channels** (set by the staff) give only a tiny emerald reward: no blocks, XP, drops or challenge "
         "progress.\n\n"
+        "**Dimensions**: after the overworld come the **Nether**, the **End**, the **Deep Dark** and the "
+        "**Shimmer**. Each has its own mining channels and blocks, and pays more per message than the one before "
+        "(about ×1.25, ×1.5, ×1.75 and ×2). Unlocking a dimension opens every one before it; the channels of a "
+        "dimension you haven't reached give nothing. `/dimensions` shows them all, with their blocks, their "
+        "channels and how much they pay.\n"
+        "**Netherite** is a goal of its own: it's only found from the Nether on. Mining there sometimes finds "
+        "**Ancient debris** (one netherite scrap, a reaction on your message shows it). 4 scraps + 4 gold ingots "
+        "make a netherite ingot, and a **diamond** piece + 1 netherite ingot make the netherite piece, enchantments "
+        "kept (`/craft`). A full set takes about a month of mining. Netherite can't be bought, sold, traded or put "
+        "up for auction.\n\n"
         "**What makes you mine better**: a pickaxe (more cobblestone and a chance to upgrade the block), a shovel "
         "(more gravel), an axe (sticks), a hoe (more XP), the Efficiency enchantment and talent (shorter cooldown), "
         "the Miner and Lucky talents (better blocks), and the Miner species.\n\n"
@@ -72,11 +82,12 @@ SECTIONS: tuple[Section, ...] = (
         "all of them, one kind (`block`) or a number of them (`amount`) (the Trader talent and the Villager species "
         "pay more). Rare blocks are worth much more than "
         "cobblestone. `/sell gear` sells a piece of gear back for part of its value, less when it's worn.\n"
-        "**The market**: `/market` sells sticks and ingots, what you need to craft, at fixed prices. The market "
+        "**The market**: `/market` sells sticks and ingots (gold, iron, diamond: not netherite), what you need to "
+        "craft, at fixed prices. The market "
         "channel shows them too, above the auctions.\n"
         "**Daily reward**: `/daily` once a day. Coming back every day grows your **streak**: a bigger reward each "
         "day up to the cap, and a bonus ingot every few days in a row. Miss a day and the streak starts over.",
-        ("mining", "sell", "market", "daily"),
+        ("mining", "dimensions", "sell", "market", "daily"),
     ),
     Section(
         "xp", "⭐ XP, levels and talents",
@@ -95,7 +106,8 @@ SECTIONS: tuple[Section, ...] = (
         "gear", "🛠️ Crafting and gear",
         "**Crafting**: `/craft <item> <material>` turns ingots and sticks into gear. Materials, from the weakest: "
         "**gold, iron, diamond, netherite**. `/craftlist` shows every recipe with its price at the market. A new "
-        "piece is equipped right away if that slot is empty.\n"
+        "piece is equipped right away if that slot is empty. Netherite gear is a diamond piece upgraded with a "
+        "netherite ingot (see Mining: netherite is found in the Nether).\n"
         "**Equipping**: one piece per slot (pickaxe, shovel, axe, hoe, sword, helmet, chestplate, leggings, boots, "
         "shield). `/gear` shows what you wear and its durability, `/equip` picks a piece, `/equip_best` equips your "
         "best pieces, `/unequip` takes one off.\n\n"
@@ -144,7 +156,7 @@ SECTIONS: tuple[Section, ...] = (
         "trading", "🤝 Trading, auctions and loans",
         "**Paying and trading**: `/pay <member> <amount>` sends emeralds. `/trade` offers a trade (or a gift) of "
         "emeralds, blocks, sticks, ingots or gear: the other player accepts with a button, and nothing moves before. "
-        "Enchanted pieces keep their enchantments.\n\n"
+        "Enchanted pieces keep their enchantments. Netherite (scraps, ingots, gear) can't be traded or sold.\n\n"
         "**Auctions**: `/auction sell <item> <price>` lists an item for everyone. The market channel shows every "
         "listing with a menu to buy; `/auction browse` and `/auction buy` work anywhere. `/auction mine` shows your "
         "listings and `/auction cancel` takes one back. The seller pays a small tax when it sells, and unsold items "

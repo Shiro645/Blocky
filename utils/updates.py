@@ -237,4 +237,23 @@ UPDATES: tuple[Update, ...] = (
         "2026-10-untouchables", "2026-10-18", "Untouchables",
         "Members with the **Untouchables** role can't be robbed, and can't rob anyone either.",
     ),
+    Update(
+        "2026-10-dimensions", "2026-10-19", "Season 2.0: the Dimensions",
+        "A new season starts! Beyond the overworld wait four dimensions, each with its own mining channels and its "
+        "own blocks, and each paying more than the one before. `/dimensions` shows them all.",
+        (
+            ("🌍 Five dimensions",
+             "🌳 Overworld (now with dirt) → 🔥 Nether → 🌌 End → 🦇 Deep Dark → ✨ Shimmer. Each pays more per "
+             "message: about ×1.25, ×1.5, ×1.75 and ×2 the overworld, with or without tools. Unlocking a dimension "
+             "opens every one before it, and each has its role and its channels."),
+            ("🔥 Netherite is a goal now",
+             "It's only found from the Nether on: mining there sometimes digs up **Ancient debris**, a netherite "
+             "scrap. 4 scraps + 4 gold ingots = a netherite ingot, and a diamond piece + 1 netherite ingot = the "
+             "netherite piece, enchantments kept (`/craft`). It can't be bought, sold or traded anymore: a full "
+             "set is about a month of mining."),
+            ("♻️ New gear for everyone",
+             "Everyone starts the season on equal terms: all gear and netherite ingots are taken back and paid "
+             "back in full in emeralds (check your DMs). Time to craft!"),
+        ),
+    ),
 )

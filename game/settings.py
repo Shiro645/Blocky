@@ -22,14 +22,55 @@ DEFAULTS: dict[str, Any] = {
         "spam_reward": 0.01,
         # Each mining reward is a pile of 1 to 6 blocks (each size as likely): the smaller the pile,
         # the rarer the block can be. Weight of each block for each pile size (see talents for the bonuses).
-        "odds_6_blocks": {"cobblestone": 100, "gravel": 0, "deepslate": 0, "obsidian": 0, "bedrock": 0},
-        "odds_4_5_blocks": {"cobblestone": 70, "gravel": 30, "deepslate": 0, "obsidian": 0, "bedrock": 0},
-        "odds_2_3_blocks": {"cobblestone": 70, "gravel": 20, "deepslate": 10, "obsidian": 0, "bedrock": 0},
-        "odds_1_block": {"cobblestone": 70, "gravel": 20, "deepslate": 9, "obsidian": 3, "bedrock": 1},
+        # These are the overworld's; the other dimensions have theirs in "dimensions".
+        "odds_6_blocks": {"dirt": 50, "cobblestone": 50, "gravel": 0, "deepslate": 0, "obsidian": 0, "bedrock": 0},
+        "odds_4_5_blocks": {"dirt": 20, "cobblestone": 50, "gravel": 30, "deepslate": 0, "obsidian": 0, "bedrock": 0},
+        "odds_2_3_blocks": {"dirt": 0, "cobblestone": 70, "gravel": 20, "deepslate": 10, "obsidian": 0, "bedrock": 0},
+        "odds_1_block": {"dirt": 0, "cobblestone": 70, "gravel": 20, "deepslate": 9, "obsidian": 3, "bedrock": 1},
     },
-    "block_values": {"cobblestone": 1, "gravel": 3, "deepslate": 5, "obsidian": 7, "bedrock": 10},
+    # Each dimension's blocks pay more: about 5.2 emeralds a message in the overworld (no gear), x1.25 in the
+    # Nether, x1.5 in the End, x1.75 in the Deep Dark and x2 in the Shimmer.
+    "block_values": {
+        "dirt": 1, "cobblestone": 1, "gravel": 3, "deepslate": 5, "obsidian": 7, "bedrock": 10,
+        "netherrack": 1, "blackstone": 4, "nether_bricks": 11, "gilded_blackstone": 18,
+        "end_stone": 1, "end_bricks": 4, "purpur": 24,
+        "sculk": 2, "sculk_shrieker": 5,
+        "shimmer_stone": 3,
+    },
+    # Dimensions (game/dimensions.py): each has its mining channels and blocks. The odds work like the
+    # overworld's (mining.odds_*); the Shimmer has a single block.
+    "dimensions": {
+        # Netherite scrap: the chance a mining reward in the Nether or beyond finds Ancient debris (one scrap).
+        # A full netherite set takes 9 ingots = 36 scraps: 1.2% ≈ a month at ~100 mining rewards a day.
+        "scrap_chance": 0.012,
+        "scraps_per_ingot": 4,
+        "gold_per_ingot": 4,
+        # Tool bonuses (pickaxe, shovel) are worth their overworld value times this, given in the dimension's
+        # blocks. Calibrated so that with tools too (gold to netherite) each dimension pays x1.25 / x1.5 / x1.75 /
+        # x2 the overworld: the pickaxe's block upgrade is worth more in some dimensions than in others.
+        "multipliers": {"nether": 1.06, "end": 1.18, "deep_dark": 1.41, "shimmer": 2.57},
+        "nether": {
+            "odds_6_blocks": {"netherrack": 100, "blackstone": 0, "nether_bricks": 0, "gilded_blackstone": 0},
+            "odds_4_5_blocks": {"netherrack": 70, "blackstone": 30, "nether_bricks": 0, "gilded_blackstone": 0},
+            "odds_2_3_blocks": {"netherrack": 70, "blackstone": 20, "nether_bricks": 10, "gilded_blackstone": 0},
+            "odds_1_block": {"netherrack": 70, "blackstone": 20, "nether_bricks": 9, "gilded_blackstone": 4},
+        },
+        "end": {
+            "odds_6_blocks": {"end_stone": 100, "end_bricks": 0, "purpur": 0},
+            "odds_4_5_blocks": {"end_stone": 70, "end_bricks": 30, "purpur": 0},
+            "odds_2_3_blocks": {"end_stone": 70, "end_bricks": 20, "purpur": 10},
+            "odds_1_block": {"end_stone": 70, "end_bricks": 20, "purpur": 13},
+        },
+        "deep_dark": {
+            "odds_6_blocks": {"sculk": 100, "sculk_shrieker": 0},
+            "odds_4_5_blocks": {"sculk": 70, "sculk_shrieker": 30},
+            "odds_2_3_blocks": {"sculk": 70, "sculk_shrieker": 30},
+            "odds_1_block": {"sculk": 70, "sculk_shrieker": 33},
+        },
+    },
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
+        # Netherite isn't sold (it's mined in the Nether): its price is only its value (rewind refunds, fair prices).
         "ingots": {"gold": 5, "iron": 10, "diamond": 60, "netherite": 300},
         "gear_sell_rate": 0.8,  # /sell gear: this share of its value (craft + books), times its durability left
     },
@@ -154,7 +195,6 @@ DEFAULTS: dict[str, Any] = {
             {"weight": 25, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 3}},
             {"weight": 15, "title": "A bedrock cluster", "reward": {"block": "bedrock", "amount": 10}},
             {"weight": 12, "title": "A diamond vein", "reward": {"ingot": "diamond", "amount": 2}},
-            {"weight": 8, "title": "Ancient debris", "reward": {"ingot": "netherite", "amount": 1}},
             {"weight": 12, "title": "A lapis vein", "reward": {"lapis": 4}},
             {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
             {"weight": 12, "title": "A witch's stash", "reward": {"potions": 2}},
@@ -226,7 +266,6 @@ DEFAULTS: dict[str, Any] = {
         "goods": [
             {"asset": "ingot:iron", "amount": 8},
             {"asset": "ingot:diamond", "amount": 4},
-            {"asset": "ingot:netherite", "amount": 1},
             {"asset": "lapis", "amount": 10},
             {"asset": "book", "amount": 1},
             {"asset": "potion", "amount": 2},
@@ -688,8 +727,9 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if merged["backups"]["hour"] > 23:
         out.append(("`balance.backups.hour` goes from 0 to 23.", [("backups", "hour")]))
 
-    if merged["daily"]["weekly_bonus_item"] not in merged["gear"]["tier"]:
-        out.append(("`balance.daily.weekly_bonus_item` must be gold, iron, diamond or netherite.", [("daily", "weekly_bonus_item")]))
+    if merged["daily"]["weekly_bonus_item"] not in ("gold", "iron", "diamond"):
+        out.append(("`balance.daily.weekly_bonus_item` must be gold, iron or diamond (netherite is only found in the "
+                    "Nether).", [("daily", "weekly_bonus_item")]))
 
     r = merged["rob"]
     for mode in ("risky", "discreet"):
@@ -728,6 +768,13 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for pile in ("odds_6_blocks", "odds_4_5_blocks", "odds_2_3_blocks", "odds_1_block"):
         if sum(float(w) for w in m[pile].values()) <= 0:
             out.append((f"`balance.mining.{pile}`: at least one block needs a weight above 0.", [("mining", pile)]))
+        for dim, odds in merged["dimensions"].items():
+            if isinstance(odds, dict) and pile in odds and sum(float(w) for w in odds[pile].values()) <= 0:
+                out.append((f"`balance.dimensions.{dim}.{pile}`: at least one block needs a weight above 0.",
+                            [("dimensions", dim, pile)]))
+    d = merged["dimensions"]
+    if int(d["scraps_per_ingot"]) < 1:
+        out.append(("`balance.dimensions.scraps_per_ingot` must be 1 or more.", [("dimensions", "scraps_per_ingot")]))
     if not 1 <= float(merged["levels"]["xp_growth_per_level"]) <= 2:
         out.append(("`balance.levels.xp_growth_per_level` goes from 1 (the same every level) to 2.",
                     [("levels", "xp_growth_per_level")]))
@@ -776,6 +823,9 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
         if not known:
             out.append((f"`balance.drops.table[{i}].reward` is not a known reward.", [("drops", "table")]))
             break
+        if reward.get("ingot") == "netherite":
+            out.append(("`balance.drops.table`: netherite is only found in the Nether, not in drops.", [("drops", "table")]))
+            break
 
     # Imported here: moderation depends on this module.
     from game import moderation
@@ -804,7 +854,8 @@ def _good_ok(good: Any) -> bool:
     if asset in ("book", "potion"):
         return True
     try:
-        return isinstance(asset, str) and assets.parse(asset)[0] not in ("emeralds", "gear")
+        return (isinstance(asset, str) and assets.parse(asset)[0] not in ("emeralds", "gear")
+                and assets.tradeable(asset))
     except GameError:
         return False
 

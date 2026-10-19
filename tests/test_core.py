@@ -186,7 +186,7 @@ class MiningTests(GameTestCase):
         rng = random.Random(0)
         for _ in range(500):
             block, amount = mining.roll_blocks(rng, 8, 5)
-            self.assertIn(block, ("cobblestone", "gravel", "deepslate", "obsidian", "bedrock"))
+            self.assertIn(block, ("dirt", "cobblestone", "gravel", "deepslate", "obsidian", "bedrock"))
             self.assertTrue(1 <= amount <= 7)
 
 

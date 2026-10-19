@@ -5,6 +5,7 @@
     "stick"             sticks
     "ingot:<material>"  ingots
     "lapis"             lapis lazuli
+    "scrap"             netherite scraps (found in the Nether)
     "book:<enchant>:<level>"   an enchanted book
     "potion:<kind>"     a potion ("potion:<kind>:2" for a reinforced one)
     "gear:<material>:<item>"   one piece of gear without enchantments (the most worn spare piece is used)
@@ -14,7 +15,7 @@
 from __future__ import annotations
 
 from game import enchants, players, potions, shop
-from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS, materials_for
+from game.catalog import BLOCK_TYPES, GEAR_ITEMS, MATERIALS, block_name, materials_for
 from game.db import Ctx
 from game.errors import GameError
 
@@ -23,7 +24,7 @@ def parse(key: str) -> tuple[str, ...]:
     parts = tuple(key.split(":"))
     kind = parts[0]
     ok = (
-        (kind in ("emeralds", "stick", "lapis") and len(parts) == 1)
+        (kind in ("emeralds", "stick", "lapis", "scrap") and len(parts) == 1)
         or (kind == "block" and len(parts) == 2 and parts[1] in BLOCK_TYPES)
         or (kind == "ingot" and len(parts) == 2 and parts[1] in MATERIALS)
         or (kind == "book" and len(parts) == 3)
@@ -65,8 +66,10 @@ def describe(key: str, amount: int | None = None) -> str:
         name = "sticks"
     elif kind == "lapis":
         name = "lapis lazuli"
+    elif kind == "scrap":
+        name = "netherite scraps"
     elif kind == "block":
-        name = parts[1]
+        name = block_name(parts[1])
     elif kind == "ingot":
         name = f"{parts[1]} ingot"
     elif kind == "book":
@@ -84,6 +87,18 @@ def is_gear(key: str) -> bool:
     return key.startswith("gear:")
 
 
+def tradeable(key: str) -> bool:
+    """Netherite (scraps, ingots, gear) is a goal of its own: found in the Nether, never traded or sold."""
+    parts = parse(key)
+    return not (parts[0] == "scrap" or (parts[0] == "ingot" and parts[1] == "netherite")
+                or (parts[0] == "gear" and parts[1] == "netherite"))
+
+
+def check_tradeable(key: str) -> None:
+    if not tradeable(key):
+        raise GameError("🔥 Netherite can't be traded: each player finds their own in the Nether.")
+
+
 def unit_value(key: str) -> float:
     """Reference value in emeralds (NPC prices), used to show fair prices."""
     parts = parse(key)
@@ -94,6 +109,8 @@ def unit_value(key: str) -> float:
         return shop.stick_value()
     if kind == "lapis":
         return shop.item_value("lapis", "none")
+    if kind == "scrap":
+        return shop.item_value("scrap", "none")
     if kind == "block":
         return players.block_value(parts[1])
     if kind == "ingot":
@@ -127,7 +144,7 @@ def owned(ctx: Ctx, user_id: int) -> list[tuple[str, int]]:
 
 def item_key(item: str, material: str) -> str:
     """Asset key of a row of the items table."""
-    if item in ("stick", "lapis"):
+    if item in ("stick", "lapis", "scrap"):
         return item
     return f"{item}:{material}"
 
@@ -157,7 +174,7 @@ def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
     kind = parts[0]
     if kind == "emeralds":
         players.spend_emeralds(ctx, user_id, amount)
-    elif kind in ("stick", "lapis"):
+    elif kind in ("stick", "lapis", "scrap"):
         players.take_item(ctx, user_id, kind, "none", amount)
     elif kind == "ingot":
         players.take_item(ctx, user_id, "ingot", parts[1], amount)
@@ -190,7 +207,7 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
     kind = parts[0]
     if kind == "emeralds":
         players.give_emeralds(ctx, user_id, amount)
-    elif kind in ("stick", "lapis"):
+    elif kind in ("stick", "lapis", "scrap"):
         players.add_item(ctx, user_id, kind, "none", amount)
     elif kind == "ingot":
         players.add_item(ctx, user_id, "ingot", parts[1], amount)
@@ -210,6 +227,7 @@ def give(ctx: Ctx, user_id: int, key: str, amount: int, durability: int | None =
 
 
 def transfer(ctx: Ctx, from_id: int, to_id: int, key: str, amount: int) -> None:
+    check_tradeable(key)
     piece = take(ctx, from_id, key, amount)
     give(ctx, to_id, key, amount, durability=piece["durability"] if piece else None,
          repairs=piece["repairs"] if piece else 0)
@@ -222,7 +240,8 @@ MAX_STAFF_GEAR = 50  # pieces of gear given at once
 def catalog() -> list[str]:
     """Every asset staff can give. Gear comes without enchantments (a full key such as
     "gear:diamond:sword:sharpness3" gives an enchanted piece)."""
-    keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis"]
+    keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis",
+            "scrap"]
     keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.ENCHANTS[e].max_level + 1)]
     keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
     keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS if m in materials_for(i)]

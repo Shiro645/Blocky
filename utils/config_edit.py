@@ -17,7 +17,7 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from game import settings
-from game.catalog import ARMOR, BLOCK_TYPES, MATERIALS
+from game.catalog import ARMOR, BLOCK_TYPES, DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, MATERIALS, block_name
 from utils.config import balance_overrides
 
 PROTECTED = (
@@ -29,7 +29,7 @@ PROTECTED = (
 # /config: a section, then one of its categories.
 SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "server": ("🖥️ Server", ("channels", "roles", "level_roles", "minecraft", "server", "moderation")),
-    "economy": ("💰 Economy", ("mining", "mining_odds", "market", "trading", "loans", "villager")),
+    "economy": ("💰 Economy", ("mining", "mining_odds", "dimensions", "market", "trading", "loans", "villager")),
     "progress": ("⭐ Progress", ("xp", "seasons", "challenges", "achievements", "species", "profiles", "titles", "guide",
                                  "teams")),
     "combat": ("⚔️ Combat", ("duels", "potions", "tools", "combat_gear", "enchant_books", "enchant_effects", "pve",
@@ -46,6 +46,7 @@ CATEGORIES = {
     "moderation": "🔨 Moderation",
     "mining": "⛏️ Mining & block values",
     "mining_odds": "📊 Mining odds",
+    "dimensions": "🌋 Dimensions & netherite",
     "market": "🛒 Market & daily",
     "trading": "🤝 Trading & auction",
     "loans": "💳 Loans",
@@ -198,8 +199,14 @@ FIELDS: list[Field] = [
     Field("ch_staff_log", "channels", "Staff channel", ("channels", "staff_log"), "channel",
           help="/link requests and the log of every staff action."),
     Field("ch_mining", "channels", "Mining channels", ("channels", "mining"), "channels",
-          help="Chatting there mines blocks and gives XP and drops (their threads too). Not set = every channel "
-               "mines. Set = the other channels give nothing (spam channels keep their tiny reward)."),
+          help="Chatting there mines overworld blocks and gives XP and drops (their threads too). Not set = every "
+               "channel mines the overworld (except the other dimensions' channels). Set = the other channels give "
+               "nothing (spam channels keep their tiny reward)."),
+    *[Field(f"ch_mining_{d}", "channels", f"{DIMENSION_NAMES[d]} mining channels", ("channels", f"mining_{d}"), "channels",
+            help=f"Chatting there mines {DIMENSION_NAMES[d]} blocks (their threads too), for the players who unlocked "
+                 f"the {DIMENSION_NAMES[d]}; the others get nothing there. Hide them with the {DIMENSION_NAMES[d]} "
+                 "role (see Roles).")
+      for d in DIMENSIONS[1:]],
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
@@ -239,6 +246,10 @@ FIELDS: list[Field] = [
     Field("role_untouchable", "roles", "Untouchables role", ("roles", "untouchable"), "role",
           help="Members with this role are out of the robberies: nobody can /rob them and they can't /rob anyone. "
                "The staff gives and takes it by hand. Not set = nobody is untouchable."),
+    *[Field(f"role_dimension_{d}", "roles", f"{DIMENSION_NAMES[d]} role (dimension)", ("roles", f"dimension_{d}"), "role",
+            help=f"Given to every player who unlocked the {DIMENSION_NAMES[d]}, taken back if they lose it. Use it to "
+                 f"show the {DIMENSION_NAMES[d]} mining channels only to them.", item="assign")
+      for d in DIMENSIONS[1:]],
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
             help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
       for key, name in (("villager", "Villager"), ("dwarf", "Dwarf"), ("witch", "Witch"), ("mage", "Mage"),
@@ -264,11 +275,26 @@ FIELDS: list[Field] = [
     _b("mining.xp_per_message.1", "mining", "XP per mining reward: maximum", max=10_000),
     _b("mining.spam_reward", "mining", "Spam channels: emeralds per reward",
        "Saved until it makes a whole emerald. 0.01 = 1 emerald every 100 rewards.", "float", max=100),
-    *[_b(f"block_values.{b}", "mining", f"{b.capitalize()} value",
+    *[_b(f"block_values.{b}", "mining", f"{block_name(b).capitalize()} value",
          "Emeralds per block with /sell. Also what the block is worth in the season score.") for b in BLOCK_TYPES],
     # ---- mining odds ----
-    *[_b(f"mining.{pile}.{b}", "mining_odds", f"Pile of {size}: {b}", WEIGHT_HELP, max=100_000)
-      for pile, size in PILES for b in BLOCK_TYPES],
+    *[_b(f"mining.{pile}.{b}", "mining_odds", f"Pile of {size}: {block_name(b)}", WEIGHT_HELP, max=100_000)
+      for pile, size in PILES for b in DIMENSION_BLOCKS["overworld"]],
+    # ---- dimensions ----
+    _pct("dimensions.scrap_chance", "dimensions", "Ancient debris: chance per mining reward",
+         "In the Nether and beyond, a mining reward finds a netherite scrap this often. 36 scraps make a full "
+         "netherite set: 1.2% ≈ a month at ~100 mining rewards a day."),
+    _b("dimensions.scraps_per_ingot", "dimensions", "Netherite ingot: scraps", "Scraps for one netherite ingot.",
+       min=1, max=100),
+    _b("dimensions.gold_per_ingot", "dimensions", "Netherite ingot: gold ingots", "Gold ingots for one netherite ingot.",
+       max=100),
+    *[_b(f"dimensions.multipliers.{d}", "dimensions", f"{DIMENSION_NAMES[d]}: tool bonus ×",
+         "The pickaxe's and the shovel's extra blocks are worth their overworld value times this (in this "
+         "dimension's blocks). Set so that with tools too the dimension pays as much more as without.", "float", max=100)
+      for d in DIMENSIONS[1:]],
+    *[_b(f"dimensions.{d}.{pile}.{b}", "dimensions", f"{DIMENSION_NAMES[d]}, pile of {size}: {block_name(b)}",
+         WEIGHT_HELP, max=100_000)
+      for d in DIMENSIONS[1:] if len(DIMENSION_BLOCKS[d]) > 1 for pile, size in PILES for b in DIMENSION_BLOCKS[d]],
     # ---- XP & talents ----
     _b("levels.xp_first_level", "xp", "XP from level 1 to 2", "XP needed to reach level 2.", min=1, max=1_000_000),
     _b("levels.xp_growth_per_level", "xp", "XP growth per level (×)",
@@ -494,7 +520,7 @@ FIELDS: list[Field] = [
          "Else, the exclusive offer is a level III book this often, or a reinforced potion."),
     *[_b(f"villager.book_weights.{i}", "villager", f"Book in his goods: weight of level {ROMAN[i]}",
          "Chances = this weight ÷ the total of both weights. 0 = never.", kind="float") for i in range(2)],
-    *[_b(f"villager.buys.{b}", "villager", f"He buys {b} by (0 = never)", "How many blocks he buys at once.", max=100_000)
+    *[_b(f"villager.buys.{b}", "villager", f"He buys {block_name(b)} by (0 = never)", "How many blocks he buys at once.", max=100_000)
       for b in BLOCK_TYPES],
     _b("villager.goods", "villager", "His goods", "What he can sell (one is picked for each visit).", "table", None,
        item="goods"),

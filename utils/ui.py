@@ -67,6 +67,10 @@ def block_icon(block: str) -> str:
     return EMOJI.get(block) or emojis.BLOCK_FALLBACK[block]
 
 
+def scrap_icon() -> str:
+    return EMOJI.get("netherite_scrap") or "🔩"
+
+
 def asset_icon(key: str) -> str:
     """Emoji for an asset key of game/assets.py ('' if none)."""
     parts = key.split(":")
@@ -76,6 +80,8 @@ def asset_icon(key: str) -> str:
         return EMOJI.get("stick", "")
     if parts[0] == "lapis":
         return lapis_icon()
+    if parts[0] == "scrap":
+        return scrap_icon()
     if parts[0] == "book":
         return book_icon()
     if parts[0] == "potion" and len(parts) >= 2 and parts[1] in potions.POTIONS:
@@ -94,6 +100,8 @@ def item_label(item: str, material: str, amount: int | None = None) -> str:
         text = f"{EMOJI['stick']} stick" + ("s" if amount != 1 else "")
     elif item == "lapis":
         text = f"{lapis_icon()} lapis lazuli"
+    elif item == "scrap":
+        text = f"{scrap_icon()} netherite scrap" + ("s" if amount != 1 else "")
     elif item == "book":
         text = f"{book_icon()} {enchants.label(*enchants.parse_book(material))} book"
     elif item == "potion":
