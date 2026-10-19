@@ -111,7 +111,7 @@ DEFAULTS: dict[str, Any] = {
         "axe_stick_chance": 0.3,
         # Hoe: XP bonus per tier.
         "hoe_xp_bonus_per_tier": 0.10,
-        # Maximum damage of a hit (duels, bosses, tournament): a better sword raises the maximum.
+        # Maximum damage of a hit (duels, gate bosses, tournament): a better sword raises the maximum.
         "sword_max_damage": {"none": 6, "gold": 8, "iron": 10, "diamond": 12, "netherite": 14},
         "armor_points": {
             "gold": {"helmet": 2, "chestplate": 5, "leggings": 3, "boots": 1},
@@ -174,11 +174,9 @@ DEFAULTS: dict[str, Any] = {
         "speed_turns": 3,  # ...during this turn and the next 2 turns of the player
         "healing_hp": 3,
         "harming_damage": 3,  # direct damage, reduced by armor
-        "boss_top": 3,  # the top 3 damage dealers of a defeated boss get boss_potions random potions
-        "boss_potions": 1,
         "level2_multiplier": 2,  # reinforced potions (II, sold by the villager): effect x2...
         "strong_per_fight": 1,  # ...and only this many per duel or dungeon run
-        # Random potions (drops, bosses, the villager's goods): how often each kind comes (0 = never).
+        # Random potions (drops, the villager's goods): how often each kind comes (0 = never).
         "random_weights": {"strength": 1, "speed": 1, "healing": 1, "harming": 1},
         "value": 40,  # reference values in emeralds (fortune, fair prices)
         "value_ii": 120,
@@ -199,18 +197,6 @@ DEFAULTS: dict[str, Any] = {
             {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
             {"weight": 12, "title": "A witch's stash", "reward": {"potions": 2}},
         ],
-    },
-    "boss": {
-        "auto_spawn_hours": 0,  # 0 = staff spawns bosses with /event boss
-        "duration_hours": 24,
-        "hp": 1000,
-        "attack_cooldown_seconds": 60,
-        "crit_chance": 0.1,
-        "crit_multiplier": 2.0,
-        "reward_pool": 600,  # emeralds shared proportionally to damage
-        "top_damage_bonus": 150,
-        "xp_reward": 150,
-        "names": ["Wither", "Ender Dragon", "Elder Guardian", "Warden"],
     },
     "seasons": {"rewards": [300, 150, 75]},
     "teams": {
@@ -233,27 +219,32 @@ DEFAULTS: dict[str, Any] = {
         # Lapis lazuli: found while mining, spent to apply books.
         "lapis_chance": 0.025,  # per mining reward (1 in 40)
         "lapis_amount": [1, 2],
-        "apply_cost": [2, 4, 8],  # lapis to apply a book of level I / II / III
+        # Levels I to VII. Random books are I to III; IV to VII are only made by combining two books, and only
+        # in a dimension that allows them (max level = 3 + the dimension: Nether IV … Shimmer VII). Beyond III each
+        # level adds half of what the level before added.
+        "apply_cost": [2, 4, 8, 16, 32, 64, 128],  # lapis to apply a book of level I … VII
         "book_weights": [60, 30, 10],  # chances of level I / II / III (drops, challenges)
-        "boss_book_weights": [0, 70, 30],  # book of the top damage dealers (boss_book_top)
-        "boss_book_top": 1,
+        "boss_book_weights": [0, 70, 30],  # the book of each survivor of a gate boss
         "challenges_book": True,  # a random book for completing every weekly challenge
         # Effects for level I / II / III.
-        "efficiency_seconds": [2, 4, 6],  # pickaxe: shorter mining cooldown
-        "fortune_bonus": [1, 2, 3],  # pickaxe blocks, shovel gravel, axe sticks
-        "fortune_hoe_xp": [0.05, 0.10, 0.15],
-        "unbreaking_chance": [0.25, 0.40, 0.50],  # chance a use costs no durability
-        "sharpness_damage": [1, 2, 3],
-        "looting_boss_bonus": [0.10, 0.20, 0.30],
-        "protection_points": [1, 2, 3],  # armor points per piece
+        "efficiency_seconds": [2.0, 4.0, 6.0, 7.0, 7.5, 7.75, 7.875],  # pickaxe: shorter mining cooldown
+        "fortune_bonus": [1.0, 2.0, 3.0, 3.5, 3.75, 3.875, 3.9375],  # pickaxe blocks, shovel gravel, axe sticks
+        "fortune_hoe_xp": [0.05, 0.10, 0.15, 0.175, 0.1875, 0.19375, 0.196875],
+        "unbreaking_chance": [0.25, 0.40, 0.50, 0.55, 0.575, 0.5875, 0.59375],  # chance a use costs no durability
+        "sharpness_damage": [1.0, 2.0, 3.0, 3.5, 3.75, 3.875, 3.9375],
+        "looting_boss_bonus": [0.10, 0.20, 0.30, 0.35, 0.375, 0.3875, 0.39375],  # gate bosses' bounty
+        # Armor points per piece. From IV on, Protection raises the cap of the damage reduction instead
+        # (gear.max_damage_reduction) by protection_cap_bonus per piece: the points are already capped there.
+        "protection_points": [1.0, 2.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        "protection_cap_bonus": [0.0, 0.0, 0.0, 0.01, 0.02, 0.03, 0.04],
         # Mending (one level, any gear): the XP a player gains repairs their equipped Mending pieces first,
         # this much durability per XP; only the XP left goes to the player.
         "mending_durability_per_xp": 2,
         "mending_value": 600,  # the most valuable book (fortune, fair prices, the villager's price)
-        "boss_mending_chance": 0.05,  # the top damage dealer's book is Mending this often
+        "boss_mending_chance": 0.05,  # a gate boss survivor's book is Mending this often
         # Reference values in emeralds (fortune, fair auction prices).
         "lapis_value": 10,
-        "book_values": [50, 150, 400],
+        "book_values": [50, 150, 400, 800, 1600, 3200, 6400],
     },
     "villager": {
         # Every day from arrive_hour to leave_hour (local time), 3 offers, one of each.
@@ -369,6 +360,37 @@ DEFAULTS: dict[str, Any] = {
             "nightmare": {"entry": 1200, "strength": 2.64, "reward": 32.0, "group_monsters": 0.5},
         },
     },
+    # Gate bosses (/boss, game/gate.py): the Wither opens the End, the Ender Dragon the Deep Dark, the Warden the
+    # Shimmer. A group of 1 to max_players, turn by turn. A boss has the same health whatever the group (it's
+    # made for 4), and its hits are reduced by armor like in duels. Calibrated: 4 players in the best gear of the
+    # boss's dimension (netherite, Sharpness and Protection IV for the Wither, V for the Dragon, VI for the
+    # Warden), a shield and 2 healing potions each (drunk under 8 health), win ~35% of the time. Unprepared
+    # (no shield or no potion), they rarely win.
+    "gate_bosses": {
+        "hp": 20,  # each player's health
+        "max_players": 4,
+        "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
+        "turn_seconds": 30,  # time to play a turn, then the bot attacks for the player
+        "afk_turns": 2,  # turns missed in a row before the player's turns play by themselves
+        "cooldown_hours": 12,  # between two fights of a player
+        "max_rounds": 60,  # the boss's turns: then it wins
+        "min_hit_after_armor": 0.5,
+        "crit_chance": 0.0,  # the bosses' critical hits (0 = none)
+        "crit_multiplier": 2.0,
+        "max_potions": 2,  # per player and per fight (reinforced II ones: potions.strong_per_fight)
+        "repeat_reward": 0.25,  # share of the bounty for a boss the player had already beaten
+        # small_group_hp: a smaller group of 1, 2 or 3 faces this share of the boss's health (a prepared group
+        # then wins ~4%, ~8% and ~15% of the time).
+        "wither": {"entry": 1500, "boss_hp": 400.0, "min_damage": 3.1, "max_damage": 7.1,
+                   "wither_damage": 1.0, "wither_turns": 2, "bounty": 3000, "xp": 300,
+                   "small_group_hp": [0.34, 0.59, 0.82]},
+        "ender_dragon": {"entry": 3000, "boss_hp": 440.0, "min_damage": 9.85, "max_damage": 22.2, "strikes": 2,
+                         "breath_every": 3, "breath_min": 3.7, "breath_max": 7.4, "bounty": 6000, "xp": 500,
+                         "small_group_hp": [0.15, 0.36, 0.66]},
+        "warden": {"entry": 6000, "boss_hp": 480.0, "min_damage": 18.1, "max_damage": 36.2,
+                   "boom_every": 4, "boom_min": 15.0, "boom_max": 24.1, "bounty": 12000, "xp": 800,
+                   "small_group_hp": [0.14, 0.38, 0.69]},
+    },
     # Profile customization (/customize) and team banners (/team banner).
     "profiles": {
         "bio_max": 150,
@@ -404,7 +426,7 @@ DEFAULTS: dict[str, Any] = {
         "change_cost": 1000,
         "change_days": 7,
         "villager_trade": 0.05,  # /sell +5%, market and villager goods -5%, villager pays +5% for blocks
-        "dwarf_damage": 0.05,  # damage in every fight (duels, tournaments, bosses, dungeon, dummy)
+        "dwarf_damage": 0.05,  # damage in every fight (duels, tournaments, gate bosses, dungeon, dummy)
         "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
@@ -561,6 +583,9 @@ DEFAULTS: dict[str, Any] = {
         "handyman_10": {"goal": 10, "reward": 100},
         "regular_20": {"goal": 20, "reward": 200},
         "moneylender": {"goal": 10000, "reward": 200},
+        "wither_slayer": {"reward": 1000},
+        "dragon_slayer": {"reward": 2000},
+        "warden_slayer": {"reward": 4000},
     },
 }
 
@@ -594,9 +619,14 @@ def get() -> dict[str, Any]:
 # ---------------- validation ----------------
 # Dicts whose keys are free (not fixed by DEFAULTS): their values must look like the defaults' values.
 _FREE_KEYS = {("moderation", "warn_mutes"), ("villager", "buys")}
+# Lists that grew in an update (enchantments: levels I-III, then I-VII): an older, shorter override keeps its
+# values and gets the defaults for the rest.
+_GROWN = {("enchants", k) for k in ("apply_cost", "efficiency_seconds", "fortune_bonus", "fortune_hoe_xp",
+                                     "unbreaking_chance", "sharpness_damage", "looting_boss_bonus",
+                                     "protection_points", "book_values")}
 # Lists that can have any length (the others have one value per level and keep their length).
 _FREE_LENGTH = {
-    ("seasons", "rewards"), ("teams", "season_rewards"), ("boss", "names"),
+    ("seasons", "rewards"), ("teams", "season_rewards"),
     ("drops", "table"), ("villager", "goods"),
 }
 
@@ -607,7 +637,7 @@ def _is_number(value: Any) -> bool:
 
 def _check(default: Any, value: Any, path: tuple[str, ...], problems: list[str]) -> Any:
     """Validate `value` against the shape of `default`. Returns the cleaned value (or _INVALID)."""
-    name = "balance." + ".".join(path)
+    name = "balance" + "".join(f".{p}" for p in path)
     if isinstance(default, dict):
         if not isinstance(value, dict):
             problems.append(f"`{name}` must be a section {{ ... }}.")
@@ -654,6 +684,8 @@ def _check(default: Any, value: Any, path: tuple[str, ...], problems: list[str])
         if not isinstance(value, list):
             problems.append(f"`{name}` must be a list [ ... ].")
             return _INVALID
+        if path in _GROWN and 0 < len(value) < len(default):
+            value = list(value) + list(default[len(value):])
         if path not in _FREE_LENGTH and len(value) != len(default):
             problems.append(f"`{name}` must have {len(default)} values.")
             return _INVALID

@@ -11,6 +11,7 @@
   now, or helps during the next wave). No answer in time = leaving with the loot.
 - The loot of every wave cleared adds up, but a player who dies loses it (and
   the entry fee). Clearing wave 5 adds `clear_bonus` and pays everyone left.
+- Clearing the Nightmare difficulty opens the **Nether** to the members still there at the end of wave 5.
 - Gear works like in duels (Dwarves hit harder, Witches drink better). The sword
   wears out like in duels (1 per attack), but each hit taken wears only one armor
   piece (drawn at random) instead of all four: the monsters hit often and softly.
@@ -23,11 +24,12 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import cooldowns, duel, gear, players, potions, settings
+from game import cooldowns, dimensions, duel, gear, players, potions, settings
 from game.db import Ctx
 from game.errors import GameError
 
 MAX_ROUNDS = 60
+NETHER_GATE = "nightmare"  # clearing it opens the Nether (game/dimensions.py)
 
 
 @dataclass(frozen=True)
@@ -489,13 +491,17 @@ def _play(ctx: Ctx, run: dict) -> dict:
     )
     run = get(ctx, run["run_id"])
     cleared_all = result["cleared"] and wave == len(WAVES)
+    nether: list[int] = []  # the Nightmare's survivors open the Nether
     if cleared_all:
         bonus = float(_cfg()["clear_bonus"])
         for m in run["in"]:
             players.bump_stat(ctx, m["user_id"], f"pve_clears_{run['difficulty']}")
             _end_member(ctx, run, m, "cleared", round(m["loot"] * (1 + bonus)))
+            if run["difficulty"] == NETHER_GATE and dimensions.unlock(ctx, m["user_id"], "nether"):
+                nether.append(m["user_id"])
     run = _close_if_empty(ctx, run)
-    return {"run": run, "wave": wave, "result": result, "reward": reward, "xp": xp, "cleared_all": cleared_all}
+    return {"run": run, "wave": wave, "result": result, "reward": reward, "xp": xp, "cleared_all": cleared_all,
+            "nether": nether}
 
 
 def leave(ctx: Ctx, run_id: int, user_id: int) -> dict:

@@ -399,7 +399,7 @@ class DuelCog(commands.Cog):
             description=(
                 "\n".join(lines)
                 + f"\n\nIn a duel, on your turn: drink one potion, then attack (up to {potions.max_per_duel()} per duel). "
-                "Potions come from drops and bosses; reinforced potions (II) only from the villager."
+                "Potions come from drops and the villager; reinforced potions (II) only from the villager."
             ),
             color=discord.Color.purple(),
         )

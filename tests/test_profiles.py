@@ -45,7 +45,7 @@ class ProfileTests(GameTestCase):
 
     async def test_goals_come_from_the_settings(self):
         settings.load({"profiles": {"title_goals": {"boss_slayer": 3}, "frame_goals": {"netherite": 2}}})
-        self.assertEqual(profiles.TITLES["boss_slayer"].how, "Help defeat 3 bosses")
+        self.assertEqual(profiles.TITLES["boss_slayer"].how, "Survive 3 gate boss victories")
         self.assertEqual(profiles.FRAMES["netherite"].how, "Win 2 weekend tournaments")
         await self.run_game(players.bump_stat, ALICE, "bosses_defeated", 3)
         self.assertEqual(await self.run_game(profiles.set_title, ALICE, "boss_slayer"), "Boss Slayer")
@@ -53,7 +53,7 @@ class ProfileTests(GameTestCase):
         self.assertEqual((await self.run_game(profiles.frames_of, ALICE))["netherite"], "locked")
 
     async def test_titles_earned_and_from_the_staff(self):
-        with self.assertRaisesRegex(GameError, "Help defeat 10 bosses"):
+        with self.assertRaisesRegex(GameError, "Survive 10 gate boss victories"):
             await self.run_game(profiles.set_title, ALICE, "boss_slayer")
         await self.run_game(players.bump_stat, ALICE, "bosses_defeated", 10)
         self.assertEqual(await self.run_game(profiles.set_title, ALICE, "boss_slayer"), "Boss Slayer")

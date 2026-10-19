@@ -72,7 +72,7 @@ GEAR_EFFECTS = {
     "shovel": "Extra gravel when you mine gravel",
     "axe": "Chance to collect sticks while mining",
     "hoe": "More XP per message",
-    "sword": "Higher maximum damage (duels, tournament, bosses, the dungeon)",
+    "sword": "Higher maximum damage (duels, tournament, gate bosses, the dungeon)",
     "helmet": "Damage reduction in duels, the tournament and the dungeon (capped)",
     "chestplate": "Damage reduction in duels, the tournament and the dungeon (capped)",
     "leggings": "Damage reduction in duels, the tournament and the dungeon (capped)",

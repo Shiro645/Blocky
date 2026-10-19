@@ -59,6 +59,9 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
                 lines.append(f"💰 +{em(last['reward'])} loot and +{last['xp']} XP each")
             if last["cleared_all"]:
                 lines.append(f"🏆 **The dungeon is cleared!** Loot +{float(c['clear_bonus']):.0%}, paid to everyone left.")
+            if last.get("nether"):
+                lines.append("🔥 **The Nether opens** for " + ", ".join(f"<@{uid}>" for uid in last["nether"])
+                             + "! (`/dimensions`)")
         if run["status"] == "between":
             nxt = run["wave"] + 1
             lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, len(run['in']), diff)} "
@@ -238,6 +241,14 @@ class PveCog(commands.Cog):
                                                     ephemeral=True)
             return
         await interaction.response.edit_message(embed=run_embed(run, last), view=run_view(run))
+        await self.opened(last)
+
+    async def opened(self, last: dict | None) -> None:
+        """The Nightmare's survivors opened the Nether: they get its role."""
+        cog = self.bot.get_cog("DimensionsCog")
+        for uid in (last or {}).get("nether", []):
+            if cog is not None:
+                await cog.sync_roles(uid)  # type: ignore[attr-defined]
 
     async def drink(self, interaction: discord.Interaction, run_id: int, key: str) -> None:
         res = await self.bot.db.run(pve.drink, run_id, interaction.user.id, key)
@@ -254,6 +265,7 @@ class PveCog(commands.Cog):
             await channel.get_partial_message(run["message_id"]).edit(embed=run_embed(run, last), view=run_view(run))
         except discord.HTTPException:
             log.exception("Could not update the dungeon message")
+        await self.opened(last)
 
     # ---------- background ----------
     @tasks.loop(minutes=1)

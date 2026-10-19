@@ -34,7 +34,7 @@ class WikiTests(unittest.TestCase):
         self.assertEqual(staff, [])
 
     def test_the_parts_fit_in_discord(self):
-        for overrides in (None, {"games": {"quiz_every_minutes": 0}, "boss": {"auto_spawn_hours": 48},
+        for overrides in (None, {"games": {"quiz_every_minutes": 0}, "gate_bosses": {"cooldown_hours": 6},
                                  "teams": {"log_score": False}, "guide": {"delete_after_days": 0}}):
             settings.load(overrides)
             for section in wiki.SECTIONS:

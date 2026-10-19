@@ -30,7 +30,7 @@ class KeyTests(unittest.TestCase):
         sig = enchants.signature({"unbreaking": 1, "sharpness": 2})
         self.assertEqual(sig, "sharpness2,unbreaking1")
         self.assertEqual(enchants.parse_signature(sig), {"sharpness": 2, "unbreaking": 1})
-        for bad in ("sharpness4", "magic1", "sharpness1,sharpness2", ""):
+        for bad in ("sharpness8", "magic1", "sharpness1,sharpness2", ""):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 enchants.parse_signature(bad)
 
@@ -41,7 +41,7 @@ class KeyTests(unittest.TestCase):
             assets.describe("gear:diamond:sword:sharpness2,unbreaking1"),
             "diamond sword (Sharpness II, Unbreaking I)",
         )
-        for bad in ("book:sharpness:4", "book:magic:1", "gear:diamond:sword:nope"):
+        for bad in ("book:sharpness:8", "book:magic:1", "gear:diamond:sword:nope"):
             with self.subTest(bad=bad), self.assertRaises(GameError):
                 assets.parse(bad)
         # An enchanted piece is worth its books too.
@@ -150,14 +150,22 @@ class EffectTests(EnchantTestCase):
         self.assertIn(res["lapis"], (1, 2))
         self.assertEqual(await self.run_game(enchants.lapis, ALICE), res["lapis"])
 
+    async def win_gate_boss(self) -> dict:
+        from game import dimensions, gate
+        from tests.test_gate import set_boss_hp
+
+        await self.run_game(players.give_emeralds, ALICE, 1500)
+        await self.run_game(dimensions.set_highest, ALICE, "nether")
+        row = await self.run_game(gate.create, ALICE, "wither")
+        await self.run_game(gate.start, row["fight_id"], ALICE)
+        await self.run_game(set_boss_hp, row["fight_id"], 0.5)
+        return (await self.run_game(gate.attack, row["fight_id"], ALICE))["rewards"][ALICE]
+
     async def test_looting_and_book_on_bosses(self):
         await self.piece(ALICE, "sword", "netherite", looting=3)
         await self.run_game(gear.equip_best, ALICE)
-        await self.run_game(events.spawn_boss, "Test", 1)
-        res = await self.run_game(events.attack_boss, ALICE)
-        reward = res["defeat"]["rewards"][0]
-        self.assertEqual(reward["looting"], int(750 * 0.3))
-        self.assertEqual(reward["reward"], 750 + int(750 * 0.3))
+        reward = await self.win_gate_boss()
+        self.assertEqual((reward["bounty"], reward["looting"]), (3000, int(3000 * 0.3)))
         self.assertTrue(reward["book"])
         self.assertEqual(len(await self.run_game(enchants.books, ALICE)), 1)
 
@@ -258,10 +266,64 @@ class MendingTests(EnchantTestCase):
         settings.load({"villager": {"exclusive_mending_chance": 1.0}, "enchants": {"boss_mending_chance": 1.0}})
         offer = await self.run_game(villager._exclusive_offer)
         self.assertEqual((offer["asset"], offer["price"]), ("book:mending:1", 600))
-        await self.run_game(events.spawn_boss, "Test", 1000)
-        await self.run_game(events.attack_boss, ALICE)
-        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
-        self.advance(120)
-        rewards = (await self.run_game(events.attack_boss, ALICE))["defeat"]["rewards"]
-        self.assertEqual(rewards[0]["book"], "Mending")
+        reward = await EffectTests.win_gate_boss(self)
+        self.assertEqual(reward["book"], "Mending")
         self.assertIn(("mending", 1, 1), await self.run_game(enchants.books, ALICE))
+
+
+class HighLevelTests(EnchantTestCase):
+    """Levels IV to VII (2.0.2): made by combining, up to 3 + the player's dimension."""
+
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        await self.run_game(players.ensure_user, ALICE)
+        await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
+
+    async def test_combine_up_to_the_dimension(self):
+        from game import dimensions
+
+        await self.run_game(enchants.give_book, ALICE, "sharpness", 3, 2)
+        with self.assertRaisesRegex(GameError, "maximum is \\*\\*III\\*\\*.*Nether"):
+            await self.run_game(enchants.combine, ALICE, "sharpness:3")
+        await self.run_game(dimensions.set_highest, ALICE, "nether")
+        res = await self.run_game(enchants.combine, ALICE, "sharpness:3")
+        self.assertEqual(res["level"], 4)
+        await self.run_game(enchants.give_book, ALICE, "sharpness", 4, 1)
+        with self.assertRaisesRegex(GameError, "maximum is \\*\\*IV\\*\\*.*End"):
+            await self.run_game(enchants.combine, ALICE, "sharpness:4")
+
+    async def test_apply_up_to_the_dimension(self):
+        from game import dimensions
+
+        sword = await self.piece(ALICE, "sword", "diamond")
+        await self.run_game(enchants.give_book, ALICE, "sharpness", 5, 1)
+        await self.run_game(enchants.give_lapis, ALICE, 32)
+        await self.run_game(dimensions.set_highest, ALICE, "nether")
+        with self.assertRaisesRegex(GameError, "maximum is \\*\\*IV\\*\\*"):
+            await self.run_game(enchants.apply, ALICE, "sharpness:5", sword)
+        await self.run_game(dimensions.set_highest, ALICE, "end")
+        res = await self.run_game(enchants.apply, ALICE, "sharpness:5", sword)
+        self.assertEqual((res["level"], res["cost"]), (5, 32))
+
+    def test_each_level_adds_half_of_the_one_before(self):
+        self.assertEqual([enchants.bonus("sharpness", lvl) for lvl in range(1, 8)],
+                         [1, 2, 3, 3.5, 3.75, 3.875, 3.9375])
+        self.assertEqual([enchants.apply_cost(lvl) for lvl in range(4, 8)], [16, 32, 64, 128])
+        self.assertEqual(enchants.label("sharpness", 7), "Sharpness VII")
+
+    async def test_protection_raises_the_cap(self):
+        for slot in ("helmet", "chestplate", "leggings", "boots"):
+            gid = await self.piece(ALICE, slot, "netherite", protection=3)
+            await self.run_game(gear.equip, ALICE, gid)
+        worn = await self.equipped(ALICE)
+        self.assertAlmostEqual(gear.damage_reduction(worn), 0.35)  # capped: 36 points would be 43%
+        for piece in worn.values():
+            await self.run_game(enchants.set_enchants, piece["gear_id"], {"protection": 7})
+        worn = await self.equipped(ALICE)
+        self.assertAlmostEqual(gear.reduction_cap(worn), 0.35 + 4 * 0.04)
+        self.assertAlmostEqual(gear.damage_reduction(worn), 36 * 0.012)  # the points are the limit now
+
+    def test_older_settings_keep_their_values(self):
+        settings.load(settings.clean({"enchants": {"sharpness_damage": [2, 3, 4]}})[0])
+        self.assertEqual(settings.get()["enchants"]["sharpness_damage"], [2, 3, 4, 3.5, 3.75, 3.875, 3.9375])
+        settings.load(None)

@@ -1,8 +1,8 @@
 """Dimensions: the overworld, then the Nether, the End, the Deep Dark and the Shimmer.
 
 - Each player has the dimensions they unlocked (users.dimension_level: 0 = only the overworld, 1 = up to the
-  Nether…). Unlocking one unlocks those before it. For now only the staff unlocks them (/player dimension);
-  the gate bosses will.
+  Nether…). Unlocking one unlocks those before it. Clearing the Nightmare dungeon opens the Nether, then the
+  gate bosses (game/gate.py) open the others; the staff can set them too (/player dimension).
 - Each dimension has its mining channels (channels.mining for the overworld, channels.mining_<dimension> for
   the others) and its blocks, worth more than the dimension before (game/mining.py). A message in the channels
   of a dimension the player hasn't unlocked gives nothing.
@@ -69,6 +69,17 @@ def set_highest(ctx: Ctx, user_id: int, dimension: str) -> dict:
 def multiplier(dimension: str) -> float:
     """How much more a dimension pays than the overworld (tool bonuses follow it)."""
     return 1.0 if dimension == "overworld" else float(settings.get()["dimensions"]["multipliers"][dimension])
+
+
+def unlock(ctx: Ctx, user_id: int, dimension: str) -> bool:
+    """A player reaches a dimension (beating its gate): it and every one before it open. Returns True if it's new."""
+    new = level_of(dimension)
+    before = level(ctx, user_id)
+    if new <= before:
+        return False
+    ctx.execute("UPDATE users SET dimension_level=? WHERE user_id=?;", (new, user_id))
+    players.bump_stat(ctx, user_id, "dimensions_unlocked", new - before)
+    return True
 
 
 def odds(dimension: str, pile: str) -> dict[str, float]:

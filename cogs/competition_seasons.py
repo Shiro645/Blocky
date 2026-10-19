@@ -125,7 +125,7 @@ class SeasonsCog(commands.Cog):
         embed = discord.Embed(
             title=f"🏆 Season {data['season_id']}",
             description=(
-                "Score = value created this week: blocks mined, daily, drops, bosses, challenges...\n"
+                "Score = value created this week: blocks mined, daily, drops, gate bosses, challenges...\n"
                 f"Ends <t:{data['ends_at']}:R>. Rewards: {rewards or 'none'} + the champion role.\n\n"
                 + ("\n".join(lines) or "Nobody has scored yet. Be the first!")
             ),

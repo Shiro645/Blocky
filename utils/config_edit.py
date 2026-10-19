@@ -68,7 +68,7 @@ CATEGORIES = {
     "enchant_effects": "✨ Enchanting: effects",
     "pve": "🏰 Dungeon",
     "pve_monsters": "🧟 Dungeon monsters",
-    "bosses": "🐉 Bosses",
+    "bosses": "🐉 Gate bosses",
     "tournament": "🏟️ Tournament",
     "live_events": "⏱️ Timed events",
     "chance": "🎰 Games of chance",
@@ -79,7 +79,7 @@ CATEGORIES = {
 SECTION_OF = {category: section for section, (_, categories) in SECTIONS.items() for category in categories}
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-ROMAN = ("I", "II", "III")
+ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII")
 # Kinds typed in a text box. The others use pickers, buttons or editors.
 TYPED = ("int", "float", "percent", "text", "timezone")
 
@@ -117,9 +117,10 @@ def _b(dotted: str, category: str, label: str, help: str = "", kind: str = "int"
     return Field(dotted, category, label, _path(dotted), kind, min, max, help, **extra)
 
 
-def _per_level(dotted: str, category: str, label: str, help: str = "", kind: str = "int", **extra: Any) -> list[Field]:
-    """One field per value of a list with a value for level I, II and III."""
-    return [_b(f"{dotted}.{i}", category, f"{label} ({ROMAN[i]})", help, kind, **extra) for i in range(3)]
+def _per_level(dotted: str, category: str, label: str, help: str = "", kind: str = "int", levels: int = 3,
+               **extra: Any) -> list[Field]:
+    """One field per value of a list with a value for each level (I, II, III… up to `levels`)."""
+    return [_b(f"{dotted}.{i}", category, f"{label} ({ROMAN[i]})", help, kind, **extra) for i in range(levels)]
 
 
 def _pct(dotted: str, category: str, label: str, help: str = "", max: float = 1.0) -> Field:
@@ -157,6 +158,7 @@ _ACHIEVEMENT_NAMES = {
     "boss_slayer": "Boss Slayer", "champion": "Champion", "arena_champion": "Arena Champion",
     "team_champion": "Squad Goals", "tycoon": "Emerald Tycoon", "wear_and_tear": "Wear and Tear",
     "lucky_100": "Feeling Lucky", "wheel_100": "Spin Doctor", "bullseye": "Bullseye", "blockdle_10": "Block Detective", "quiz_10": "Know-It-All", "thief_10": "Master Thief", "watch_5": "Neighborhood Watch", "dungeon_hard": "Into the Depths", "dungeon_hardcore": "Hardcore Hero", "dungeon_nightmare": "Nightmare Slayer", "challenger_10": "Challenger", "challenger_50": "Challenge Master", "high_roller": "High Roller", "enchanter_10": "Enchanter", "handyman_10": "Handyman", "regular_20": "Regular Customer", "moneylender": "Moneylender",
+    "wither_slayer": "Wither Slayer", "dragon_slayer": "Dragon Slayer", "warden_slayer": "Warden Slayer",
 }
 _CHALLENGE_NAMES = {
     "mine_blocks": "Mine blocks", "find_bedrock": "Find bedrock", "sell_blocks": "Earn emeralds by selling",
@@ -405,8 +407,6 @@ FIELDS: list[Field] = [
     _b("potions.healing_hp", "potions", "Healing: HP healed", kind="float", max=100),
     _b("potions.harming_damage", "potions", "Harming: direct damage", "Reduced by armor.", "float", max=100),
     _b("potions.level2_multiplier", "potions", "Reinforced potions: effect ×", kind="float", min=1, max=10),
-    _b("potions.boss_top", "potions", "Bosses: top N fighters get potions", max=50),
-    _b("potions.boss_potions", "potions", "Bosses: potions each of them gets", max=20),
     _b("potions.strong_per_fight", "potions", "Reinforced (II) potions per fight", "Per duel and per dungeon run.",
        max=20),
     *[_b(f"potions.random_weights.{k}", "potions", f"Random potions: {name} weight",
@@ -418,51 +418,87 @@ FIELDS: list[Field] = [
     _pct("enchants.lapis_chance", "enchant_books", "Lapis chance per mining reward"),
     _b("enchants.lapis_amount.0", "enchant_books", "Lapis found: minimum", min=1, max=1000),
     _b("enchants.lapis_amount.1", "enchant_books", "Lapis found: maximum", min=1, max=1000),
-    *_per_level("enchants.apply_cost", "enchant_books", "Lapis to apply a book", "Lapis spent with /enchant apply.", max=1000),
+    *_per_level("enchants.apply_cost", "enchant_books", "Lapis to apply a book", "Lapis spent with /enchant apply.",
+                max=100_000, levels=7),
     *_per_level("enchants.book_weights", "enchant_books", "Book level weight", "Chances of each level for books "
                 "from drops and challenges (weight ÷ total).", max=10_000),
     *_per_level("enchants.boss_book_weights", "enchant_books", "Boss book level weight", "Chances of each level for "
-                "the book of a boss's top damage dealers.", max=10_000),
-    _b("enchants.boss_book_top", "enchant_books", "Bosses: top N fighters get a book", max=50),
+                "the book of each survivor of a gate boss.", max=10_000),
     _b("enchants.challenges_book", "enchant_books", "Book for all weekly challenges", kind="bool", min=None,
        help="A random book for completing every challenge of the week."),
     _b("enchants.lapis_value", "enchant_books", "Lapis value (emeralds)", "Used for fortunes and fair prices."),
-    *_per_level("enchants.book_values", "enchant_books", "Book value (emeralds)", "Used for fortunes and fair prices."),
-    *_per_level("enchants.efficiency_seconds", "enchant_effects", "Efficiency: seconds less", "Shorter mining cooldown.", max=3600),
+    *_per_level("enchants.book_values", "enchant_books", "Book value (emeralds)", "Used for fortunes and fair prices.",
+                max=10_000_000, levels=7),
+    *_per_level("enchants.efficiency_seconds", "enchant_effects", "Efficiency: seconds less", "Shorter mining cooldown.",
+                kind="float", max=3600, levels=7),
     *_per_level("enchants.fortune_bonus", "enchant_effects", "Fortune: extra blocks",
-                "Pickaxe cobblestone, shovel gravel, axe sticks.", max=100),
-    *[_pct(f"enchants.fortune_hoe_xp.{i}", "enchant_effects", f"Fortune on a hoe: XP bonus ({ROMAN[i]})", max=10) for i in range(3)],
+                "Pickaxe cobblestone, shovel gravel, axe sticks (a fraction is a chance of one more).", kind="float",
+                max=100, levels=7),
+    *[_pct(f"enchants.fortune_hoe_xp.{i}", "enchant_effects", f"Fortune on a hoe: XP bonus ({ROMAN[i]})", max=10) for i in range(7)],
     *[_pct(f"enchants.unbreaking_chance.{i}", "enchant_effects", f"Unbreaking: chance to keep ({ROMAN[i]})",
-           "Chance that a use costs no durability.") for i in range(3)],
-    *_per_level("enchants.sharpness_damage", "enchant_effects", "Sharpness: max damage +", kind="float", max=1000),
-    *[_pct(f"enchants.looting_boss_bonus.{i}", "enchant_effects", f"Looting: boss reward bonus ({ROMAN[i]})", max=10)
-      for i in range(3)],
+           "Chance that a use costs no durability.") for i in range(7)],
+    *_per_level("enchants.sharpness_damage", "enchant_effects", "Sharpness: max damage +", kind="float", max=1000, levels=7),
+    *[_pct(f"enchants.looting_boss_bonus.{i}", "enchant_effects", f"Looting: gate boss bounty bonus ({ROMAN[i]})", max=10)
+      for i in range(7)],
     *_per_level("enchants.protection_points", "enchant_effects", "Protection: armor points", "Per enchanted piece.",
-                kind="float", max=100),
+                kind="float", max=100, levels=7),
+    *[_pct(f"enchants.protection_cap_bonus.{i}", "enchant_effects", f"Protection: reduction cap + ({ROMAN[i]})",
+           "Per enchanted piece: raises the most the armor can reduce the damage (Combat → max damage reduction). "
+           "Useful from IV on, where the armor points are already capped.", max=1) for i in range(7)],
     _b("enchants.mending_durability_per_xp", "enchant_effects", "Mending: durability per XP",
        "The XP a player gains repairs their equipped Mending pieces first, this much per XP.", kind="float", max=100),
     _b("enchants.mending_value", "enchant_books", "Mending book value (emeralds)",
        "The rarest book. Used for fortunes and fair prices.", min=1),
-    _pct("enchants.boss_mending_chance", "enchant_books", "Bosses: chance the top book is Mending",
-         "The top damage dealer's book is a Mending book this often."),
+    _pct("enchants.boss_mending_chance", "enchant_books", "Gate bosses: chance a book is Mending",
+         "Each survivor's book is a Mending book this often."),
     # ---- drops ----
     _pct("drops.chance", "drops", "Drop chance per mining reward"),
     _b("drops.min_interval_seconds", "drops", "Seconds between two drops (min)", max=7 * 86_400),
     _b("drops.claim_seconds", "drops", "Seconds to claim a drop", min=5, max=840),
     _b("drops.table", "drops", "Drop table", "What a drop can be, and how often (weight ÷ total).", "table", None,
        item="drops"),
-    # ---- bosses ----
-    _b("boss.auto_spawn_hours", "bosses", "Automatic boss every X hours",
-       "Hours after the previous boss ended. 0 = only /event boss.", "float", max=720),
-    _b("boss.duration_hours", "bosses", "Hours before a boss escapes", kind="float", min=0.1, max=720),
-    _b("boss.hp", "bosses", "Boss HP", min=1, max=10_000_000),
-    _b("boss.attack_cooldown_seconds", "bosses", "Seconds between two attacks", max=86_400),
-    _pct("boss.crit_chance", "bosses", "Critical hit chance"),
-    _b("boss.crit_multiplier", "bosses", "Critical hit multiplier", kind="float", min=1, max=10),
-    _b("boss.reward_pool", "bosses", "Reward pool (emeralds)", "Shared by damage dealt."),
-    _b("boss.top_damage_bonus", "bosses", "Top damage dealer bonus"),
-    _b("boss.xp_reward", "bosses", "XP for every fighter"),
-    _b("boss.names", "bosses", "Boss names", "A random one is picked for each boss.", "list", None, item="text"),
+    # ---- gate bosses ----
+    _b("gate_bosses.max_players", "bosses", "Players per group (max)", "A boss is made for this many.", min=1, max=10),
+    _b("gate_bosses.hp", "bosses", "Each player's health", min=1, max=1000),
+    _b("gate_bosses.lobby_minutes", "bosses", "Minutes to start a group", "Not started by then: cancelled, entries back.",
+       min=1, max=1440),
+    _b("gate_bosses.turn_seconds", "bosses", "Seconds to play a turn", "Then the bot attacks for the player.",
+       min=10, max=600),
+    _b("gate_bosses.afk_turns", "bosses", "Missed turns before auto", "In a row: then the player's turns play by "
+       "themselves.", min=1, max=20),
+    _b("gate_bosses.cooldown_hours", "bosses", "Hours between two fights", "Per player, from the start of a fight.",
+       kind="float", max=720),
+    _b("gate_bosses.max_rounds", "bosses", "Boss turns before it wins", min=1, max=500),
+    _b("gate_bosses.min_hit_after_armor", "bosses", "Smallest boss hit after armor", kind="float", max=100),
+    _pct("gate_bosses.crit_chance", "bosses", "Boss critical hit chance", "0 = none."),
+    _b("gate_bosses.crit_multiplier", "bosses", "Boss critical hit multiplier", kind="float", min=1, max=10),
+    _b("gate_bosses.max_potions", "bosses", "Potions per player per fight", max=20),
+    _pct("gate_bosses.repeat_reward", "bosses", "Bounty share for a boss already beaten"),
+    *[f for key, name in (("wither", "Wither"), ("ender_dragon", "Dragon"), ("warden", "Warden")) for f in (
+        _b(f"gate_bosses.{key}.entry", "bosses", f"{name}: entry (emeralds)", "Paid by each player; back if the group "
+           "never starts."),
+        _b(f"gate_bosses.{key}.boss_hp", "bosses", f"{name}: health", "For a full group (see below for smaller ones).",
+           kind="float", min=1, max=1_000_000),
+        *[_pct(f"gate_bosses.{key}.small_group_hp.{i}", "bosses", f"{name}: health share for {i + 1} player(s)",
+               "A smaller group faces this share of the boss's health.") for i in range(3)],
+        _b(f"gate_bosses.{key}.min_damage", "bosses", f"{name}: smallest hit", "Before armor.", kind="float", max=1000),
+        _b(f"gate_bosses.{key}.max_damage", "bosses", f"{name}: biggest hit", "Before armor.", kind="float", max=1000),
+        _b(f"gate_bosses.{key}.bounty", "bosses", f"{name}: bounty (emeralds)", "For each survivor of a victory "
+           "(Looting adds to it)."),
+        _b(f"gate_bosses.{key}.xp", "bosses", f"{name}: XP for each survivor", max=1_000_000),
+    )],
+    _b("gate_bosses.wither.wither_damage", "bosses", "Wither: withering per turn", "Health lost on its next turns, "
+       "no armor.", kind="float", max=1000),
+    _b("gate_bosses.wither.wither_turns", "bosses", "Wither: withering turns", max=20),
+    _b("gate_bosses.ender_dragon.strikes", "bosses", "Dragon: strikes per turn", "On players at random.", min=1, max=10),
+    _b("gate_bosses.ender_dragon.breath_every", "bosses", "Dragon: breath every X turns", "On everyone; no shield "
+       "stops it.", min=1, max=100),
+    _b("gate_bosses.ender_dragon.breath_min", "bosses", "Dragon: smallest breath", kind="float", max=1000),
+    _b("gate_bosses.ender_dragon.breath_max", "bosses", "Dragon: biggest breath", kind="float", max=1000),
+    _b("gate_bosses.warden.boom_every", "bosses", "Warden: Sonic Boom every X turns", "Ignores armor and shields.",
+       min=1, max=100),
+    _b("gate_bosses.warden.boom_min", "bosses", "Warden: smallest Sonic Boom", kind="float", max=1000),
+    _b("gate_bosses.warden.boom_max", "bosses", "Warden: biggest Sonic Boom", kind="float", max=1000),
     # ---- seasons & challenges ----
     _b("seasons.rewards", "seasons", "Season podium rewards", "Emeralds for #1, #2, #3… of the weekly season.",
        "list", None, item="int", max_items=10),

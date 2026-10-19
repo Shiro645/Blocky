@@ -89,7 +89,7 @@ class ConfigEditTests(unittest.TestCase):
 class RegistryTests(unittest.TestCase):
     """Every game setting can be changed from /config."""
 
-    FREE_LENGTH = {("seasons", "rewards"), ("teams", "season_rewards"), ("boss", "names"), ("drops", "table"),
+    FREE_LENGTH = {("seasons", "rewards"), ("teams", "season_rewards"), ("drops", "table"),
                    ("villager", "goods")}
 
     def setUp(self):
@@ -135,7 +135,7 @@ class RegistryTests(unittest.TestCase):
     def test_a_value_inside_a_list(self):
         cost = ce.FIELDS_BY_KEY["enchants.apply_cost.1"]
         cfg = ce.set_field(BASE, cost, 6)
-        self.assertEqual(cfg["balance"]["enchants"]["apply_cost"], [2, 6, 8])
+        self.assertEqual(cfg["balance"]["enchants"]["apply_cost"], [2, 6, 8, 16, 32, 64, 128])
         self.assertTrue(ce.is_modified(cfg, cost))
         cfg = ce.set_field(cfg, cost, None)  # back to the default: the override goes away
         self.assertNotIn("balance", cfg)
@@ -168,8 +168,6 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(ce.mute_rule(" 4 ", "2H"), ("4", "2h"))
         with self.assertRaises(ValueError):
             ce.mute_rule("4", "soon")
-        names = ce.FIELDS_BY_KEY["boss.names"]
-        self.assertEqual(ce.parse_item(names, " Herobrine "), "Herobrine")
         table = ce.FIELDS_BY_KEY["drops.table"]
         self.assertEqual(ce.set_whole(BASE, table, settings.DEFAULTS["drops"]["table"]), BASE)
         self.assertEqual(ce.display(ce.FIELDS_BY_KEY["moderation.warn_mutes"], {"10": "1d", "3": "1h"}), "3 → 1h · 10 → 1d")
@@ -183,17 +181,17 @@ class PrepareChangeTests(unittest.TestCase):
         settings.load()
 
     def test_an_old_key_never_blocks_a_change_and_is_removed(self):
-        old = {**BASE, "balance": {"boss": {"ping_here": True, "hp": 2000}, "mining": {"cooldown_seconds": 15}}}
+        old = {**BASE, "balance": {"duel": {"ping_here": True, "hp": 25}, "mining": {"cooldown_seconds": 15}}}
         change = ce.prepare_change(old, lambda cfg: ce.set_value(cfg, ("channels", "spam"), [5]))
         self.assertEqual(change.refused, [])
         self.assertEqual(len(change.cleaned), 1)
         self.assertIn("ping_here", change.cleaned[0])
-        self.assertEqual(change.config["balance"], {"boss": {"hp": 2000}, "mining": {"cooldown_seconds": 15}})
+        self.assertEqual(change.config["balance"], {"duel": {"hp": 25}, "mining": {"cooldown_seconds": 15}})
         self.assertEqual(change.config["channels"]["spam"], [5])
-        self.assertIn("ping_here", old["balance"]["boss"])  # the original isn't touched
+        self.assertIn("ping_here", old["balance"]["duel"])  # the original isn't touched
 
     def test_a_bad_new_value_is_refused(self):
-        old = {**BASE, "balance": {"boss": {"ping_here": True}}}
+        old = {**BASE, "balance": {"duel": {"ping_here": True}}}
         change = ce.prepare_change(old, lambda cfg: ce.set_value(cfg, ("balance", "mining", "cooldown_seconds"), -3))
         self.assertEqual(len(change.refused), 1)
         self.assertIn("cooldown_seconds", change.refused[0])

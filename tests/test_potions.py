@@ -250,31 +250,6 @@ class PotionSourceTests(GameTestCase):
         self.assertIn("Potion of", text)
         self.assertEqual(sum((await self.run_game(potions.owned, ALICE)).values()), 2)
 
-    async def test_top_boss_fighters_get_a_potion(self):
-        await self.run_game(events.spawn_boss, "Test", 1000)
-        for uid in (ALICE, BOB, CAROL, DAVE):
-            await self.run_game(events.attack_boss, uid)
-        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
-        self.advance(120)
-        res = await self.run_game(events.attack_boss, ALICE)
-        rewards = res["defeat"]["rewards"]
-        self.assertEqual([bool(r["potion"]) for r in rewards], [True, True, True, False])
-        for r in rewards:
-            owned = sum((await self.run_game(potions.owned, r["user_id"])).values())
-            self.assertEqual(owned, 1 if r["potion"] else 0)
-
-    async def test_boss_books_and_potions_follow_the_settings(self):
-        settings.load({"potions": {"boss_top": 1, "boss_potions": 2}, "enchants": {"boss_book_top": 2}})
-        await self.run_game(events.spawn_boss, "Test", 1000)
-        for uid in (ALICE, BOB, CAROL):
-            await self.run_game(events.attack_boss, uid)
-        await self.run_game(lambda ctx: ctx.execute("UPDATE bosses SET hp=1;"))
-        self.advance(120)
-        rewards = (await self.run_game(events.attack_boss, ALICE))["defeat"]["rewards"]
-        self.assertEqual([bool(r["book"]) for r in rewards], [True, True, False])
-        self.assertEqual(sum((await self.run_game(potions.owned, rewards[0]["user_id"])).values()), 2)
-        self.assertIsNone(rewards[1]["potion"])
-
     async def test_potions_trade_and_count_in_the_fortune(self):
         await self.run_game(potions.give, ALICE, "speed", 3)
         self.assertEqual(assets.describe("potion:speed", 2), "2 × Potion of Speed")

@@ -1,7 +1,7 @@
 """Weekly seasons: the score is the value a player created during the week (Monday to Sunday).
 
 The score is fed by players.add_score: the value of the blocks mined (when
-they are mined, not when they are sold), the rewards (daily, drops, bosses,
+they are mined, not when they are sold), the rewards (daily, drops, gate bosses,
 challenges, the server share of the tournament pot) and the trader/villager
 bonus on sales. Spending doesn't lower it; emeralds or blocks received from
 other players, duel pots and auction sales don't count. When a week is over,

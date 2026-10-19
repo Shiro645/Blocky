@@ -56,7 +56,7 @@ _ACHIEVEMENTS: list[tuple[str, str, str, str, Callable[[int], str]]] = [
     ("merchant", "🤝", "Merchant", "stat:trades_completed", lambda n: f"Complete {_plural(n, 'trade')}"),
     ("auctioneer", "🏷️", "Auctioneer", "stat:auction_sales", lambda n: f"Sell {_plural(n, 'listing')} at the auction house"),
     ("treasure_hunter", "🎁", "Treasure Hunter", "stat:drops_claimed", lambda n: f"Claim {_plural(n, 'drop')}"),
-    ("boss_slayer", "🐉", "Boss Slayer", "stat:bosses_defeated", lambda n: "Help defeat a boss"),
+    ("boss_slayer", "⚔️", "Boss Slayer", "stat:bosses_defeated", lambda n: "Survive a victory against a gate boss"),
     ("champion", "👑", "Champion", "stat:seasons_won", lambda n: "Win a weekly season"),
     ("arena_champion", "🏟️", "Arena Champion", "stat:tournaments_won", lambda n: "Win a weekend tournament"),
     ("team_champion", "🚩", "Squad Goals", "stat:team_seasons_won", lambda n: "Win a team season with your team"),
@@ -79,6 +79,10 @@ _ACHIEVEMENTS: list[tuple[str, str, str, str, Callable[[int], str]]] = [
     ("handyman_10", "🔧", "Handyman", "stat:items_repaired", lambda n: f"Repair gear {n:,} times"),
     ("regular_20", "🧑‍🌾", "Regular Customer", "stat:villager_trades", lambda n: f"Make {_plural(n, 'deal')} with the wandering villager"),
     ("moneylender", "🏦", "Moneylender", "stat:emeralds_lent", lambda n: f"Lend {_plural(n, 'emerald')}"),
+    ("wither_slayer", "🖤", "Wither Slayer", "stat:wither_defeated", lambda n: "Survive a victory against the Wither"),
+    ("dragon_slayer", "🐉", "Dragon Slayer", "stat:ender_dragon_defeated",
+     lambda n: "Survive a victory against the Ender Dragon"),
+    ("warden_slayer", "👁️", "Warden Slayer", "stat:warden_defeated", lambda n: "Survive a victory against the Warden"),
 ]
 ACHIEVEMENT_CODES = [a[0] for a in _ACHIEVEMENTS]
 
@@ -208,8 +212,8 @@ def challenge_pool(kind: str = "week") -> list[Challenge]:
 def available(c: Challenge) -> bool:
     """A challenge that can be done now (the game it needs is on)."""
     s = settings.get()
-    if c.stat == "boss_damage":  # bosses only from /event boss: the week may have none
-        return float(s["boss"]["auto_spawn_hours"]) > 0
+    if c.stat == "boss_damage":  # gate bosses need a group and a dimension: not a challenge for everyone
+        return False
     if c.stat == "quiz_wins":
         return float(s["games"]["quiz_every_minutes"]) > 0
     if c.stat == "roulette_spins":

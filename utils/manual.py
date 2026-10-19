@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import blockdle, enchants, guide, live_events, luckyblock, mines, players, potions, progress, roulette
+from game import blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, RECIPES, TALENT_BRANCHES, block_name
 from game.profiles import FRAMES
@@ -41,7 +41,7 @@ CATEGORIES: dict[str, tuple[str, bool]] = {
 }
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-ROMAN = ("I", "II", "III")
+ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII")
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ def duration(seconds: float) -> str:
 
 def per_level(values: list, fmt: Callable[[float], str] = num) -> str:
     """[2, 4, 8] -> 'I 2 · II 4 · III 8'"""
-    return " · ".join(f"{ROMAN[i]} {fmt(v)}" for i, v in enumerate(values[:3]))
+    return " · ".join(f"{ROMAN[i]} {fmt(v)}" for i, v in enumerate(values[:len(ROMAN)]))
 
 
 def listing(mapping: dict, fmt: Callable[[Any], str] = num) -> str:
@@ -241,29 +241,27 @@ def _gear(s: Settings) -> list[str]:
 def _enchant_effects(s: Settings) -> list[str]:
     e = s["enchants"]
 
-    def levels(key: str, fmt: Callable[[float], str] = num) -> str:
-        return " / ".join(fmt(v) for v in e[key][: enchants.MAX_LEVEL])
+    def levels(key: str, fmt: Callable[[float], str] = num, start: int = 0) -> str:
+        return " / ".join(fmt(round(v, 3)) for v in e[key][start: enchants.MAX_LEVEL])
 
-    fortune = levels("fortune_bonus")
     effects = {
         "efficiency": f"mining cooldown -{levels('efficiency_seconds')} s",
-        "fortune": f"pickaxe +{fortune} cobblestone, shovel +{fortune} gravel, axe +{fortune} sticks, "
+        "fortune": f"+{levels('fortune_bonus')} blocks (pickaxe cobblestone, shovel gravel, axe sticks), "
         f"hoe +{levels('fortune_hoe_xp', pct)} XP",
         "unbreaking": f"{levels('unbreaking_chance', pct)} chance that a use costs no durability",
         "sharpness": f"+{levels('sharpness_damage')} maximum damage",
-        "looting": f"+{levels('looting_boss_bonus', pct)} boss reward",
-        "protection": f"+{levels('protection_points')} armor points",
-        "mending": f"the XP you gain repairs the equipped piece first: **{num(e['mending_durability_per_xp'])}** "
-        "durability per XP, and only the XP left goes to you. One level; the rarest book (the villager's exclusive "
-        f"offer, or now and then a boss's top damage dealer: {pct(e['boss_mending_chance'])})",
+        "looting": f"+{levels('looting_boss_bonus', pct)} gate boss bounty",
+        "protection": f"+{levels('protection_points')} armor points; IV to VII raise the damage reduction cap "
+        f"+{levels('protection_cap_bonus', pct, 3)} per piece",
+        "mending": f"your XP repairs it first (**{num(e['mending_durability_per_xp'])}** durability per XP); one level, "
+        f"from the villager or a gate boss ({pct(e['boss_mending_chance'])})",
     }
-    lines = []
+    lines = ["Effects, levels I to VII:"]
     for ench in enchants.ENCHANTS.values():
         items = "any gear" if len(ench.items) > 4 else ", ".join(ench.items)
         if ench.key == "protection":
             items = "armor"
-        levels_text = " (I / II / III)" if ench.max_level > 1 else ""
-        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}{levels_text}")
+        lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}")
     return lines
 
 
@@ -272,7 +270,7 @@ def _apply_cost(s: Settings) -> str:
 
 
 def _xp(s: Settings) -> list[str]:
-    m, d, du, b, t = s["mining"], s["daily"], s["duel"], s["boss"], s["tournament"]
+    m, d, du, t = s["mining"], s["daily"], s["duel"], s["tournament"]
     lo, hi = m["xp_per_message"]
     return [
         f"XP for the next level: **{num(s['levels']['xp_first_level'])}** at level 1, then "
@@ -280,7 +278,8 @@ def _xp(s: Settings) -> list[str]:
         f"level 50: **{num(players.xp_required_for_level(50))}**)",
         f"1 talent point every **{num(s['talents']['points_every_levels'])}** levels",
         f"XP sources: mining **{num(lo)}–{num(hi)}** per reward · daily **{num(d['xp'])}** · "
-        f"duel won **{num(du['xp_win'])}** / lost **{num(du['xp_loss'])}** · boss defeated **{num(b['xp_reward'])}** · "
+        f"duel won **{num(du['xp_win'])}** / lost **{num(du['xp_loss'])}** · gate boss "
+        f"**{num(s['gate_bosses']['wither']['xp'])}–{num(s['gate_bosses']['warden']['xp'])}** · "
         f"tournament fight won **{num(t['xp_per_win'])}**",
     ]
 
@@ -346,9 +345,8 @@ def _potions(s: Settings) -> list[str]:
     lines += [
         f"Reinforced (II): effect **×{num(p['level2_multiplier'])}**, **{num(p['strong_per_fight'])}** per duel or "
         "dungeon run at most",
-        f"Up to **{num(p['max_per_duel'])}** potions per duel, one per turn",
-        f"Bosses: the top **{num(p['boss_top'])}** damage dealers get **{num(p['boss_potions'])}** random "
-        f"potion{'s' if int(p['boss_potions']) != 1 else ''}",
+        f"Up to **{num(p['max_per_duel'])}** potions per duel, one per turn · gate bosses: "
+        f"**{num(s['gate_bosses']['max_potions'])}** per fight",
     ]
     return lines
 
@@ -390,32 +388,27 @@ def _live_events(s: Settings) -> list[str]:
     return lines
 
 
-def _boss(s: Settings) -> list[str]:
-    b = s["boss"]
-    spawn = (
-        f"A boss appears every **{num(b['auto_spawn_hours'])} h**"
-        if float(b["auto_spawn_hours"]) > 0
-        else "Bosses only appear when staff summons one"
-    )
-    return [
-        spawn,
-        f"HP: **{num(b['hp'])}** · stays **{num(b['duration_hours'])} h**, then escapes (nobody is paid)",
-        f"Reward pool: {em(b['reward_pool'])} shared by damage · top damage dealer: **+{num(b['top_damage_bonus'])}**",
-        f"Top **{num(s['enchants']['boss_book_top'])}**: a book · top **{num(s['potions']['boss_top'])}**: "
-        f"**{num(s['potions']['boss_potions'])}** random potion{'s' if int(s['potions']['boss_potions']) != 1 else ''} "
-        f"· XP for everyone: **{num(b['xp_reward'])}**",
-        "Looting: " + per_level(s["enchants"]["looting_boss_bonus"], pct) + " more reward",
-    ]
-
-
-def _attack(s: Settings) -> list[str]:
-    b = s["boss"]
-    return [
-        f"Cooldown: **{duration(b['attack_cooldown_seconds'])}** between two attacks",
-        f"A hit deals **{num(s['duel']['min_damage'])}** to your sword's maximum",
-        _sword(s),
-        f"Critical hit: **{pct(b['crit_chance'])}** (×{num(b['crit_multiplier'])})",
-    ]
+def _gate(s: Settings) -> list[str]:
+    g = s["gate_bosses"]
+    lines = [f"Groups of up to **{num(g['max_players'])}** · **{num(g['hp'])}** HP each · "
+             f"**{duration(g['turn_seconds'])}** per turn · one fight every **{num(g['cooldown_hours'])} h** · "
+             f"**{num(g['max_potions'])}** potions each per fight"]
+    for key, b in gate.BOSSES.items():
+        c = g[key]
+        small = " / ".join(pct(x) for x in c["small_group_hp"])
+        lines.append(f"{b.emoji} **{b.name}** ({DIMENSION_NAMES[b.home]} → {DIMENSION_NAMES[b.opens]}): entry "
+                     f"{em(c['entry'])} · **{num(c['boss_hp'])}** HP (1/2/3 players: {small}) · hits "
+                     f"**{num(c['min_damage'])}–{num(c['max_damage'])}** · bounty {em(c['bounty'])} · "
+                     f"**{num(c['xp'])}** XP")
+    w, d, wa = g["wither"], g["ender_dragon"], g["warden"]
+    lines.append(f"Wither: withers for **{num(w['wither_damage'])}** HP on its next **{num(w['wither_turns'])}** "
+                 f"turns · Dragon: **{num(d['strikes'])}** strikes a turn, breath **{num(d['breath_min'])}–"
+                 f"{num(d['breath_max'])}** every **{num(d['breath_every'])}** turns · Warden: Sonic Boom "
+                 f"**{num(wa['boom_min'])}–{num(wa['boom_max'])}** every **{num(wa['boom_every'])}** turns")
+    lines.append(f"A boss already beaten pays **{pct(g['repeat_reward'])}** of its bounty · Looting: "
+                 + per_level(s["enchants"]["looting_boss_bonus"], pct) + " more · a book (Mending "
+                 f"**{pct(s['enchants']['boss_mending_chance'])}**)")
+    return lines
 
 
 def _tournament(s: Settings) -> list[str]:
@@ -814,8 +807,11 @@ PAGES: list[Page] = [
     ),
     Page(
         "enchant combine", "gear",
-        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III), on your anvil "
-        "(`/craft item:anvil`; it wears out a little with each use). Level III is the maximum. It's free.",
+        "Turns 2 identical books into 1 book of the next level (I + I → II, II + II → III…), on your anvil "
+        "(`/craft item:anvil`; it wears out a little with each use). It's free.\n"
+        "Levels **IV to VII** only come from combining, and only up to your maximum: **III** in the overworld, "
+        "**IV** with the Nether, **V** the End, **VI** the Deep Dark, **VII** the Shimmer. Beyond III each level adds "
+        "half of what the one before added. You can't apply a book above your maximum either.",
         examples=("/enchant combine book:Fortune I",),
         related=("enchant apply", "enchant info"),
     ),
@@ -1126,20 +1122,29 @@ PAGES: list[Page] = [
     ),
     # ---- events ----
     Page(
-        "boss", "events",
-        "Shows the current boss: health, time left and the best damage dealers. Everyone fights it together "
-        "with /attack. When it's defeated, the reward pool is shared by damage dealt.",
-        _boss,
-        examples=("/boss",),
-        related=("attack", "gear"),
+        "boss fight", "combat",
+        "Calls a group to fight a **gate boss**: the 🖤 **Wither** (in the Nether, it opens the End), the 🐉 "
+        "**Ender Dragon** (in the End, it opens the Deep Dark) or the 👁️ **Warden** (in the Deep Dark, it opens the "
+        "Shimmer). You need to have reached its dimension; each player pays the entry when joining (given back if the "
+        "group never starts). The leader starts with the button.\n"
+        "It's turn by turn: each player in order may drink a potion, then **Attack** or **Attack + block** (with a "
+        "shield: the boss's next strike or hit on you is stopped), then the boss plays. No move in time: you attack; "
+        "miss a few turns in a row and yours play by themselves. A boss is made for a full group: a smaller one faces "
+        "less health, but it's much harder. Come prepared: shields and potions make the difference.\n"
+        "Each **survivor** of a victory opens the next dimension and gets the bounty (Looting adds to it), a book "
+        "(sometimes Mending) and XP; the fallen get nothing. Gear wears out like in duels.",
+        _gate,
+        examples=("/boss fight boss:🖤 Wither",),
+        related=("boss info", "dimensions", "pve start", "enchant combine"),
     ),
     Page(
-        "attack", "events",
-        "Attacks the current boss once. Like in duels, a hit deals a random amount between the minimum damage "
-        "and your sword's maximum, and can be a critical hit. Your sword wears out a little.",
-        _attack,
-        examples=("/attack",),
-        related=("boss", "gear"),
+        "boss info", "combat",
+        "Shows the gate bosses: where each one lives, what it opens, its entry and bounty, the ones you already "
+        "beat, how each one fights, and when you can fight again. The Nether opens by clearing the **Nightmare** "
+        "dungeon (/pve start).",
+        _gate,
+        examples=("/boss info",),
+        related=("boss fight", "dimensions"),
     ),
     Page(
         "tournament join", "events",
@@ -1699,17 +1704,10 @@ PAGES: list[Page] = [
     ),
     # ---- staff: events ----
     Page(
-        "event boss", "staff_events",
-        "Summons a boss now (only one at a time), with the name and HP you choose or the default ones.",
-        lambda s: [f"Default HP: **{num(s['boss']['hp'])}**", "Names: " + ", ".join(s["boss"]["names"])] + _boss(s)[:1],
-        examples=("/event boss", "/event boss name:Herobrine hp:5000"),
-        related=("boss", "event drop"),
-    ),
-    Page(
         "event drop", "staff_events",
         "Makes a drop appear in this channel right now: the first player to click it gets the reward.",
         examples=("/event drop",),
-        related=("event boss",),
+        related=("event quiz",),
     ),
     Page(
         "event tournament", "staff_events",

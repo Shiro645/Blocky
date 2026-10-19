@@ -439,7 +439,7 @@ class ResetView(BaseView):
                         "and type `RESET` to confirm. A backup of the database is made just before.",
             color=discord.Color.orange(),
         )
-        embed.add_field(name="Never touched", value="Minecraft links, moderation, teams, settings, bosses, tournaments, "
+        embed.add_field(name="Never touched", value="Minecraft links, moderation, teams, settings, boss fights, tournaments, "
                                                     "villager, Blockdle.", inline=False)
         return embed
 

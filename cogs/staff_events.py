@@ -14,7 +14,7 @@ from utils.checks import staff_only
 class StaffEventsCog(commands.Cog):
     """/event: start the server events now. The work is done by each event's own cog."""
 
-    event = app_commands.Group(name="event", description="STAFF: Start an event now: timed event, boss, drop, quiz, tournament, villager.")
+    event = app_commands.Group(name="event", description="STAFF: Start an event now: timed event, drop, quiz, tournament, villager.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -38,15 +38,6 @@ class StaffEventsCog(commands.Cog):
     @staff_only()
     async def stop(self, interaction: discord.Interaction):
         await self.cog("LiveEventsCog").staff_stop(interaction)
-
-    @event.command(name="boss", description="STAFF: Summon a boss now (one at a time).")
-    @app_commands.describe(name="Boss name (random if empty)", hp="Health points (default from the settings)")
-    @staff_only()
-    async def boss(
-        self, interaction: discord.Interaction, name: app_commands.Range[str, 1, 64] | None = None,
-        hp: app_commands.Range[int, 1, 10_000_000] | None = None,
-    ):
-        await self.cog("BossCog").summon(interaction, name, hp)
 
     @event.command(name="drop", description="STAFF: Make a drop appear in this channel now.")
     @staff_only()
