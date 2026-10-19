@@ -769,6 +769,10 @@ FIELDS: list[Field] = [
                                ("talents", "talents", "the talents (every spent point given back)"),
                                ("achievements", "achievements", "achievements, stats and challenges"),
                                ("dimensions", "dimensions", "the dimensions (back to the overworld)"))],
+    *[_b(f"prestige.skip_achievements.{code}", "prestige", f"Not needed: {name}"[:45], "On: a prestige doesn't need "
+         "this achievement.", kind="bool", min=None)
+      for code, name in (("champion", "Champion"), ("arena_champion", "Arena Champion"),
+                         ("team_champion", "Squad Goals"), ("warlord", "Warlord"), ("level_100", "Legend (level 100)"))],
     # ---- guide ----
     _b("guide.reward", "guide", "Checklist reward", "Emeralds for doing every step of the guide, paid once per player."),
     _b("guide.delete_after_days", "guide", "Days before a finished guide is deleted",

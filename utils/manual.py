@@ -450,6 +450,8 @@ def _prestige(s: Settings) -> list[str]:
         f"Levels: {steps}",
         f"Bonus: **+{pct(p['bonus'])}** mining XP and /sell per prestige, for good",
         "Starts over: " + (", ".join(on) if on else "nothing") + " · the level stays",
+        "Achievements not needed: " + (", ".join(a.name for a in progress.achievements()
+                                                   if p["skip_achievements"].get(a.code)) or "none"),
     ]
 
 
@@ -1202,7 +1204,8 @@ PAGES: list[Page] = [
     Page(
         "prestige", "progress",
         "**Prestige**: the end of the game, and a new start. Shows what the next prestige needs (a level, every "
-        "achievement, every dimension up to the Shimmer, the server's Beacon lit), what you start over and what you "
+        "achievement but the ones only one player or team wins each time and level 100, every dimension up to the "
+        "Shimmer, the server's Beacon lit), what you start over and what you "
         "get. When you meet everything, the **Become Prestige** button asks to confirm, then the parts set by the "
         "staff start over (by default your emeralds, blocks and items, your gear, your talents (every point given "
         "back to spend again), your achievements with their stats and challenges, and your dimensions). You keep "

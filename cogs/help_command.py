@@ -8,7 +8,7 @@ from game import settings
 from utils import manual
 from utils.config import channel_id
 from utils.checks import is_staff
-from utils.ui import BaseView, join_lines
+from utils.ui import BaseView, chunk_lines, join_lines
 
 TYPE_NAMES = {
     AppCommandOptionType.string: "text",
@@ -130,8 +130,8 @@ class HelpCog(commands.Cog):
             options = [option_line(p, seen) for p in cmd.parameters]
             embed.add_field(name="⚙️ Options", value=join_lines(options, empty="No options."), inline=False)
         values = page.current_values(settings.get())
-        if values:
-            embed.add_field(name="📊 Current values", value=join_lines(values), inline=False)
+        for i, chunk in enumerate(chunk_lines(values)):  # several fields when it's long (the challenges' pools)
+            embed.add_field(name="📊 Current values" + (" (more)" if i else ""), value=chunk, inline=False)
         if page.examples:
             examples = []
             for example in page.examples:

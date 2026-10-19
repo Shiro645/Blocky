@@ -367,4 +367,15 @@ UPDATES: tuple[Update, ...] = (
              "Sleep at night to be safe from monsters until the morning, and your next `/daily` pays 25% more."),
         ),
     ),
+    Update(
+        "2026-10-fixes-2-1", "2026-10-21", "Fixes",
+        "A few fixes after the 2.0 updates.",
+        (
+            ("🌟 Prestige",
+             "Prestige no longer needs the achievements only one player or team can win each time (Champion, Arena "
+             "Champion, Squad Goals, Warlord), nor Legend (level 100): Prestige I really is at level 50."),
+            ("📖 /help",
+             "The challenges page shows all its values again."),
+        ),
+    ),
 )

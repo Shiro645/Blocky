@@ -27,7 +27,8 @@ def status_embed(st: dict) -> discord.Embed:
     level, ach, dims = c["level"], c["achievements"], c["dimensions"]
     lines = [
         f"{mark('level')} Level **{level[1]}** (you: {level[0]})",
-        f"{mark('achievements')} Every achievement ({ach[0]}/{ach[1]})",
+        f"{mark('achievements')} Every achievement ({ach[0]}/{ach[1]}; the ones only one player wins and level 100 "
+        "aren't needed)",
         f"{mark('dimensions')} Every dimension, up to the {DIMENSION_NAMES[DIMENSIONS[-1]]} "
         f"(you: {DIMENSION_NAMES[DIMENSIONS[min(dims[0], len(DIMENSIONS) - 1)]]})",
         f"{mark('beacon')} The server's Beacon lit",

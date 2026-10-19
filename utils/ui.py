@@ -129,6 +129,23 @@ def tag_prefix(tags: dict[int, str], user_id: int, species: dict[int, str] | Non
     return (f"{star} " if star else "") + (f"{emoji} " if emoji else "") + (f"`[{tag}]` " if tag else "")
 
 
+def chunk_lines(lines: list[str], limit: int = 1024) -> list[str]:
+    """Lines grouped into texts of `limit` characters at most (one embed field each), none cut in half
+    (a single line longer than `limit` is shortened)."""
+    out: list[str] = []
+    current = ""
+    for line in lines:
+        line = line if len(line) <= limit else line[: limit - 1] + "…"
+        if current and len(current) + 1 + len(line) > limit:
+            out.append(current)
+            current = line
+        else:
+            current = f"{current}\n{line}" if current else line
+    if current:
+        out.append(current)
+    return out
+
+
 def join_lines(lines: list[str], limit: int = 1024, empty: str = "—") -> str:
     """Join lines without cutting one in half (embed fields hold 1024 characters)."""
     out, size = [], 0

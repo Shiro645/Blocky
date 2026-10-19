@@ -1,7 +1,8 @@
 """Prestige (/prestige): start over for good bonuses, up to prestige.max times.
 
-- Prestige n+1 needs level prestige.base_level + prestige.level_step × n (50, 60, 70…), every achievement,
-  every dimension (up to the Shimmer) and the server's Beacon lit.
+- Prestige n+1 needs level prestige.base_level + prestige.level_step × n (50, 60, 70…), every achievement but
+  the ones of prestige.skip_achievements (only one winner each time, and level 100), every dimension (up to the
+  Shimmer) and the server's Beacon lit.
 - The level stays. The parts switched on in prestige.reset start over: wealth (emeralds, blocks, items, auction
   listings, loans, bounties put), gear (and its enchantments, the anvil), talents (every spent point is given back
   to spend again: they come from the level, so none is lost), achievements (with the stats and the challenges
@@ -61,7 +62,8 @@ def status(ctx: Ctx, user_id: int) -> dict:
     out = {"prestige": n, "max": int(_cfg()["max"]), "bonus": bonus(user), "resets": resets()}
     if n >= out["max"]:
         return {**out, "next": None, "ready": False}
-    every = progress.achievements()
+    skip = _cfg()["skip_achievements"]
+    every = [a for a in progress.achievements() if not skip.get(a.code)]
     done = progress.unlocked_codes(ctx, user_id)
     missing = [a for a in every if a.code not in done]
     checks = {
