@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from game import beacon, blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
+from game import beacon, biomes, blockdle, enchants, gate, guide, live_events, luckyblock, mines, players, potions, progress, roulette
 from game.assets import MAX_STAFF_GEAR
 from game.catalog import DIMENSION_BLOCKS, DIMENSION_NAMES, DIMENSIONS, RECIPES, TALENT_BRANCHES, block_name
 from game.profiles import FRAMES
@@ -425,6 +425,16 @@ def _beacon(s: Settings) -> list[str]:
         f"Contributor (≥ {em(b['contributor_value'])} given this week): mining XP +{pct(b['contributor_xp'])}, /sell "
         f"+{pct(b['contributor_sell'])}",
     ]
+
+
+def _biomes(s: Settings) -> list[str]:
+    b = s["biomes"]
+    out = [f"Bonus **+{pct(b['bonus'])}**, malus **-{pct(b['malus'])}** · on a chance ×{num(b['odds_bonus'])} / "
+           f"×{num(b['odds_malus'])} · the biome's challenge pays {em(b['challenge_reward'])}"]
+    for biome in biomes.BIOMES.values():
+        off = "" if b["enabled"].get(biome.key, True) else " *(not drawn)*"
+        out.append(f"{biome.label}: {biomes.describe(biome.bonus, True)} · {biomes.describe(biome.malus, False)}{off}")
+    return out
 
 
 def _bounty(s: Settings) -> list[str]:
@@ -1255,6 +1265,16 @@ PAGES: list[Page] = [
         related=("luckyblock", "wheel", "sell", "market"),
     ),
     Page(
+        "biome", "events",
+        "Shows the **biome of the week**: one biome for the whole server, drawn every Monday (never the same twice "
+        "in a row) and announced. Each one has a **bonus** and a **malus** that fit it (the Mountains have emerald "
+        "ore: /sell pays more, but the steep slopes slow the mining down), and a **challenge** of its own, paid apart "
+        "from the weekly challenges (it doesn't count for their book). Also shows your progress on it.",
+        _biomes,
+        examples=("/biome",),
+        related=("challenges", "events"),
+    ),
+    Page(
         "villager", "events",
         "Shows whether the wandering villager is here and his 3 offers: a **sale** (goods below their value), "
         "a **purchase** (he buys a pile of blocks above the /sell price) and an **exclusive** (a level III book or "
@@ -1868,6 +1888,15 @@ PAGES: list[Page] = [
         _quiz,
         examples=("/event quiz",),
         related=("event drop",),
+    ),
+    Page(
+        "event biome", "staff_events",
+        "Sets this week's biome (until next Monday) and announces it. The biomes switched off in /config are never "
+        "drawn, but this can still set them. Progress on the biome's challenge only counts for the biome it was "
+        "made in.",
+        _biomes,
+        examples=("/event biome biome:🌊 Ocean",),
+        related=("biome",),
     ),
     Page(
         "event start", "staff_events",

@@ -1,7 +1,7 @@
 """Player state: emeralds, blocks, items, stats, XP and talents."""
 from __future__ import annotations
 
-from game import live_events, settings
+from game import biomes, live_events, settings
 from game.catalog import BLOCK_TYPES, MATERIALS, TALENT_BRANCHES
 from game.db import Ctx
 from game.errors import GameError
@@ -167,17 +167,19 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
     from game import beacon  # beacon depends on this module
 
     golden = live_events.sell_bonus(ctx)  # a Golden Hour
+    biome = biomes.multiplier(ctx, "sell") - 1.0  # the week's biome (can be a malus)
     extra = (trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
-             + beacon.sell_bonus(ctx, user_id))
-    bonus = int(round(base * extra))
+             + beacon.sell_bonus(ctx, user_id) + biome)
+    bonus = int(round(base * extra))  # below 0 when the biome's malus is bigger than the bonuses
     for b, n in sold.items():
         take_blocks(ctx, user_id, b, n)
     # The blocks' value was scored when they were mined: only the trader bonus is new.
-    give_emeralds(ctx, user_id, base)
+    give_emeralds(ctx, user_id, base + min(0, bonus))
     earn_emeralds(ctx, user_id, bonus)
     bump_stat(ctx, user_id, "emeralds_from_sales", base + bonus)
     left = {b: n for b, n in get_blocks(ctx, user_id).items() if n > 0}
-    return {"sold": sold, "base": base, "bonus": bonus, "golden": golden, "balance": get_emeralds(ctx, user_id),
+    return {"sold": sold, "base": base, "bonus": bonus, "golden": golden, "biome": biome,
+            "balance": get_emeralds(ctx, user_id),
             "left": left}
 
 

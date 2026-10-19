@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import progress, seasons
+from game import biomes, progress, seasons
 from utils.ui import em, join_lines, progress_bar
 
 
@@ -20,9 +20,10 @@ class ProgressCog(commands.Cog):
             day_ends = int(datetime.combine(ctx.today + timedelta(days=1), datetime.min.time(),
                                             tzinfo=ctx.local_now.tzinfo).timestamp())
             return (progress.daily_challenges(ctx, user_id), day_ends,
-                    progress.weekly_challenges(ctx, user_id), seasons.season_end(ctx))
+                    progress.weekly_challenges(ctx, user_id), seasons.season_end(ctx),
+                    biomes.current(ctx), progress.biome_progress(ctx, user_id))
 
-        day, day_ends, week, week_ends = await self.bot.db.run(load, interaction.user.id)
+        day, day_ends, week, week_ends, biome, biome_challenge = await self.bot.db.run(load, interaction.user.id)
 
         def lines(entries: list[dict]) -> str:
             out = []
@@ -39,6 +40,9 @@ class ProgressCog(commands.Cog):
             embed.add_field(name="📅 Today", value=f"{lines(day)}\n\nNew ones <t:{day_ends}:R>.", inline=False)
         if week:
             embed.add_field(name="🗓️ This week", value=f"{lines(week)}\n\nNew ones <t:{week_ends}:R>.", inline=False)
+        if biome_challenge:
+            embed.add_field(name=f"{biome.label}: the biome's challenge", value=f"{lines([biome_challenge])}\n\n"
+                            "Paid apart (not counted for the weekly book). `/biome`", inline=False)
         if not day and not week:
             embed.description = "No challenges right now."
         await interaction.response.send_message(embed=embed, ephemeral=True)

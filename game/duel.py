@@ -19,7 +19,7 @@ import json
 import random
 from dataclasses import dataclass, field
 
-from game import bounty, gear, players, potions, settings, species
+from game import biomes, bounty, gear, players, potions, settings, species
 from game.catalog import ARMOR, SHIELD
 from game.db import Ctx
 from game.errors import GameError
@@ -242,7 +242,7 @@ def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
     fighter = Fighter(
         user_id, float(gear.attack_damage(equipped)) * strength, gear.damage_reduction(equipped), hp,
         min_attack=float(settings.get()["duel"]["min_damage"]) * strength,
-        potion_boost=species.bonus(ctx, user_id, "witch"),
+        potion_boost=species.bonus(ctx, user_id, "witch") + (biomes.multiplier(ctx, "potions") - 1),  # the Swamp
         blocks_left=gear.shield_blocks(equipped),
     )
     fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}

@@ -70,7 +70,8 @@ class DropsCog(commands.Cog):
         """Every mining event has a small chance to make a drop appear."""
         d = settings.get()["drops"]
         now = time.monotonic()
-        if now < self.next_drop_at or self.rng.random() >= d["chance"]:
+        chance = float(d["chance"]) * float(result.get("drop_chance", 1.0))  # the week's biome
+        if now < self.next_drop_at or self.rng.random() >= chance:
             return
         self.next_drop_at = now + int(d["min_interval_seconds"])
         channel = self.bot.announcer.channel("events") or message.channel

@@ -152,8 +152,11 @@ class EconomyMiningCog(commands.Cog):
         embed = discord.Embed(title="Sale complete", description="\n".join(lines), color=discord.Color.green())
         gained = res["base"] + res["bonus"]
         if res["bonus"]:
-            embed.add_field(name="Gained", value=f"{res['base']} + {res['bonus']} bonus (Trader talent, Villager"
-                            f"{', 💰 Golden Hour' if res['golden'] else ''}) = {em(gained)}")
+            why = ["Trader talent", "Villager", "Beacon"] + (["💰 Golden Hour"] if res["golden"] else []) \
+                + ([f"biome {res['biome']:+.0%}"] if res.get("biome") else [])
+            sign = "+" if res["bonus"] > 0 else "-"
+            embed.add_field(name="Gained", value=f"{res['base']} {sign} {abs(res['bonus'])} ({', '.join(why)}) "
+                                                 f"= {em(gained)}")
         else:
             embed.add_field(name="Gained", value=em(gained))
         embed.add_field(name="New balance", value=em(res["balance"]))

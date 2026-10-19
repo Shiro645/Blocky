@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from game import anvil, enchants, gear, live_events, players, potions, settings, species
+from game import anvil, biomes, enchants, gear, live_events, players, potions, settings, species
 from game.catalog import ARMOR, MATERIALS, RECIPES, SHIELD, materials_for
 from game.db import Ctx
 from game.errors import GameError
@@ -42,7 +42,7 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
         raise GameError("Quantity must be greater than 0.")
     offer = offers[key]
     full_price = units * offer["price"]
-    sale = live_events.market_discount(ctx)  # a Market Sale
+    sale = market_discount(ctx)  # a Market Sale, the week's biome
     villager = species.bonus(ctx, user_id, "villager")
     total_price = max(1, round(full_price * (1 - sale) * (1 - villager)))
     players.spend_emeralds(ctx, user_id, total_price)
@@ -59,8 +59,13 @@ def buy(ctx: Ctx, user_id: int, key: str, units: int) -> dict:
     }
 
 
+def market_discount(ctx: Ctx) -> float:
+    """How much cheaper /market is now: a Market Sale and the week's biome (below 0: dearer)."""
+    return 1 - (1 - live_events.market_discount(ctx)) * biomes.multiplier(ctx, "market")
+
+
 def sale_price(price: int, discount: float) -> int:
-    """A market price during a Market Sale."""
+    """A market price with a discount (market_discount)."""
     return max(1, round(price * (1 - discount))) if discount else price
 
 
@@ -273,7 +278,7 @@ def gear_offer(ctx: Ctx, user_id: int, piece: dict) -> dict:
     (Villagers get their bonus on top)."""
     value = gear_value(piece)
     # During a Market Sale its craft is worth what the ingots cost now: buying cheap to sell gear isn't a profit.
-    value -= craft_cost(piece["item"], piece["material"]) * live_events.market_discount(ctx)
+    value -= craft_cost(piece["item"], piece["material"]) * max(0.0, market_discount(ctx))
     left = piece["durability"] / piece["max_durability"] if piece["max_durability"] else 0.0
     base = max(1, int(round(value * float(settings.get()["market"]["gear_sell_rate"]) * left)))
     bonus = int(round(base * species.bonus(ctx, user_id, "villager")))

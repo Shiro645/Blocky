@@ -8,8 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from cogs.economy_market import QuantityModal, market_options
-from game import assets, botstate, exchange, live_events, settings, shop
+from cogs.economy_market import QuantityModal, market_options, price_note
+from game import assets, botstate, exchange, settings, shop
 from utils.autocomplete import owned_asset_choices
 from utils.config import channel_id
 from utils.ui import ConfirmView, asset_icon, em, report_error
@@ -28,7 +28,7 @@ def shop_embed(discount: float = 0.0) -> discord.Embed:
         icon = asset_icon("stick" if offer["item"] == "stick" else f"ingot:{offer['material']}") or "•"
         now = shop.sale_price(offer["price"], discount)
         lines.append(f"{icon} **{offer['label']}** — {em(now)}" + (f" ~~{offer['price']:,}~~" if now != offer["price"] else ""))
-    sale = f"🏷️ **Market Sale**: everything is **{discount:.0%}** cheaper for a while!\n\n" if discount else ""
+    sale = price_note(discount, "for a while")
     embed = discord.Embed(
         title="🛒 Market",
         description=f"{sale}Buy from the server at fixed prices: pick an item in the menu, then the quantity.\n\n"
@@ -238,7 +238,7 @@ class AuctionCog(commands.Cog):
 
     async def ensure_shop(self, channel: discord.abc.Messageable, cid: int) -> bool:
         """Keep the market message (fixed prices) up to date. Returns True if it had to be posted again."""
-        discount = await self.bot.db.run(live_events.market_discount)
+        discount = await self.bot.db.run(shop.market_discount)
         embed = shop_embed(discount)
         signature = (cid, repr(shop.market_offers()), embed.footer.text, discount)
         saved = await self.bot.db.run(botstate.get, SHOP_KEY)

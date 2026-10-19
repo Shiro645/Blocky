@@ -253,6 +253,12 @@ SECTIONS: tuple[Section, ...] = (
         "daily limit at the Lucky Block and the wheel), ⛏️ **Mining Rush** (more mining XP), 💰 **Golden Hour** "
         "(`/sell` pays more), 🍀 **Lucky Hour** (more obsidian and bedrock) or 🏷️ **Market Sale** (cheaper "
         "`/market`). One comes every day at a random time, announced in the events channel.\n\n"
+        "**🗺️ The biome of the week** (`/biome`): every Monday a biome is drawn for the whole server (never the "
+        "same twice in a row), with a bonus and a malus that fit it: the Mountains have emerald ore (`/sell` pays "
+        "more) but steep slopes (slower mining), the Ocean has shipwrecks (more drops) but you mine underwater "
+        "(slower), the Mushroom Fields have no monsters (less damage taken in the dungeon) but are far from "
+        "everything (`/market` dearer)… Each biome also has a **challenge** of its own, paid apart from the weekly "
+        "challenges (`/challenges` shows it too).\n\n"
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
 
@@ -260,7 +266,7 @@ SECTIONS: tuple[Section, ...] = (
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "
         "reinforced potion). Each offer exists **once**: the first to click gets it. `/villager` says when he's "
         "next here.",
-        ("events", "villager"),
+        ("events", "biome", "villager"),
     ),
     Section(
         "competition", "🏆 Seasons, challenges, achievements and leaderboards",

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from game import beacon, dimensions, enchants, gear, live_events, players, settings, species, teams
+from game import beacon, biomes, dimensions, enchants, gear, live_events, players, settings, species, teams
 from game.catalog import DIMENSION_BLOCKS, rank_block
 from game.db import Ctx
 from game.errors import GameError
@@ -105,8 +105,8 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     user = players.get_user(ctx, user_id)
     tools = gear.get_equipped(ctx, user_id)
     common = rank_block(dimension, 0)
-    block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"], live_events.rare_multiplier(ctx),
-                                dimension)
+    rare = live_events.rare_multiplier(ctx) * biomes.multiplier(ctx, "rare_odds")  # a Lucky Hour, the biome
+    block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"], rare, dimension)
     used: list[dict] = []
     sticks = 0
 
@@ -172,6 +172,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     glow = beacon.mining_xp_bonus(ctx, user_id)  # the Beacon, and giving to it this week
     if glow:
         xp = int(round(xp * (1 + glow)))
+    biome_xp = biomes.multiplier(ctx, "mining_xp")  # the week's biome
+    if biome_xp != 1:
+        xp = int(round(xp * biome_xp))
 
     players.add_blocks(ctx, user_id, block, amount)
     players.add_blocks(ctx, user_id, common, bonus)
@@ -208,6 +211,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     haste = beacon.effect(ctx, "haste")
     if haste and cooldown > 0:
         cooldown = max(1, round(cooldown * (1 - haste)))
+    slow = biomes.multiplier(ctx, "cooldown")  # the week's biome
+    if slow != 1 and cooldown > 0:
+        cooldown = max(1, round(cooldown * slow))
     return {
         "dimension": dimension,
         "block": block,
@@ -222,4 +228,5 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
         "lapis": lapis,
         "broken": broken,
         "cooldown": cooldown,
+        "drop_chance": biomes.multiplier(ctx, "drops"),  # the drops cog's chance is multiplied by this
     }

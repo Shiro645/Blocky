@@ -149,6 +149,18 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
   - 🍀 **Lucky Hour** — obsidian and bedrock ×2 more likely when mining.
   - 🏷️ **Market Sale** — `/market` 25% cheaper (during it, gear sold with `/sell gear` is valued at the sale prices, so buying cheap to sell gear back isn't a profit).
   - One comes by itself **every day** at a random time between 10:00 and 22:00, never the same as the day before; the staff can start one with `/event start` (one at a time) and end it with `/event stop`. Tuned with `balance.live_events` (`/config` → Games & events → Timed events): `daily_random`, `earliest_hour`, `latest_hour`, `duration_minutes`, `random_kinds` (which ones can come by themselves), `frenzy_multiplier`, `rush_xp_multiplier`, `golden_sell_bonus`, `lucky_rare_multiplier`, `market_sale_discount`.
+- **Biome of the week** (`/biome`) — Every Monday a biome is drawn for the whole server (never the same as the week before) and announced; the staff can set one with `/event biome`. Each has a bonus (**+15%**, or **×1.5** on a chance) and a malus (**-10%**, or **×0.9** on a chance), and a challenge paying **250** emeralds apart from the weekly challenges (not counted for their book; also in `/challenges`):
+  - 🏜️ Desert: highest bet of the games of chance ×1.5 · mining XP -10% · break 30 Lucky Blocks
+  - ⛰️ Mountains: /sell +15% · mining cooldown +10% · earn 1,500 emeralds selling blocks
+  - 🏔️ Badlands: rare blocks ×1.5 · /sell -10% · find 6 bedrock
+  - 🌲 Forest: /market -15% · rare blocks ×0.9 · craft 3 pieces of gear
+  - 🌑 Dark Forest: /rob loot +15% · damage taken in the dungeon and against gate bosses +10% · 3 successful robberies
+  - 🌴 Jungle: dungeon rewards +15% · mining XP -10% · clear 20 dungeon waves
+  - 🌿 Swamp: potion effects +15% (duels, dungeon, gate bosses) · drop chance ×0.9 · win 3 duels
+  - 🌊 Ocean: drop chance ×1.5 · mining cooldown +10% · claim 3 drops
+  - 🍄 Mushroom Fields: damage taken in the dungeon and against gate bosses -15% · /market +10% · deal 250 damage to bosses
+  - ❄️ Tundra: mining cooldown -15% · drop chance ×0.9 · mine 900 blocks
+  - They add up with the other bonuses (Beacon, timed events, talents). All in `balance.biomes` (`/config` → Games & events → 🗺️ Biomes of the week): `bonus`, `malus`, `odds_bonus`, `odds_malus`, `enabled` (which ones are drawn), `challenge_reward`, `challenges` (each biome's target).
 - **Random drops** — Activity sometimes makes a drop appear (emeralds, ingots, bedrock, lapis, enchanted books, potions). The first player to click gets it.
 
 ### 🚪 Gate bosses
@@ -582,6 +594,7 @@ game/                        # game rules, no Discord code
 ├── beacon.py                # the server's Beacon
 ├── war.py                   # gang wars: team chests, the weekly war, raids
 ├── bounty.py                # bounties on players' heads
+├── biomes.py                # the biome of the week
 ├── live_events.py           # timed events (Gambling Frenzy, Mining Rush, Golden Hour, Lucky Hour, Market Sale)
 └── links.py                 # Discord <-> Minecraft links
 cogs/                        # slash commands, one file per feature
