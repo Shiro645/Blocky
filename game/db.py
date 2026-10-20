@@ -771,6 +771,10 @@ MIGRATIONS: list[str] = [
     ALTER TABLE raids ADD COLUMN state TEXT;                  -- JSON: the turn-by-turn fight (status 'fighting')
     ALTER TABLE teams ADD COLUMN chest_debt INTEGER NOT NULL DEFAULT 0;  -- levy not paid (the chest was emptied)
     """,
+    # 42: the enchanting table (crafted once, it never wears out)
+    """
+    ALTER TABLE users ADD COLUMN enchanting_table INTEGER NOT NULL DEFAULT 0;  -- 1 = the player has one
+    """,
 ]
 
 

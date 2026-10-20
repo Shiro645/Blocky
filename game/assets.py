@@ -149,8 +149,9 @@ def item_key(item: str, material: str) -> str:
     return f"{item}:{material}"
 
 
-def _pick_gear(ctx: Ctx, user_id: int, key: str) -> dict:
-    """A piece with exactly the enchantments of the key: spare pieces first, then the most worn one."""
+def _pick_gear(ctx: Ctx, user_id: int, key: str, bound_ok: bool = False) -> dict:
+    """A piece with exactly the enchantments of the key: spare pieces first, then the most worn one. A worn piece
+    with the Curse of Binding never leaves its owner (only the staff can take it: `bound_ok`)."""
     parts = parse(key)
     rows = ctx.all(
         """
@@ -160,14 +161,20 @@ def _pick_gear(ctx: Ctx, user_id: int, key: str) -> dict:
         (user_id, parts[1], parts[2]),
     )
     wanted = gear_enchants(key)
+    bound = False
     for piece in enchants.attach(ctx, [dict(r) for r in rows]):
         if piece["enchants"] == wanted:
+            if piece["equipped"] and "binding" in piece["enchants"] and not bound_ok:
+                bound = True
+                continue
             return piece
+    if bound:
+        raise GameError(f"Your **{describe(key)}** has the **Curse of Binding**: it can't leave you until it breaks.")
     raise GameError(f"You don't have a **{describe(key)}**.")
 
 
-def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
-    """Remove an asset from a player. For gear, returns the removed piece."""
+def take(ctx: Ctx, user_id: int, key: str, amount: int, bound_ok: bool = False) -> dict | None:
+    """Remove an asset from a player. For gear, returns the removed piece (`bound_ok`: see _pick_gear)."""
     if amount <= 0:
         raise GameError("Amount must be greater than 0.")
     parts = parse(key)
@@ -195,7 +202,7 @@ def take(ctx: Ctx, user_id: int, key: str, amount: int) -> dict | None:
     else:
         if amount != 1:
             raise GameError("Gear can only be moved one piece at a time.")
-        piece = _pick_gear(ctx, user_id, key)
+        piece = _pick_gear(ctx, user_id, key, bound_ok)
         ctx.execute("DELETE FROM gear WHERE gear_id=?;", (piece["gear_id"],))
         return piece
     return None
@@ -242,7 +249,8 @@ def catalog() -> list[str]:
     "gear:diamond:sword:sharpness3" gives an enchanted piece)."""
     keys = ["emeralds", *(f"block:{b}" for b in BLOCK_TYPES), "stick", *(f"ingot:{m}" for m in MATERIALS), "lapis",
             "scrap"]
-    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) for lvl in range(1, enchants.ENCHANTS[e].max_level + 1)]
+    keys += [f"book:{e}:{lvl}" for e in sorted(enchants.ENCHANTS) if not enchants.ENCHANTS[e].curse
+             for lvl in range(1, enchants.ENCHANTS[e].max_level + 1)]
     keys += [f"potion:{potions.key_of(k, lvl)}" for k in potions.POTIONS for lvl in range(1, potions.MAX_LEVEL + 1)]
     keys += [f"gear:{m}:{i}" for m in MATERIALS for i in GEAR_ITEMS if m in materials_for(i)]
     return keys
@@ -276,7 +284,7 @@ def staff_take(ctx: Ctx, user_id: int, key: str, amount: int) -> tuple[int, int]
         raise GameError(f"<@{user_id}> has no **{describe(key)}**.")
     if is_gear(key):
         for _ in range(removed):
-            take(ctx, user_id, key, 1)
+            take(ctx, user_id, key, 1, bound_ok=True)
     else:
         take(ctx, user_id, key, removed)
     return removed, have - removed

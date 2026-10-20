@@ -162,13 +162,17 @@ def create_gear(ctx: Ctx, user_id: int, item: str, material: str) -> int:
 
 
 def craft(ctx: Ctx, user_id: int, item: str, material: str | None = None) -> dict:
-    """Craft a piece of gear (or the anvil). Without a material, the item's only material is used."""
+    """Craft a piece of gear (or the anvil, a netherite ingot, the enchanting table). Without a material, the item's only material is used."""
     if item == "anvil":
         return {**anvil.craft(ctx, user_id), "anvil": True}
     if item == "netherite_ingot":
         return {**craft_netherite_ingot(ctx, user_id), "netherite_ingot": True}
+    if item == "enchanting_table":
+        from game import enchanting_table  # it uses this module's values
+
+        return {**enchanting_table.craft(ctx, user_id), "enchanting_table": True}
     if item not in RECIPES:
-        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}, anvil, netherite_ingot.")
+        raise GameError(f"Unknown item. Allowed: {', '.join(RECIPES)}, anvil, netherite_ingot, enchanting_table.")
     if material is None:
         if len(materials_for(item)) != 1:
             raise GameError(f"Choose the `material` of your {item}: {', '.join(materials_for(item))}.")
@@ -297,6 +301,7 @@ def sell_gear(ctx: Ctx, user_id: int, gear_id: int, price: int | None = None) ->
     piece = owned_piece(ctx, user_id, gear_id)
     if piece["material"] == "netherite":
         raise GameError("🔥 Netherite gear can't be sold: it's yours for good.")
+    gear.check_not_bound(ctx, piece)
     offer = gear_offer(ctx, user_id, piece)
     if price is not None and offer["price"] != price:
         raise GameError(f"The price changed: it now sells for **{offer['price']:,}** emeralds. Use `/sell` again.")

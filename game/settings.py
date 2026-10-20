@@ -248,6 +248,30 @@ DEFAULTS: dict[str, Any] = {
         # Reference values in emeralds (fortune, fair auction prices).
         "lapis_value": 10,
         "book_values": [50, 150, 400, 800, 1600, 3200, 6400],
+        # Fire Aspect (sword): each hit that lands sets the target on fire for fire_aspect_turns of its turns (the
+        # fighter's own turns; a round for monsters and bosses), losing this much health each, through the armor.
+        # Several burning swords don't add up: the strongest fire burns.
+        "fire_aspect_damage": [0.5, 1.0, 1.5, 1.75, 1.875, 1.9375, 1.96875],
+        "fire_aspect_turns": 3,
+        # Thorns (armor): each piece sends back this share of the damage taken to the attacker (no armor stops it).
+        "thorns_reflect": [0.02, 0.04, 0.06, 0.07, 0.075, 0.0775, 0.07875],
+        # Sweeping Edge (sword, the dungeon): this share of each hit also hits another monster.
+        "sweeping_edge_share": [0.025, 0.04, 0.05, 0.055, 0.0575, 0.05875, 0.059375],
+    },
+    # The enchanting table: crafted once (it never wears out), it enchants a piece of gear without any enchantment
+    # with 1 to 3 random enchantments, for lapis only.
+    "enchanting_table": {
+        "obsidian": 4,  # blocks
+        "diamond_ingots": 2,
+        "books": 1,  # any enchanted book (the least valuable one is used)
+        "lapis": 12,  # a use
+        "count_weights": [60, 30, 10],  # chances of 1 / 2 / 3 enchantments
+        # Weights of level I to VII, up to the player's maximum (III, +1 per dimension). The maximum itself always
+        # weighs top_level_weight: very rare.
+        "level_weights": [60.0, 30.0, 9.0, 4.0, 2.0, 1.0, 0.5],
+        "top_level_weight": 1.0,
+        "curse_chance": 0.10,  # a curse comes on top of the enchantments this often
+        "curse_weights": {"binding": 1.0, "vanishing": 1.0},
     },
     "villager": {
         # Every day from arrive_hour to leave_hour (local time), 3 offers, one of each.
@@ -976,6 +1000,19 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     for key in ("book_weights", "boss_book_weights"):
         if sum(float(w) for w in ench[key]) <= 0:
             out.append((f"`balance.enchants.{key}`: at least one level needs a weight above 0.", [("enchants", key)]))
+    for key in ("thorns_reflect", "sweeping_edge_share"):
+        if any(float(v) > 1 for v in ench[key]):
+            out.append((f"`balance.enchants.{key}` is a share: between 0 and 1.", [("enchants", key)]))
+    table = merged["enchanting_table"]
+    if sum(float(w) for w in table["count_weights"]) <= 0:
+        out.append(("`balance.enchanting_table.count_weights`: at least one count needs a weight above 0.",
+                    [("enchanting_table", "count_weights")]))
+    if sum(float(w) for w in table["level_weights"][:2]) <= 0:
+        out.append(("`balance.enchanting_table.level_weights`: level I or II needs a weight above 0.",
+                    [("enchanting_table", "level_weights")]))
+    if float(table["curse_chance"]) > 0 and sum(float(w) for w in table["curse_weights"].values()) <= 0:
+        out.append(("`balance.enchanting_table.curse_weights`: at least one curse needs a weight above 0.",
+                    [("enchanting_table", "curse_weights", k) for k in table["curse_weights"]]))
     if float(merged["repair"]["durability_per_ingot"]) <= 0:
         out.append(("`balance.repair.durability_per_ingot` must be above 0.", [("repair", "durability_per_ingot")]))
     if sum(float(w) for w in merged["potions"]["random_weights"].values()) <= 0:

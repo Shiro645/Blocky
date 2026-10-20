@@ -82,6 +82,8 @@ class Player:
     speed_chance: float = 0.0
     withered: int = 0  # boss turns left losing health to the Wither
     afk: int = 0  # turns missed in a row
+    fire: float = 0.0  # Fire Aspect: health the boss loses each of its turns on fire
+    thorns: float = 0.0  # Thorns: share of the damage taken sent back to the boss
     gear_ids: dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -104,6 +106,9 @@ class Fight:
     min_bonus: float = 0.0  # Strength drunk this turn
     log: list[str] = field(default_factory=list)  # what happened since the last message (shown, then cleared)
     result: str | None = None  # "won" | "lost"
+    burning: int = 0  # boss turns left on fire (Fire Aspect: the strongest sword's fire burns)
+    burn: float = 0.0  # health it loses each of them
+    burner: int = 0  # the player whose fire it is (the damage counts for them)
 
     # ---- state ----
     @property
@@ -190,6 +195,8 @@ class Fight:
         damage = min(damage, self.hp)
         self.hp -= damage
         p.damage += damage
+        if p.fire > 0 and (not self.burning or p.fire >= self.burn):
+            self.burning, self.burn, self.burner = gear.burn_turns(), p.fire, p.user_id
         return damage if not crit else -damage  # negative: a critical hit (for the log)
 
     def attack(self, rng: random.Random, user_id: int, block: bool = False) -> None:
@@ -247,13 +254,33 @@ class Fight:
             return 0.0
         p.hp = max(0.0, p.hp - damage)
         p.hits_taken += 1
+        reflected = min(self.hp, damage * p.thorns)
+        if reflected > 0:
+            self.hp -= reflected
+            p.damage += reflected
+            self.log.append(f"🌵 <@{p.user_id}>'s thorns: -{reflected:.1f} to the boss")
         return damage
+
+    def _burn(self) -> None:
+        """The boss on fire loses health at the start of its turn (counted for the player whose fire it is)."""
+        if self.burning <= 0:
+            return
+        self.burning -= 1
+        damage = min(self.burn, self.hp)
+        self.hp -= damage
+        for p in self.players:
+            if p.user_id == self.burner:
+                p.damage += damage
+        self.log.append(f"🔥 The {BOSSES[self.boss].name} burns: -{damage:.1f}")
 
     def boss_turn(self, rng: random.Random) -> None:
         c = boss_cfg(self.boss)
         b = BOSSES[self.boss]
         alive = [p for p in self.players if p.alive]
         self.rounds += 1
+        self._burn()
+        if self._check_won():
+            return
         if self.boss == "wither":
             for p in alive:  # the withering of its last turns
                 if p.withered > 0:
@@ -297,6 +324,8 @@ class Fight:
         for p in alive:
             if not p.alive:
                 self.log.append(f"☠️ <@{p.user_id}> falls.")
+        if self._check_won():  # the thorns
+            return
         if not any(p.alive for p in self.players):
             self.result = "lost"
             self.log.append(f"💀 **Everyone fell. The {b.name} wins.**")
@@ -327,7 +356,7 @@ def make_player(ctx: Ctx, user_id: int) -> Player:
     taken = biomes.multiplier(ctx, "damage_taken") * (1 - team)  # the week's biome
     p = Player(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
                1 - (1 - f.reduction) * (1 - resistance) * taken, float(_cfg()["hp"]), potion_boost=f.potion_boost,
-               blocks_left=f.blocks_left)
+               blocks_left=f.blocks_left, fire=f.fire, thorns=f.thorns)
     p.gear_ids = dict(f.gear_ids)
     return p
 
@@ -561,6 +590,8 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
                 gear.wear(ctx, pieces[slot], p.hits_taken)
         if p.blocks_used and SHIELD in pieces:
             gear.wear_shield(ctx, pieces[SHIELD], p.blocks_used)
+        if not p.alive:
+            gear.vanish(ctx, pieces)  # the Curse of Vanishing
         if fight.result != "won" or not p.alive:
             continue
         opened = dimensions.unlock(ctx, p.user_id, b.opens)

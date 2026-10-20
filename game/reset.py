@@ -66,7 +66,7 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
     if "gear" in parts:
         ctx.execute(f"DELETE FROM gear_enchants WHERE gear_id IN (SELECT gear_id FROM gear{where});", args)
         out["gear"] = ctx.execute(f"DELETE FROM gear{where};", args).rowcount
-        ctx.execute(f"UPDATE users SET anvil=0{where};", args)
+        ctx.execute(f"UPDATE users SET anvil=0, enchanting_table=0{where};", args)
 
     if "levels" in parts:
         ctx.execute(

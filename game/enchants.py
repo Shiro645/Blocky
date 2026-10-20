@@ -9,6 +9,8 @@ Enchantments belong to the piece of gear: they follow it in trades and
 auctions, and disappear when it breaks.
 Random books are levels I to III. Levels IV to VII only come from combining, and a
 player can only make or apply a level up to 3 + their dimension (Nether IV … Shimmer VII).
+Curses (Binding, Vanishing) never come as books: only the enchanting table puts them on a piece
+(game/enchanting_table.py), and they can't be removed.
 """
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ from game.errors import GameError
 MAX_LEVEL = 7
 BASE_LEVEL = 3  # the highest level of random books, and of the overworld
 ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII"}
+CURSABLE = tuple(i for i in GEAR_ITEMS if i != "shield")  # what the enchanting table enchants
 
 
 @dataclass(frozen=True)
@@ -33,7 +36,8 @@ class Enchant:
     items: tuple[str, ...]
     setting: str  # the effect in settings "enchants": a list for level I / II / III, or one value (one level)
     max_level: int = MAX_LEVEL
-    rare: bool = False  # never a random book
+    rare: bool = False  # never a random book, nor from the enchanting table
+    curse: bool = False  # never a book: only the enchanting table puts it, and it can't be removed
 
 
 ENCHANTS: dict[str, Enchant] = {
@@ -46,11 +50,17 @@ ENCHANTS: dict[str, Enchant] = {
         Enchant("looting", "Looting", ("sword",), "looting_boss_bonus"),
         Enchant("protection", "Protection", ARMOR, "protection_points"),
         Enchant("mending", "Mending", GEAR_ITEMS, "mending_durability_per_xp", max_level=1, rare=True),
+        Enchant("fire_aspect", "Fire Aspect", ("sword",), "fire_aspect_damage"),
+        Enchant("sweeping_edge", "Sweeping Edge", ("sword",), "sweeping_edge_share"),
+        Enchant("thorns", "Thorns", ARMOR, "thorns_reflect"),
+        Enchant("binding", "Curse of Binding", CURSABLE, "", max_level=1, rare=True, curse=True),
+        Enchant("vanishing", "Curse of Vanishing", CURSABLE, "", max_level=1, rare=True, curse=True),
     )
 }
 RANDOM_BOOKS = tuple(sorted(k for k, e in ENCHANTS.items() if not e.rare))  # what a random book can be
+CURSES = tuple(k for k, e in ENCHANTS.items() if e.curse)
 
-_PART = re.compile(r"^([a-z]+)([1-9])$")
+_PART = re.compile(r"^([a-z_]+)([1-9])$")
 
 
 def _cfg() -> dict:
@@ -66,7 +76,9 @@ def _per_level(values: list | float, level: int) -> float:
 
 
 def bonus(name: str, level: int) -> float:
-    """Effect of an enchantment at a level (0 when not enchanted)."""
+    """Effect of an enchantment at a level (0 when not enchanted; curses have no number)."""
+    if ENCHANTS[name].curse:
+        return float(level > 0)
     return _per_level(_cfg()[ENCHANTS[name].setting], level)
 
 
@@ -137,6 +149,16 @@ def effect_text(name: str, level: int) -> str:
         return f"+{v:.0%} boss reward"
     if name == "mending":
         return f"the XP you gain repairs it first ({v:g} durability per XP)"
+    if name == "fire_aspect":
+        return f"burns {int(_cfg()['fire_aspect_turns'])} turns, -{v:g}/turn"
+    if name == "sweeping_edge":
+        return f"{v * 100:g}% on a 2nd monster"
+    if name == "thorns":
+        return f"{v * 100:g}% sent back"
+    if name == "binding":
+        return "once worn, it can't be taken off, replaced, sold or traded until it breaks"
+    if name == "vanishing":
+        return "it vanishes if you fall in the dungeon, against a gate boss or at night"
     cap = protection_cap_bonus(level)
     return f"+{v:g} armor points" + (f", damage reduction cap +{cap:.0%}" if cap else "")
 
@@ -156,7 +178,7 @@ def book_material(name: str, level: int) -> str:
 def parse_book(material: str) -> tuple[str, int]:
     """'sharpness:2' -> ('sharpness', 2)"""
     name, _, level = material.partition(":")
-    if name not in ENCHANTS or not level.isdigit() or not 1 <= int(level) <= ENCHANTS[name].max_level:
+    if name not in ENCHANTS or ENCHANTS[name].curse or not level.isdigit() or not 1 <= int(level) <= ENCHANTS[name].max_level:
         raise GameError("Unknown book. Pick one from the suggestions.")
     return name, int(level)
 

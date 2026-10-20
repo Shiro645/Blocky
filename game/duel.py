@@ -7,7 +7,9 @@ The fight is turn based and luck matters a lot:
 - with a shield, a player can end their turn with "Attack + block": the
   opponent's next attack (all its hits) is blocked, twice per duel at most.
   Nobody sees it coming: only "X blocked N damage" when it happens;
-- armor reduces the damage taken, but only up to a cap.
+- armor reduces the damage taken, but only up to a cap;
+- Fire Aspect sets the target on fire for a few of its turns (it loses health at the start of each, through the
+  armor); Thorns sends part of the damage taken back to the attacker.
 Better gear wins more often, not always. The player who plays second starts
 with a few extra HP to make up for not striking first. In a duel the players
 play their turns one by one and can drink a potion before attacking (see
@@ -43,6 +45,11 @@ class Fighter:
     blocking: bool = False  # the shield is raised for the opponent's next attack
     blocks_used: int = 0
     blocked_damage: float = 0.0
+    fire: float = 0.0  # Fire Aspect: health the target loses each turn it burns
+    thorns: float = 0.0  # Thorns: share of the damage taken sent back to the attacker
+    burning: int = 0  # own turns left on fire
+    burn_damage: float = 0.0  # health lost each of those turns
+    burned: float = 0.0  # health lost to fire in this fight
     gear_ids: dict[str, int] = field(default_factory=dict)  # slot -> gear_id worn when the fight started
 
     def __post_init__(self) -> None:
@@ -54,6 +61,7 @@ class Hit:
     damage: float
     crit: bool
     blocked: bool = False  # by the defender's shield
+    thorns: float = 0.0  # damage the defender's Thorns sent back to the attacker
 
 
 @dataclass
@@ -65,6 +73,8 @@ class Turn:
     direct: float = 0.0  # Harming damage
     hits: list[Hit] = field(default_factory=list)
     blocked: float = 0.0  # damage the defender's shield stopped
+    burn: float = 0.0  # health the attacker lost to fire at the start of the turn
+    thorns: float = 0.0  # damage the defender's Thorns sent back to the attacker
     attacker_hp: float = 0.0
     defender_hp: float = 0.0
 
@@ -143,7 +153,22 @@ class Fight:
             return Hit(damage, crit, blocked=True)  # what it would have dealt
         defender.hp = max(0.0, defender.hp - damage)
         defender.hits_taken += 1
-        return Hit(damage, crit)
+        if attacker.fire > 0:
+            defender.burning, defender.burn_damage = gear.burn_turns(), attacker.fire
+        reflected = min(attacker.hp, damage * defender.thorns)
+        attacker.hp -= reflected
+        return Hit(damage, crit, thorns=reflected)
+
+    @staticmethod
+    def burn(fighter: Fighter) -> float:
+        """A fighter on fire loses health at the start of their turn. Returns it."""
+        if fighter.burning <= 0:
+            return 0.0
+        fighter.burning -= 1
+        damage = min(fighter.hp, fighter.burn_damage)
+        fighter.hp -= damage
+        fighter.burned += damage
+        return round(damage, 1)
 
     def drink(self, potion: str) -> Turn:
         """The current player drinks a potion. The turn goes on: they attack next (see play)."""
@@ -188,12 +213,14 @@ class Fight:
         min_bonus = self._min_bonus
         self.pending, self._min_bonus = None, 0.0
 
-        if defender.hp > 0:
+        turn.burn = self.burn(attacker)
+        if defender.hp > 0 and attacker.hp > 0:
             turn.hits.append(self._hit(rng, min_bonus))
         if attacker.speed_turns > 0:
             attacker.speed_turns -= 1
-            if defender.hp > 0 and rng.random() < attacker.speed_chance:
+            if defender.hp > 0 and attacker.hp > 0 and rng.random() < attacker.speed_chance:
                 turn.hits.append(self._hit(rng))
+        turn.thorns = round(sum(h.thorns for h in turn.hits), 1)
         if defender.blocking:  # this whole attack hit the shield
             turn.blocked = round(sum(h.damage for h in turn.hits if h.blocked), 1)
             defender.blocking = False
@@ -208,6 +235,8 @@ class Fight:
         self.rounds += 1
         if defender.hp <= 0:
             self.winner = attacker
+        elif attacker.hp <= 0:  # burnt, or the defender's Thorns
+            self.winner = defender
         elif self.rounds >= int(settings.get()["duel"]["max_rounds"]):
             # Nobody fell: the one with the most health left wins (coin flip on a tie).
             a, b = self.fighters
@@ -244,6 +273,7 @@ def make_fighter(ctx: Ctx, user_id: int) -> tuple[Fighter, dict[str, dict]]:
         min_attack=float(settings.get()["duel"]["min_damage"]) * strength,
         potion_boost=species.bonus(ctx, user_id, "witch") + (biomes.multiplier(ctx, "potions") - 1),  # the Swamp
         blocks_left=gear.shield_blocks(equipped),
+        fire=gear.fire_aspect(equipped), thorns=gear.thorns(equipped),
     )
     fighter.gear_ids = {slot: piece["gear_id"] for slot, piece in equipped.items()}
     return fighter, equipped

@@ -24,6 +24,14 @@ class GearBroken:
 
 
 @dataclass(frozen=True)
+class GearVanished:
+    """A piece with the Curse of Vanishing disappeared: its owner fell in a fight."""
+    user_id: int
+    item: str
+    material: str
+
+
+@dataclass(frozen=True)
 class AchievementUnlocked:
     user_id: int
     code: str

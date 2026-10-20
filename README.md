@@ -81,6 +81,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Mending** — the rarest book (one level, worth **600**): only the villager's exclusive offer (10% of his visits, 600 emeralds) or, 5% of the time, the book of a gate boss survivor. On any gear: the XP you gain repairs your equipped Mending pieces first (**2 durability per XP**), and only the XP left goes to you. XP given by the staff doesn't repair.
 - `/enchant apply <book> <piece>` — Costs 2 / 4 / 8 lapis for a level I / II / III book. A higher level replaces a lower one.
 - `/enchant combine <book>` — Two identical books make one book of the next level (I + I = II, II + II = III), on your anvil (Mending can't be combined).
+- **Enchanting table** — `/craft item:enchanting_table`: **4 obsidian + 2 diamond ingots + 1 enchanted book** (any: the least valuable one is used). One per player, it **never wears out** (`/gear` shows it; `/reset` gear takes it back). `/enchant table <piece>` enchants a piece **without any enchantment** (sword, tools, armor; not the shield) for **12 lapis**, at random: **1 / 2 / 3** different enchantments **60% / 30% / 10%** of the time (fewer when the piece can't take that many), never Mending. Each level is drawn with the weights 60 / 30 / 9 / 4 / 2 / 1 / 0.5 up to the player's maximum (III, +1 per dimension), and the maximum itself always weighs **1**: about **1%** (overworld: I 66%, II 33%, III 1%). **10%** of the uses add a **curse** on top (Binding or Vanishing, half and half), which can't be removed. Books can then add more enchantments, as on any piece. All of it in `/config` → Combat → 🪄 Enchanting table (`balance.enchanting_table`).
 - `/enchant info` — Your books and lapis, and every effect.
 - Enchantments follow the piece in `/trade` and `/auction` (the suggestions list enchanted pieces separately) and are lost when it breaks.
 
@@ -93,6 +94,11 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 | Looting | sword | +10% / +20% / +30% · +35% / +37.5% / +38.8% / +39.4% gate boss bounty |
 | Protection | armor | +1 / +2 / +3 armor points per piece · then the damage reduction cap +1% / +2% / +3% / +4% per piece |
 | Mending | all gear | one level: 2 durability per XP gained (the XP repairs the piece first) |
+| Fire Aspect | sword | the target burns **3 turns** (renewed by each hit that lands), losing 0.5 / 1 / 1.5 · 1.75 / 1.88 / 1.94 / 1.97 health each, **through the armor** (duels and tournament: its own turns; raids, gate bosses, the dungeon and the night: each round). Several burning swords don't add up: the strongest fire burns |
+| Thorns | armor | each piece sends back 2% / 4% / 6% · 7% / 7.5% / 7.75% / 7.88% of the damage taken to the attacker (no armor stops it): a full set at III, 24% |
+| Sweeping Edge | sword | the dungeon: 2.5% / 4% / 5% · 5.5% / 5.75% / 5.88% / 5.94% of each hit also hits another monster, at random (calibrated: III ≈ Fire Aspect III ≈ +11 points of success on Nightmare) |
+| Curse of Binding | all but the shield | only from the enchanting table: once worn, the piece can't be taken off, replaced, sold, traded or put up for auction until it breaks (the staff can still `/take` it) |
+| Curse of Vanishing | all but the shield | only from the enchanting table: the piece vanishes when its owner falls (0 HP) in the dungeon, against a gate boss or at night (announced) |
 
 ### ⭐ XP & talents
 

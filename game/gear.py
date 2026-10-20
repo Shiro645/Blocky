@@ -7,7 +7,7 @@ from game import enchants, players, settings
 from game.catalog import ARMOR, GEAR_ITEMS, SHIELD
 from game.db import Ctx
 from game.errors import GameError
-from game.notices import GearBroken
+from game.notices import GearBroken, GearVanished
 
 
 def tier(material: str) -> int:
@@ -31,10 +31,24 @@ def get_pieces(ctx: Ctx, gear_ids: dict[str, int]) -> dict[str, dict]:
     return {slot: by_id[gid] for slot, gid in gear_ids.items() if gid in by_id}
 
 
+def _bound(ctx: Ctx, gear_id: int) -> bool:
+    return ctx.one("SELECT 1 FROM gear_enchants WHERE gear_id=? AND enchant='binding';", (gear_id,)) is not None
+
+
+def check_not_bound(ctx: Ctx, piece: dict) -> None:
+    """A worn piece with the Curse of Binding can't be taken off, replaced, sold or traded until it breaks."""
+    if piece["equipped"] and _bound(ctx, piece["gear_id"]):
+        raise GameError(f"Your {piece['material']} {piece['item']} has the **Curse of Binding**: it stays on you "
+                        "until it breaks.")
+
+
 def equip(ctx: Ctx, user_id: int, gear_id: int) -> dict:
     row = ctx.one("SELECT * FROM gear WHERE gear_id=? AND user_id=?;", (gear_id, user_id))
     if row is None:
         raise GameError("You don't own this piece of gear.")
+    worn = ctx.one("SELECT * FROM gear WHERE user_id=? AND item=? AND equipped=1;", (user_id, row["item"]))
+    if worn is not None and worn["gear_id"] != gear_id:
+        check_not_bound(ctx, dict(worn))
     ctx.execute("UPDATE gear SET equipped=0 WHERE user_id=? AND item=? AND equipped=1;", (user_id, row["item"]))
     ctx.execute("UPDATE gear SET equipped=1 WHERE gear_id=?;", (gear_id,))
     from game import progress  # progress depends on this module
@@ -49,15 +63,33 @@ def unequip(ctx: Ctx, user_id: int, slot: str) -> dict:
     row = ctx.one("SELECT * FROM gear WHERE user_id=? AND item=? AND equipped=1;", (user_id, slot))
     if row is None:
         raise GameError(f"You have nothing equipped in the **{slot}** slot.")
+    check_not_bound(ctx, dict(row))
     ctx.execute("UPDATE gear SET equipped=0 WHERE gear_id=?;", (row["gear_id"],))
     return dict(row)
 
 
 def unequip_all(ctx: Ctx, user_id: int) -> list[dict]:
-    """Take off every piece. Returns them (empty when nothing was worn)."""
+    """Take off every piece (not the ones with the Curse of Binding). Returns them (empty when nothing was worn)."""
     rows = [dict(r) for r in ctx.all("SELECT * FROM gear WHERE user_id=? AND equipped=1 ORDER BY gear_id;", (user_id,))]
-    ctx.execute("UPDATE gear SET equipped=0 WHERE user_id=? AND equipped=1;", (user_id,))
-    return enchants.attach(ctx, rows)
+    rows = [r for r in enchants.attach(ctx, rows) if "binding" not in r["enchants"]]
+    for r in rows:
+        ctx.execute("UPDATE gear SET equipped=0 WHERE gear_id=?;", (r["gear_id"],))
+    return rows
+
+
+def vanish(ctx: Ctx, pieces: dict[str, dict]) -> list[dict]:
+    """The Curse of Vanishing: its owner fell (the dungeon, a gate boss, the night), the cursed pieces they wore
+    disappear. Returns them."""
+    gone = []
+    for piece in pieces.values():
+        cursed = piece.get("enchants") or enchants.of_gear(ctx, [piece["gear_id"]]).get(piece["gear_id"], {})
+        if "vanishing" not in cursed:
+            continue
+        ctx.execute("DELETE FROM gear_enchants WHERE gear_id=?;", (piece["gear_id"],))
+        if ctx.execute("DELETE FROM gear WHERE gear_id=?;", (piece["gear_id"],)).rowcount:
+            gone.append(piece)
+            ctx.notices.append(GearVanished(piece["user_id"], piece["item"], piece["material"]))
+    return gone
 
 
 def equip_best(ctx: Ctx, user_id: int) -> list[dict]:
@@ -120,6 +152,25 @@ def armor_points(equipped: dict[str, dict]) -> int | float:
         if piece:
             total += float(table[piece["material"]][slot]) + enchants.effect(piece, "protection")
     return _number(total)
+
+
+def fire_aspect(equipped: dict[str, dict]) -> float:
+    """Health the target of the sword's Fire Aspect loses each turn it burns (0: no fire)."""
+    return enchants.effect(equipped.get("sword"), "fire_aspect")
+
+
+def burn_turns() -> int:
+    return int(settings.get()["enchants"]["fire_aspect_turns"])
+
+
+def thorns(equipped: dict[str, dict]) -> float:
+    """Share of the damage taken that the armor's Thorns sends back to the attacker."""
+    return min(1.0, sum(enchants.effect(equipped.get(slot), "thorns") for slot in ARMOR))
+
+
+def sweep(equipped: dict[str, dict]) -> float:
+    """Share of a hit the sword's Sweeping Edge also deals to another monster (the dungeon)."""
+    return min(1.0, enchants.effect(equipped.get("sword"), "sweeping_edge"))
 
 
 def shield_blocks(equipped: dict[str, dict]) -> int:

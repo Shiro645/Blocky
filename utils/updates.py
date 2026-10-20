@@ -409,4 +409,20 @@ UPDATES: tuple[Update, ...] = (
              "The wheel, blackjack and mines now show what you won or lost and your balance, like the Lucky Block."),
         ),
     ),
+    Update(
+        "2026-10-enchanting-table", "2026-10-23", "The enchanting table",
+        "A new way to enchant, three new enchantments… and curses.",
+        (
+            ("🪄 Enchanting table",
+             "`/craft item:enchanting_table` (4 obsidian, 2 diamond ingots, any book), made once for good. "
+             "`/enchant table` gives a piece without enchantments 1 to 3 random ones for 12 lapis: your maximum "
+             "level is very rare."),
+            ("☠️ Curses",
+             "Sometimes the table adds a curse: Binding (the piece stays on you until it breaks) or Vanishing (it "
+             "vanishes if you fall in a fight)."),
+            ("🔥 New enchantments",
+             "Fire Aspect (the target burns, through its armor), Thorns (part of the damage goes back to the "
+             "attacker) and Sweeping Edge (a second monster gets hit in the dungeon). Books of them can drop too."),
+        ),
+    ),
 )
