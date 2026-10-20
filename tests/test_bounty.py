@@ -114,16 +114,21 @@ class ClaimTests(BountyTestCase):
         await self.run_game(war.launch_raid, raid["raid_id"], A1)
         await self.run_game(war.join_raid, raid["raid_id"], B1)
         raid = await self.run_game(war.resolve_raid, raid["raid_id"])
+        self.assertEqual(raid["status"], "fighting")
+        raid = await self.run_game(war.play_out, raid["raid_id"])
         self.assertEqual(raid["status"], "won")  # three against one: the defender falls
         [claim] = raid["bounties"]
         self.assertEqual((claim["target_id"], claim["amount"], claim["via"]), (B1, 1000, "raid"))
         self.assertIn(claim["hunter_id"], (A1, A2, A3))
 
     def test_fight_remembers_who_downed_whom(self):
-        a = war.Raider(1, "attack", 30, 30, 0, 20)
-        d = war.Raider(2, "defend", 1, 1, 0, 20)
-        winner, _ = war.fight(random.Random(1), [a], [d])
-        self.assertEqual((winner, d.downed_by, a.downed_by), ("attack", 1, None))
+        from game.raid_fight import Fighter, RaidFight
+
+        a = Fighter(1, "attack", 30, 30, 0, 20)
+        d = Fighter(2, "defend", 1, 1, 0, 20)
+        fight = RaidFight([a, d])
+        fight.auto_play(random.Random(1))
+        self.assertEqual((fight.result, d.downed_by, a.downed_by), ("attack", 1, None))
 
 
 class ExpiryTests(BountyTestCase):

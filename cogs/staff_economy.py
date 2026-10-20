@@ -341,8 +341,11 @@ class StaffEconomyCog(commands.Cog):
             return embed
 
         if "levels" in parts:
-            # Level roles follow the level: everyone is level 1 again.
+            # Level roles follow the level: everyone is level 1 again. The prestige went too.
             asyncio.create_task(self.sync_roles_of(user_ids))
+            prestige_cog = self.bot.get_cog("PrestigeCog")
+            if prestige_cog is not None:
+                asyncio.create_task(prestige_cog.sync_role())  # type: ignore[attr-defined]
         dims = self.bot.get_cog("DimensionsCog")
         if "progress" in parts and dims is not None:  # back to the overworld: the dimension roles go
             asyncio.create_task(dims.sync_roles(user_id))  # type: ignore[attr-defined]

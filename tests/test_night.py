@@ -19,6 +19,7 @@ class NightTestCase(GameTestCase):
         for uid in (ALICE, BOB, CAROL):
             await self.run_game(players.give_emeralds, uid, 10_000)
             await self.run_game(players.set_level, uid, 10)
+            await self.run_game(night.seen, uid)  # played today
 
     async def to_slot(self, slot: int) -> tuple[int, str]:
         """Move the clock to a monster's time tonight (tests start on Wednesday at noon)."""
@@ -123,7 +124,7 @@ class MonsterTests(NightTestCase):
 
     async def test_the_phantom_hunts_the_sleepless(self):
         settings.load({"night": {"monsters": 0}})  # only the Phantom
-        await self.to_slot(0)
+        await self.to_slot(night.PHANTOM_SLOT)
         self.assertEqual((await self.run_game(night.tick, [ALICE, BOB]))["spawned"], [])  # nobody sleepless yet
         await self.run_game(lambda ctx: ctx.execute("DELETE FROM night_attacks;"))
         await self.run_game(botstate.put, "night_since", "2026-10-01")
@@ -135,6 +136,19 @@ class MonsterTests(NightTestCase):
         self.advance(16 * MINUTE)
         [gone] = (await self.run_game(night.tick, [ALICE, BOB]))["ended"]
         self.assertEqual(gone["amount"], min(500, before * 2 // 100))  # 2%
+
+    async def test_only_active_players_are_attacked(self):
+        await self.to_slot(0)  # 23:00 or later: 11 h after they played
+        settings.load({"night": {"active_hours": 6}})
+        self.assertEqual((await self.run_game(night.tick, [ALICE, BOB]))["spawned"], [])
+
+    async def test_an_attack_nobody_can_see_never_happened(self):
+        await self.to_slot(0)
+        [a] = (await self.run_game(night.tick, [ALICE]))["spawned"]
+        await self.run_game(night.unposted, a["attack_id"])
+        self.advance(16 * MINUTE)
+        self.assertEqual((await self.run_game(night.tick, [ALICE]))["ended"], [])  # nothing lost
+        self.assertEqual((await self.run_game(night.get, a["attack_id"]))["status"], "nobody")
 
     async def test_a_late_slot_is_skipped(self):
         at, _ = await self.to_slot(0)

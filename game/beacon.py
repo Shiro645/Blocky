@@ -149,7 +149,9 @@ def give(ctx: Ctx, user_id: int, material: str, ingots: int) -> dict:
         raise GameError("The Beacon isn't lit yet: it needs a Nether Star, from the first victory against the Wither.")
     if ingots <= 0 or ingots % 9:
         raise GameError("Give whole blocks: a multiple of 9 ingots (9, 18, 27…).")
-    b = _this_week(ctx, b)
+    # A new week the loop hasn't settled yet: settle the last one first (its missed upkeep isn't forgiven).
+    settled = weekly(ctx)
+    b = _this_week(ctx, get(ctx))
     up_material, due = upkeep_due(ctx, b)
     to_upkeep = min(ingots, max(0, due - b["upkeep_paid"])) if material == up_material else 0
     left = ingots - to_upkeep
@@ -182,7 +184,7 @@ def give(ctx: Ctx, user_id: int, material: str, ingots: int) -> dict:
     players.bump_stat(ctx, user_id, "beacon_ingots", ingots)
     players.bump_stat(ctx, user_id, "beacon_value", value)
     return {"ingots": ingots, "material": material, "upkeep": to_upkeep, "built": built, "value": value,
-            "status": status(ctx)}
+            "status": status(ctx), "settled": settled}
 
 
 def light(ctx: Ctx, user_id: int | None) -> bool:

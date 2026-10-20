@@ -98,6 +98,17 @@ class FightTests(GateTestCase):
         row = (await self.run_game(gate.expire))[0]  # Alice's second miss: her turns play by themselves now
         self.assertEqual(row["fight"].player(ALICE).afk, 2)
         self.assertEqual(row["fight"].current.user_id, BOB)
+        await self.run_game(gate.present, fid, ALICE)  # she clicks (out of turn): she's back in control
+        row = await self.run_game(gate.attack, fid, BOB)
+        self.assertEqual((row["fight"].current.user_id, row["fight"].player(ALICE).afk), (ALICE, 0))
+
+    async def test_drinking_then_running_out_of_time_isnt_a_missed_turn(self):
+        fid = await self.group(ALICE, BOB)
+        await self.run_game(potions.give, ALICE, "harming", 1)
+        await self.run_game(gate.drink, fid, ALICE, "harming")
+        self.advance(31)
+        row = (await self.run_game(gate.expire))[0]
+        self.assertEqual(row["fight"].player(ALICE).afk, 0)
 
     async def test_potions_two_per_fight(self):
         fid = await self.group(ALICE)

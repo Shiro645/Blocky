@@ -4,9 +4,10 @@
   the ones of prestige.skip_achievements (only one winner each time, and level 100), every dimension (up to the
   Shimmer) and the server's Beacon lit.
 - The level stays. The parts switched on in prestige.reset start over: wealth (emeralds, blocks, items, auction
-  listings, loans, bounties put), gear (and its enchantments, the anvil), talents (every spent point is given back
-  to spend again: they come from the level, so none is lost), achievements (with the stats and the challenges
-  they come from) and dimensions (back to the overworld). With both wealth and achievements reset, achievement rewards are paid again (like /reset).
+  listings, bounties put), gear (and its enchantments, the anvil), talents (every spent point is given back to
+  spend again: they come from the level, so none is lost), achievements (with the stats they come from; the
+  challenges' progress stays) and dimensions (back to the overworld). With both wealth and achievements reset,
+  achievement rewards are paid again (like /reset). Not while a loan, a loan offer or a game of chance is open.
 - Each prestige: +prestige.bonus mining XP and /sell for good, a ⭐ next to the name, the Prestige role, and
   earned cosmetics (game/profiles.py: the titles Reborn and Mythic, the Prestige frame).
 """
@@ -22,7 +23,7 @@ PARTS = {
     "wealth": "emeralds, blocks and items (auction listings, loans and the bounties you put are cancelled)",
     "gear": "gear, its enchantments and the anvil",
     "talents": "talents (every spent point is given back to spend again)",
-    "achievements": "achievements, stats and challenges",
+    "achievements": "achievements and stats",
     "dimensions": "dimensions (back to the overworld)",
 }
 
@@ -83,11 +84,20 @@ def ascend(ctx: Ctx, user_id: int) -> dict:
         raise GameError(f"You reached the highest prestige (**{roman(st['max'])}**).")
     if not st["ready"]:
         raise GameError("You don't meet every condition yet: see `/prestige`.")
+    # Starting over must not wipe a debt (or a loan given), nor a bet still on the table.
+    if ctx.one("SELECT 1 FROM loans WHERE status IN ('active', 'late') AND (borrower_id=? OR lender_id=?);",
+               (user_id, user_id)):
+        raise GameError("Settle your loans first (the ones you owe and the ones you gave): `/loan`.")
+    if ctx.one("SELECT 1 FROM loan_offers WHERE status='open' AND (lender_id=? OR borrower_id=?);", (user_id, user_id)):
+        raise GameError("You have a loan offer waiting: cancel it or let it be answered first.")
+    if ctx.one("SELECT 1 FROM chance_games WHERE user_id=? AND status='active';", (user_id,)):
+        raise GameError("Finish your game of chance first.")
     parts = st["resets"]
     if "wealth" in parts or "gear" in parts:
         reset.apply(ctx, {p for p in ("wealth", "gear") if p in parts}, user_id)
     if "achievements" in parts:
-        for table in ("stats", "achievements", "challenge_progress"):
+        # The challenges' progress stays: this week's ones can't be done and paid a second time.
+        for table in ("stats", "achievements"):
             ctx.execute(f"DELETE FROM {table} WHERE user_id=?;", (user_id,))
         if "wealth" in parts:  # their rewards are earned again (like /reset)
             ctx.execute("DELETE FROM rewards_paid WHERE user_id=?;", (user_id,))

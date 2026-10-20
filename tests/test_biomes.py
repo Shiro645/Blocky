@@ -132,6 +132,14 @@ class ChallengeTests(BiomeTestCase):
         await self.run_game(progress.on_stat, ALICE, "blocks_mined", 500)  # paid once
         self.assertEqual(await self.run_game(players.get_stat, ALICE, "biome_challenges"), 1)
 
+    async def test_one_biome_challenge_paid_a_week(self):
+        await self.set_biome("tundra")
+        await self.run_game(progress.on_stat, ALICE, "blocks_mined", 900)
+        await self.set_biome("forest")  # the staff changed it after Alice finished hers
+        await self.run_game(progress.on_stat, ALICE, "items_crafted", 5)
+        self.assertEqual(await self.run_game(players.get_stat, ALICE, "biome_challenges"), 1)
+        self.assertTrue((await self.run_game(progress.biome_progress, ALICE))["completed"])
+
     async def test_progress_belongs_to_its_biome(self):
         await self.set_biome("tundra")
         await self.run_game(progress.on_stat, ALICE, "blocks_mined", 500)

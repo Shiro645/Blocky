@@ -166,4 +166,5 @@ class RewindTests(GameTestCase):
         self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "diamond"), 5)
         left = await self.run_game(exchange.listings_of, BOB)
         self.assertEqual([r["asset"] for r in left], ["lapis"])
-        self.assertEqual(await self.run_game(rewind.plan), {})
+        with self.assertRaisesRegex(GameError, "already done"):  # once only
+            await self.run_game(rewind.plan)

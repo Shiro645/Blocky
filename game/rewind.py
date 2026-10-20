@@ -3,13 +3,17 @@
 Every piece of gear (weapons, armor, tools, shields, worn or spare, listed at the auction house or not) and every
 netherite ingot is taken back and paid back in full: the ingots and sticks of its recipe at the market prices,
 plus the enchanted books on it (netherite ingots at market.ingots.netherite). Repairs aren't paid back. The
-refund is given, not earned: it doesn't count for the seasons.
+refund is given, not earned: it doesn't count for the seasons. It can be done once only (a later netherite piece
+is an upgraded diamond one: this refund would pay it far more than it cost).
 """
 from __future__ import annotations
 
-from game import assets, enchants, players, shop
+from game import assets, botstate, enchants, players, shop
 from game.catalog import RECIPES
 from game.db import Ctx
+from game.errors import GameError
+
+DONE_KEY = "gear_rewound_at"  # bot_state: when it was done (it's done once: the 2.0 fresh start)
 
 
 def piece_refund(piece: dict) -> int:
@@ -32,8 +36,16 @@ def _listing_refund(listing: dict) -> int | None:
     return None
 
 
+def check_not_done(ctx: Ctx) -> None:
+    """Once only: after it, netherite pieces are upgraded diamond ones, which this refund would overpay."""
+    done = botstate.get(ctx, DONE_KEY)
+    if done:
+        raise GameError(f"The gear rewind was already done (<t:{done}:f>): it's the 2.0 fresh start, done once.")
+
+
 def plan(ctx: Ctx) -> dict[int, dict]:
     """user_id -> {"pieces", "ingots", "listings", "emeralds"}: what the rewind would take and pay back."""
+    check_not_done(ctx)
     out: dict[int, dict] = {}
 
     def entry(uid: int) -> dict:
@@ -78,4 +90,5 @@ def apply(ctx: Ctx) -> dict[int, dict]:
     ctx.execute("DELETE FROM items WHERE item='ingot' AND material='netherite';")
     for uid, e in refunds.items():
         players.give_emeralds(ctx, uid, e["emeralds"])
+    botstate.put(ctx, DONE_KEY, str(int(ctx.now)))
     return refunds

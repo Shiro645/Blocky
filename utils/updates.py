@@ -378,4 +378,19 @@ UPDATES: tuple[Update, ...] = (
              "The challenges page shows all its values again."),
         ),
     ),
+    Update(
+        "2026-10-team-chest", "2026-10-21", "Team chests and raids",
+        "Your team's chest now does something: fill it up, defend it… or raid the others'!",
+        (
+            ("💰 The chest's bonus",
+             "The leader picks a bonus for the whole team with `/team chest bonus`: ⛏️ mining XP, 💰 /sell, ⚔️ combat "
+             "or 🍀 luck. The more emeralds in the chest, the stronger: up to +15% at 100,000."),
+            ("🛡️ Defenses",
+             "Build 🧱 walls, 🏹 archers and an 🛡️ Iron Golem with the chest's emeralds (`/team chest defense`). The "
+             "golem defends even when nobody's online. Raids wear them out: repair them."),
+            ("⚔️ Turn-by-turn raids",
+             "Raids are now played turn by turn with buttons, like the gate bosses: potions, shields, every move "
+             "counts. A won raid takes 30% of the chest (up to 30,000)."),
+        ),
+    ),
 )

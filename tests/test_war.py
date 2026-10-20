@@ -107,8 +107,8 @@ class RaidTests(WarTestCase):
         self.assertEqual(raid["status"], "defending")
         self.advance(31 * MINUTE)
         raid = (await self.run_game(war.due_raids))[0]
-        self.assertEqual((raid["status"], raid["stolen"]), ("won", 150))
-        self.assertEqual(await self.run_game(war.chest, self.ta), 150)
+        self.assertEqual((raid["status"], raid["stolen"]), ("won", 300))
+        self.assertEqual(await self.run_game(war.chest, self.ta), 300)
         st = {t["tag"]: t["points"] for t in await self.run_game(war.standings)}
         self.assertEqual(st["AAA"], 5)
         self.advance(3 * 3600)
@@ -124,6 +124,16 @@ class RaidTests(WarTestCase):
         for uid in (A1, A2, A3):
             await self.run_game(war.join_raid, raid["raid_id"], uid)
         raid = await self.run_game(war.resolve_raid, raid["raid_id"])
+        self.assertEqual(raid["status"], "fighting")
+        fight = war.fight_of(raid)
+        self.assertEqual([f.side for f in fight.fighters], ["attack", "defend", "attack", "defend", "defend"])
+        current = fight.current.user_id
+        other = next(f.user_id for f in fight.fighters if f.user_id != current)
+        with self.assertRaisesRegex(GameError, "turn"):
+            await self.run_game(war.raid_attack, raid["raid_id"], other)
+        raid = await self.run_game(war.raid_attack, raid["raid_id"], current)
+        self.assertNotEqual(war.fight_of(raid).current.user_id, current)
+        raid = await self.run_game(war.play_out, raid["raid_id"])
         self.assertIn(raid["status"], ("won", "lost"))
         self.assertTrue(raid["log"])
         with self.assertRaisesRegex(GameError, "already raided today"):
@@ -140,3 +150,90 @@ class RaidTests(WarTestCase):
         self.advance(11 * 3600)  # 23:00
         with self.assertRaisesRegex(GameError, "asleep"):
             await self.run_game(war.start_raid, A1, "BBB")
+
+
+class ChestBonusTests(WarTestCase):
+    async def test_the_leader_picks_it_once_a_week(self):
+        with self.assertRaisesRegex(GameError, "leader"):
+            await self.run_game(teams.pick_chest_bonus, A2, "trade")
+        await self.run_game(teams.pick_chest_bonus, A1, "trade")
+        with self.assertRaisesRegex(GameError, "again"):
+            await self.run_game(teams.pick_chest_bonus, A1, "mining")
+        self.advance(7 * DAY + 60)
+        await self.run_game(teams.pick_chest_bonus, A1, "mining")
+
+    async def test_tiers_follow_the_chest(self):
+        await self.run_game(teams.pick_chest_bonus, A1, "trade")
+        self.assertEqual(await self.run_game(teams.chest_bonus, A2, "trade"), 0.0)  # empty chest
+        await self.run_game(players.give_emeralds, A1, 20_000)
+        await self.run_game(war.deposit, A1, 20_000)
+        self.assertAlmostEqual(await self.run_game(teams.chest_bonus, A2, "trade"), 0.06)  # tier II
+        self.assertEqual(await self.run_game(teams.chest_bonus, A2, "mining"), 0.0)  # not the one picked
+        self.assertEqual(await self.run_game(teams.chest_bonus, B1, "trade"), 0.0)  # another team
+        await self.run_game(players.add_blocks, A2, "cobblestone", 1000)
+        res = await self.run_game(players.sell_blocks, A2)
+        self.assertEqual(res["bonus"], 60)
+        await self.run_game(war.withdraw, A1, 1)  # below 20,000: tier I
+        self.assertAlmostEqual(await self.run_game(teams.chest_bonus, A2, "trade"), 0.03)
+
+
+class LevyTests(WarTestCase):
+    async def test_emptying_the_chest_before_monday_doesnt_dodge_it(self):
+        await self.run_game(war.weekly)  # the first run sets the week
+        await self.run_game(players.give_emeralds, A1, 10_000)
+        await self.run_game(war.deposit, A1, 10_000)
+        self.advance(7 * DAY - 120)
+        await self.run_game(war.withdraw, A1, 10_000)  # emptied 2 minutes before Monday
+        self.advance(240)
+        res = await self.run_game(war.weekly)
+        self.assertEqual(res["pot"], 0)  # nothing to take now…
+        debt = await self.run_game(lambda ctx: ctx.one("SELECT chest_debt FROM teams WHERE team_id=?;",
+                                                      (self.ta,))["chest_debt"])
+        self.assertAlmostEqual(debt, 500, delta=5)  # …but 5% of its average (≈10,000) is owed
+        await self.run_game(war.deposit, A1, 2_000)
+        self.assertEqual(await self.run_game(war.chest, self.ta), 2_000 - debt)  # the debt is paid first
+
+
+class DefenseTests(WarTestCase):
+    async def test_build_wear_and_repair(self):
+        await self.run_game(players.give_emeralds, A1, 50_000)
+        await self.run_game(war.deposit, A1, 30_000)
+        with self.assertRaisesRegex(GameError, "leader"):
+            await self.run_game(war.buy_defense, A2, "golem")
+        res = await self.run_game(war.buy_defense, A1, "golem")
+        self.assertEqual((res["level"], res["chest"]), (1, 22_000))
+        await self.run_game(war.buy_defense, A1, "walls")
+        # A raid with nobody but the golem defending: the fight starts anyway.
+        raid = await self.run_game(war.start_raid, B1, "AAA")
+        await self.run_game(war.join_raid, raid["raid_id"], B2)
+        await self.run_game(war.launch_raid, raid["raid_id"], B1)
+        raid = await self.run_game(war.resolve_raid, raid["raid_id"])
+        fight = war.fight_of(raid)
+        self.assertEqual((raid["status"], fight.walls), ("fighting", 0.04))
+        self.assertTrue(any(f.golem for f in fight.fighters))
+        await self.run_game(war.play_out, raid["raid_id"])
+        d = await self.run_game(war.defenses, self.ta)
+        self.assertEqual((d["golem"], d["walls"]), ([1, 0.75], [1, 0.75]))
+        res = await self.run_game(war.repair_defense, A1, "golem")
+        self.assertEqual(res["price"], round(8_000 * 0.25 * 0.25))
+        for _ in range(4):  # 4 raids wear a level away
+            await self.run_game(lambda ctx: war._wear_defenses(ctx, self.ta))
+        self.assertEqual((await self.run_game(war.defenses, self.ta))["walls"], [0, 1.0])
+
+
+class RaidFightTests(WarTestCase):
+    async def test_a_player_who_doesnt_play_attacks_then_plays_by_themselves(self):
+        raid = await self.run_game(war.start_raid, B1, "AAA")
+        await self.run_game(war.join_raid, raid["raid_id"], B2)
+        await self.run_game(war.launch_raid, raid["raid_id"], B1)
+        await self.run_game(war.join_raid, raid["raid_id"], A1)
+        raid = await self.run_game(war.resolve_raid, raid["raid_id"])
+        first = war.fight_of(raid).current.user_id
+        self.advance(31)
+        [raid] = await self.run_game(war.due_raids)
+        if raid["status"] == "fighting":
+            fight = war.fight_of(raid)
+            self.assertEqual(next(f for f in fight.fighters if f.user_id == first).afk, 1)
+            await self.run_game(war.raid_present, raid["raid_id"], first)
+            fight = war.fight_of(await self.run_game(war.get_raid, raid["raid_id"]))
+            self.assertEqual(next(f for f in fight.fighters if f.user_id == first).afk, 0)

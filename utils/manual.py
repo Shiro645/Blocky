@@ -480,7 +480,7 @@ def _war(s: Settings) -> list[str]:
     prizes = " / ".join(pct(x) for x in w["prizes"])
     return [
         f"At war: every team of at least **{num(w['min_members'])}** members · Monday levy **{pct(w['levy'])}** of each "
-        f"chest into the pot · podium {prizes} after a **{pct(w['tax'])}** tax",
+        f"chest's average over the week into the pot · podium {prizes} after a **{pct(w['tax'])}** tax",
         f"Points: duel won vs an enemy **+{num(p['duel'])}** (max {num(w['duel_pair_cap'])} a day per pair) · robbery "
         f"on an enemy **+{num(p['rob'])}** · stopping one **+{num(p['rob_stopped'])}** · raid won **+{num(p['raid'])}** "
         f"· raid pushed back **+{num(p['raid_defended'])}**",
@@ -488,8 +488,27 @@ def _war(s: Settings) -> list[str]:
         f"**{num(w['raid_gather_minutes'])} min**, defenders have **{num(w['raid_defend_minutes'])} min** (up to "
         f"{num(w['raid_max_defenders'])}) · won: **{pct(w['raid_steal'])}** of the chest ({em(w['raid_steal_max'])} max) · "
         f"{num(w['raids_per_day'])} a day per team · a raided chest is safe **{num(w['raid_protection_hours'])} h** · "
-        "no raids at night",
+        f"turn by turn, **{num(w['raid_max_rounds'])}** rounds at most · no raids at night",
     ]
+
+
+def _chest(s: Settings) -> list[str]:
+    w = s["war"]
+    b, d = w["chest_bonus"], w["defenses"]
+    out = []
+    for i, need in enumerate(w["chest_tiers"]):
+        out.append(f"Tier {ROMAN[i]} ({em(need)}): mining XP +{pct(b['mining'][i])} · /sell +{pct(b['trade'][i])} · "
+                   f"combat +{pct(b['combat'][i])} · luck ×{num(1 + float(b['luck'][i]))}")
+    out.append(f"The leader changes the bonus once every **{num(w['chest_bonus_days'])} days**")
+    out.append("Walls " + " / ".join(f"-{pct(r)}" for r in d["walls"]["reduction"]) + " · archers "
+               + " / ".join(num(a) for a in d["archers"]["arrows"]) + " arrows · golem "
+               + " / ".join(f"{num(h)} HP" for h in d["golem"]["hp"]))
+    out.append("Prices: walls " + " / ".join(em(p) for p in d["walls"]["price"]) + " · archers "
+               + " / ".join(em(p) for p in d["archers"]["price"]) + " · golem "
+               + " / ".join(em(p) for p in d["golem"]["price"]))
+    out.append(f"Every raid suffered: **-{pct(d['wear'])}** solidity (0 = a level lost) · repair "
+               f"**{pct(d['repair'])}** of the price")
+    return out
 
 
 def _tournament(s: Settings) -> list[str]:
@@ -1208,7 +1227,7 @@ PAGES: list[Page] = [
         "Shimmer, the server's Beacon lit), what you start over and what you "
         "get. When you meet everything, the **Become Prestige** button asks to confirm, then the parts set by the "
         "staff start over (by default your emeralds, blocks and items, your gear, your talents (every point given "
-        "back to spend again), your achievements with their stats and challenges, and your dimensions). You keep "
+        "back to spend again), your achievements with their stats, and your dimensions). You keep "
         "your **level**, so no talent point is lost: the next prestige needs a higher level. Each prestige gives a bonus to mining XP and /sell **for good**, a ⭐ next to "
         "your name (profile, leaderboards), the Prestige role and earned cosmetics (titles Reborn and Mythic, the "
         "Prestige frame). Announced to everyone.",
@@ -1612,22 +1631,48 @@ PAGES: list[Page] = [
     ),
     Page(
         "team chest view", "teams",
-        "Shows your team's chest, whether it's safe from raids right now, and what the gang war takes and gives.",
-        _war,
+        "Shows your team's chest: its bonus and the tier it reached (and the next ones), its defenses (level, "
+        "solidity, price of the next level and of a repair), whether it's safe from raids right now, and what the "
+        "gang war takes and gives.",
+        _chest,
         examples=("/team chest view",),
-        related=("team chest deposit", "war"),
+        related=("team chest deposit", "team chest bonus", "team chest defense", "war"),
     ),
     Page(
         "team raid", "teams",
         "Raids another team's chest. You open the raid; members of your team join with the button (a few at least), "
         "then the party leaves (the leader clicks Launch, or the gathering time is up). The target's members are "
-        "pinged and have a while to click **Defend**. Then the attackers and the defenders fight it out, all at once, "
-        "with their gear (like duels). The attackers win (or nobody came to defend): they take a share of the chest "
-        "into their own, and their team scores. The defenders win: their team scores. Gear wears out. No raids at "
-        "night, one raid a day per team, and a raided chest is safe for a while.",
+        "pinged and have a while to click **Defend**. Then the assault is played **turn by turn** in the message, "
+        "like the gate bosses: an attacker, then a defender…, each drinks a potion if they want, then **Attack** (a "
+        "random enemy) or **Attack + block** (a shield stops the next hit on them). The chest's **defenses** fight "
+        "too: the 🛡️ Iron Golem (even when no player came), the 🏹 archers (arrows after every round) and the 🧱 "
+        "walls (every hit on a defender lowered). The attackers win (or nobody, golem included, defends): they take "
+        "a share of the chest into their own, and their team scores. The defenders win: their team scores. Gear "
+        "and defenses wear out. No raids at night, one raid a day per team, and a raided chest is safe for a while.",
         _war,
         examples=("/team raid team:DIG",),
         related=("war", "team chest view"),
+    ),
+    Page(
+        "team chest bonus", "teams",
+        "LEADER: picks the bonus your team's chest gives every member: ⛏️ **Mining** (mining XP), 💰 **Trade** "
+        "(/sell), ⚔️ **Combat** (more damage, less damage taken in the dungeon, against gate bosses and in raids) "
+        "or 🍀 **Luck** (rare blocks and drops). The more emeralds in the chest, the stronger (4 tiers): emptying "
+        "it, or a raid, lowers it at once. It can be changed once a week.",
+        _chest,
+        examples=("/team chest bonus bonus:💰 Trade",),
+        related=("team chest view", "team chest deposit", "team chest defense"),
+    ),
+    Page(
+        "team chest defense", "teams",
+        "LEADER: builds the next level (I to III) of a chest defense, or repairs it, paid from the chest's "
+        "emeralds: 🧱 **Walls** (every hit on your defenders lowered), 🏹 **Archers** (arrows at the attackers after "
+        "every round of a raid) and 🛡️ **Iron Golem** (a defender that fights even when nobody comes). Every raid on "
+        "your chest wears them a little; worn out, a defense loses a level. Not during a raid.",
+        _chest,
+        examples=("/team chest defense action:Build the next level defense:🛡️ Iron Golem",
+                  "/team chest defense action:Repair defense:🧱 Walls"),
+        related=("team chest view", "team raid", "team chest bonus"),
     ),
     Page(
         "team top", "teams",

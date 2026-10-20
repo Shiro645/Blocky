@@ -100,6 +100,16 @@ class BeaconTests(GameTestCase):
         self.assertEqual(res["undone"], ("gold", 2))
         self.assertEqual((await self.run_game(beacon.status))["step"], 1)
 
+    async def test_a_gift_on_monday_doesnt_forgive_last_weeks_upkeep(self):
+        await self.light()
+        await self.run_game(beacon.give, ALICE, "gold", 81 + 225)
+        self.advance(7 * DAY)
+        await self.run_game(beacon.weekly)  # this week's upkeep is now due (18 gold)
+        self.advance(7 * DAY)  # not given; someone gives before the loop settles the week
+        res = await self.run_game(beacon.give, BOB, "gold", 9)
+        self.assertEqual(res["settled"]["undone"], ("gold", 2))
+        self.assertEqual((await self.run_game(beacon.status))["step"], 1)
+
     async def test_staff_and_settings(self):
         st = await self.run_game(beacon.staff_set, True, 8)
         self.assertEqual(st["levels"], {1: "iron", 2: "iron", 3: "iron", 4: "iron"})

@@ -24,7 +24,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import beacon, biomes, cooldowns, dimensions, duel, gear, players, potions, settings
+from game import beacon, biomes, cooldowns, dimensions, duel, gear, players, potions, settings, teams
 from game.db import Ctx
 from game.errors import GameError
 
@@ -155,7 +155,9 @@ def make_hero(ctx: Ctx, user_id: int) -> Hero:
     f, equipped = duel.make_fighter(ctx, user_id)
     hp = float(_cfg()["hp"])
     strength, resistance = beacon.combat(ctx)  # the server's Beacon
-    taken = biomes.multiplier(ctx, "damage_taken")  # the week's biome
+    team = teams.chest_bonus(ctx, user_id, "combat")  # the team chest's Combat bonus
+    strength += team
+    taken = biomes.multiplier(ctx, "damage_taken") * (1 - team)  # the week's biome
     return Hero(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
                 1 - (1 - f.reduction) * (1 - resistance) * taken, hp, hp, f.potion_boost,
                 gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
