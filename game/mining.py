@@ -105,7 +105,8 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     user = players.get_user(ctx, user_id)
     tools = gear.get_equipped(ctx, user_id)
     common = rank_block(dimension, 0)
-    rare = live_events.rare_multiplier(ctx) * biomes.multiplier(ctx, "rare_odds")  # a Lucky Hour, the biome
+    luck = 1 + teams.chest_bonus(ctx, user_id, "luck")  # the team chest's Luck bonus
+    rare = live_events.rare_multiplier(ctx) * biomes.multiplier(ctx, "rare_odds") * luck  # a Lucky Hour, the biome
     block, amount = roll_blocks(ctx.rng, user["miner_points"], user["lucky_points"], rare, dimension)
     used: list[dict] = []
     sticks = 0
@@ -172,6 +173,9 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
     glow = beacon.mining_xp_bonus(ctx, user_id)  # the Beacon, and giving to it this week
     if glow:
         xp = int(round(xp * (1 + glow)))
+    chest_xp = teams.chest_bonus(ctx, user_id, "mining")  # the team chest's Mining bonus
+    if chest_xp:
+        xp = int(round(xp * (1 + chest_xp)))
     reborn = players.prestige_bonus(user)  # every prestige, for good
     if reborn:
         xp = int(round(xp * (1 + reborn)))
@@ -231,5 +235,5 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
         "lapis": lapis,
         "broken": broken,
         "cooldown": cooldown,
-        "drop_chance": biomes.multiplier(ctx, "drops"),  # the drops cog's chance is multiplied by this
+        "drop_chance": biomes.multiplier(ctx, "drops") * luck,  # the drops cog's chance is multiplied by this
     }

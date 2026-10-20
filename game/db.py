@@ -760,6 +760,17 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN last_seen INTEGER;
     """,
+    # 41: the team chest's bonus and defenses, and its average over the week (the Monday levy is taken on it)
+    """
+    ALTER TABLE teams ADD COLUMN chest_bonus TEXT;            -- mining | trade | combat | luck (the leader's pick)
+    ALTER TABLE teams ADD COLUMN chest_bonus_at INTEGER;      -- when it was last picked
+    ALTER TABLE teams ADD COLUMN chest_area INTEGER NOT NULL DEFAULT 0;  -- emerald-seconds since chest_from
+    ALTER TABLE teams ADD COLUMN chest_from INTEGER;          -- the start of the average (the last levy)
+    ALTER TABLE teams ADD COLUMN chest_touched INTEGER;       -- the last change of the chest
+    ALTER TABLE teams ADD COLUMN defenses TEXT;               -- JSON {"walls": [level, solidity], ...}
+    ALTER TABLE raids ADD COLUMN state TEXT;                  -- JSON: the turn-by-turn fight (status 'fighting')
+    ALTER TABLE teams ADD COLUMN chest_debt INTEGER NOT NULL DEFAULT 0;  -- levy not paid (the chest was emptied)
+    """,
 ]
 
 

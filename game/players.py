@@ -168,6 +168,9 @@ def sell_blocks(ctx: Ctx, user_id: int, block: str | None = None, amount: int | 
 
     golden = live_events.sell_bonus(ctx)  # a Golden Hour
     biome = biomes.multiplier(ctx, "sell") - 1.0  # the week's biome (can be a malus)
+    from game import teams  # teams depends on this module
+
+    biome += teams.chest_bonus(ctx, user_id, "trade")  # the team chest's Trade bonus
     extra = (trader_multiplier(user["trader_points"]) - 1.0 + species.bonus(ctx, user_id, "villager") + golden
              + beacon.sell_bonus(ctx, user_id) + biome + prestige_bonus(user))
     bonus = int(round(base * extra))  # below 0 when the biome's malus is bigger than the bonuses

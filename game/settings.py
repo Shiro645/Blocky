@@ -416,6 +416,13 @@ DEFAULTS: dict[str, Any] = {
         "prizes": [0.5, 0.3, 0.2],
         "points": {"duel": 1, "rob": 2, "rob_stopped": 1, "raid": 5, "raid_defended": 3},
         "duel_pair_cap": 3,  # duel wins a day of one player over the same enemy that score
+        # The chest's bonus (the leader picks one, changed once every chest_bonus_days): the more emeralds in the
+        # chest, the stronger (chest_tiers: tier I to IV). Mining: mining XP; trade: /sell; combat: damage dealt
+        # up and damage taken down (dungeon, gate bosses, raids); luck: rare blocks and drops ×(1 + value).
+        "chest_tiers": [5000, 20000, 50000, 100000],
+        "chest_bonus": {"mining": [0.03, 0.06, 0.10, 0.15], "trade": [0.03, 0.06, 0.10, 0.15],
+                        "combat": [0.02, 0.04, 0.06, 0.08], "luck": [0.10, 0.20, 0.35, 0.50]},
+        "chest_bonus_days": 7,
         # Raids on a team's chest: min_attackers to max_attackers members gather (gather_minutes), then the
         # target's members have defend_minutes to come and defend; then the fight. Won (or nobody defended):
         # the attackers take raid_steal of the chest (raid_steal_max at most) into their own chest.
@@ -424,11 +431,25 @@ DEFAULTS: dict[str, Any] = {
         "raid_max_defenders": 4,
         "raid_gather_minutes": 5,
         "raid_defend_minutes": 30,
-        "raid_steal": 0.15,
-        "raid_steal_max": 5000,
+        "raid_steal": 0.30,
+        "raid_steal_max": 30000,
         "raids_per_day": 1,  # raids a team can launch a day
         "raid_protection_hours": 24,  # a raided chest is safe for this long
-        "raid_max_rounds": 40,
+        "raid_max_rounds": 15,  # then the side with the most health left wins (the defenders on a tie)
+        # The chest's defenses, built and repaired by the leader with the chest's emeralds (levels I to III).
+        # Walls: every hit on a defender lowered; archers: arrows at the attackers after every round; the Iron
+        # Golem: a defender that fights even when no player comes. Every raid on the team wears them (wear of their
+        # solidity; at 0 a level is lost); a repair costs `repair` of the level's price for a full solidity.
+        # Calibrated (3 diamond attackers, all playing by themselves): golem alone I/II/III ~78/58/42% won by the
+        # attackers; the three at I/II/III ~70/39/15%; 4 netherite attackers vs the three at III ~96%.
+        "defenses": {
+            "walls": {"price": [5000, 15000, 40000], "reduction": [0.04, 0.07, 0.10]},
+            "archers": {"price": [5000, 15000, 40000], "arrows": [1, 2, 3], "min_damage": 0.5, "max_damage": 1.2},
+            "golem": {"price": [8000, 20000, 50000], "hp": [60, 62, 62], "min_damage": [8.0, 8.8, 9.6],
+                      "max_damage": [20.0, 22.0, 24.0], "reduction": [0.18, 0.24, 0.288]},
+            "wear": 0.25,
+            "repair": 0.25,
+        },
     },
     # Biomes of the week (/biome, game/biomes.py): one for the whole server, a bonus and a malus. Percent effects
     # +bonus / -malus; chances (rare blocks, drops, the highest bet) ×odds_bonus / ×odds_malus. Each biome has a
@@ -909,6 +930,13 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     w = merged["war"]
     if sum(float(x) for x in w["prizes"]) > 1:
         out.append(("`balance.war.prizes`: the podium can't share more than the whole pot.", [("war", "prizes")]))
+    tiers = [int(t) for t in w["chest_tiers"]]
+    if tiers != sorted(tiers):
+        out.append(("`balance.war.chest_tiers` go up: tier I needs the least.", [("war", "chest_tiers")]))
+    golem = w["defenses"]["golem"]
+    if any(float(lo) > float(hi) for lo, hi in zip(golem["min_damage"], golem["max_damage"])):
+        out.append(("`balance.war.defenses.golem`: a smallest hit can't be above the biggest one.",
+                    [("war", "defenses", "golem", "min_damage"), ("war", "defenses", "golem", "max_damage")]))
     if int(w["raid_min_attackers"]) > int(w["raid_max_attackers"]):
         out.append(("`balance.war`: a raid's minimum attackers can't be above its maximum.",
                     [("war", "raid_min_attackers"), ("war", "raid_max_attackers")]))

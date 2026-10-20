@@ -14,13 +14,12 @@
 from __future__ import annotations
 
 import json
-import random
-from dataclasses import dataclass
 
-from game import botstate, bounty, duel, gear, loans, players, robbery, settings, teams
-from game.catalog import ARMOR
+from game import botstate, bounty, duel, gear, loans, players, potions, robbery, settings, teams
+from game.catalog import ARMOR, SHIELD
 from game.db import Ctx
 from game.errors import GameError
+from game.raid_fight import GOLEM, Fighter, RaidFight
 
 MINUTE, HOUR = 60, 3600
 
@@ -30,6 +29,40 @@ def _cfg() -> dict:
 
 
 # ---------------- the chest ----------------
+def _touch(ctx: Ctx, team_id: int) -> None:
+    """Before the chest changes: add its time at the old amount to the week's average (the levy is taken on it)."""
+    row = ctx.one("SELECT chest, chest_area, chest_from, chest_touched FROM teams WHERE team_id=?;", (team_id,))
+    if row is None:
+        return
+    now = int(ctx.now)
+    since = row["chest_touched"] if row["chest_touched"] is not None else now
+    area = int(row["chest_area"]) + int(row["chest"]) * max(0, now - since)
+    ctx.execute("UPDATE teams SET chest_area=?, chest_touched=?, chest_from=COALESCE(chest_from, ?) WHERE team_id=?;",
+                (area, now, now, team_id))
+
+
+def move_chest(ctx: Ctx, team_id: int, delta: int) -> None:
+    """Add (or take, below 0) emeralds to a team's chest. What comes in pays the levy it owes first (into the pot)."""
+    _touch(ctx, team_id)
+    if delta > 0:
+        row = ctx.one("SELECT chest_debt FROM teams WHERE team_id=?;", (team_id,))
+        owed = min(int(delta), int(row["chest_debt"])) if row else 0
+        if owed:
+            ctx.execute("UPDATE teams SET chest_debt = chest_debt - ? WHERE team_id=?;", (owed, team_id))
+            _week(ctx, ctx.week_id)
+            ctx.execute("UPDATE war_weeks SET pot = pot + ? WHERE week_id=?;", (owed, ctx.week_id))
+            delta -= owed
+    ctx.execute("UPDATE teams SET chest = MAX(0, chest + ?) WHERE team_id=?;", (int(delta), team_id))
+
+
+def average_chest(ctx: Ctx, team_id: int) -> int:
+    """The chest's average since the last levy (weighted by time)."""
+    _touch(ctx, team_id)
+    row = ctx.one("SELECT chest, chest_area, chest_from FROM teams WHERE team_id=?;", (team_id,))
+    span = int(ctx.now) - int(row["chest_from"])
+    return int(row["chest_area"] / span) if span > 0 else int(row["chest"])
+
+
 def chest(ctx: Ctx, team_id: int) -> int:
     row = ctx.one("SELECT chest FROM teams WHERE team_id=?;", (team_id,))
     return int(row["chest"]) if row else 0
@@ -43,7 +76,7 @@ def deposit(ctx: Ctx, user_id: int, amount: int) -> dict:
         raise GameError("Put at least 1 emerald.")
     loans.check_not_late(ctx, user_id, "chest deposits")  # a late borrower's wealth stays where it can be garnished
     players.spend_emeralds(ctx, user_id, amount)
-    ctx.execute("UPDATE teams SET chest = chest + ? WHERE team_id=?;", (amount, team["team_id"]))
+    move_chest(ctx, team["team_id"], amount)
     players.bump_stat(ctx, user_id, "chest_deposits", amount)
     return {"team": team, "amount": amount, "chest": chest(ctx, team["team_id"])}
 
@@ -54,20 +87,20 @@ def withdraw(ctx: Ctx, user_id: int, amount: int) -> dict:
         raise GameError("Only your team's leader can take emeralds out of the chest.")
     if amount <= 0:
         raise GameError("Take at least 1 emerald.")
-    if ctx.one("SELECT 1 FROM raids WHERE defender_team=? AND status IN ('gathering', 'defending');",
+    if ctx.one("SELECT 1 FROM raids WHERE defender_team=? AND status IN ('gathering', 'defending', 'fighting');",
                (team["team_id"],)):
         raise GameError("Your chest is being raided: nothing comes out of it until the raid is over.")
     have = chest(ctx, team["team_id"])
     if amount > have:
         raise GameError(f"The chest only holds **{have:,}** emeralds.")
-    ctx.execute("UPDATE teams SET chest = chest - ? WHERE team_id=?;", (amount, team["team_id"]))
+    move_chest(ctx, team["team_id"], -amount)
     players.give_emeralds(ctx, user_id, amount)
     return {"team": team, "amount": amount, "chest": chest(ctx, team["team_id"])}
 
 
 def set_chest(ctx: Ctx, team_id: int, amount: int) -> None:
     """Staff: set a chest."""
-    ctx.execute("UPDATE teams SET chest=? WHERE team_id=?;", (max(0, amount), team_id))
+    move_chest(ctx, team_id, max(0, amount) - chest(ctx, team_id))
 
 
 # ---------------- the war ----------------
@@ -170,7 +203,7 @@ def weekly(ctx: Ctx) -> dict | None:
             for place, (team, prize) in enumerate(zip(ranked, c["prizes"]), start=1):
                 paid = int(share * float(prize))
                 carried -= paid
-                ctx.execute("UPDATE teams SET chest = chest + ? WHERE team_id=?;", (paid, team["team_id"]))
+                move_chest(ctx, team["team_id"], paid)
                 podium.append({**team, "place": place, "paid": paid})
                 if place == 1:
                     for m in teams.members(ctx, team["team_id"]):
@@ -179,14 +212,20 @@ def weekly(ctx: Ctx) -> dict | None:
                         (int(ctx.now), json.dumps(podium), last))
             _week(ctx, ctx.week_id)
             ctx.execute("UPDATE war_weeks SET pot = pot + ? WHERE week_id=?;", (max(0, carried), ctx.week_id))
-    # This week's pot: a share of every chest of the teams at war.
+    # This week's pot: a share of every chest of the teams at war, on its average over the week (emptying it just
+    # before Monday doesn't dodge it), never more than it holds. The average then starts over.
     pot = 0
     for t in ctx.all("SELECT team_id, chest FROM teams;"):
         if at_war(ctx, t["team_id"]):
-            take = int(t["chest"] * float(c["levy"]))
+            due = int(average_chest(ctx, t["team_id"]) * float(c["levy"]))
+            take = min(int(t["chest"]), due)
             if take > 0:
-                ctx.execute("UPDATE teams SET chest = chest - ? WHERE team_id=?;", (take, t["team_id"]))
+                move_chest(ctx, t["team_id"], -take)
                 pot += take
+            if due > take:  # emptied before Monday: what's missing is owed, paid by the next emeralds put in
+                ctx.execute("UPDATE teams SET chest_debt = chest_debt + ? WHERE team_id=?;", (due - take, t["team_id"]))
+        ctx.execute("UPDATE teams SET chest_area=0, chest_from=?, chest_touched=? WHERE team_id=?;",
+                    (int(ctx.now), int(ctx.now), t["team_id"]))
     _week(ctx, ctx.week_id)
     ctx.execute("UPDATE war_weeks SET pot = pot + ? WHERE week_id=?;", (pot, ctx.week_id))
     botstate.put(ctx, "war_week", ctx.week_id)
@@ -211,7 +250,7 @@ def get_raid(ctx: Ctx, raid_id: int) -> dict:
 def _open_raid_of(ctx: Ctx, user_id: int) -> int | None:
     row = ctx.one(
         "SELECT r.raid_id FROM raids r JOIN raid_members m ON m.raid_id = r.raid_id "
-        "WHERE m.user_id=? AND r.status IN ('gathering', 'defending');", (user_id,))
+        "WHERE m.user_id=? AND r.status IN ('gathering', 'defending', 'fighting');", (user_id,))
     return int(row["raid_id"]) if row else None
 
 
@@ -235,7 +274,7 @@ def start_raid(ctx: Ctx, user_id: int, target_query: str) -> dict:
     if opens is not None:
         raise GameError(f"Everyone is asleep: no raids at night. Try again <t:{opens}:R>.")
     busy = ctx.one(
-        "SELECT 1 FROM raids WHERE status IN ('gathering', 'defending') "
+        "SELECT 1 FROM raids WHERE status IN ('gathering', 'defending', 'fighting') "
         "AND (attacker_team IN (?, ?) OR defender_team IN (?, ?));",
         (team["team_id"], target["team_id"], team["team_id"], target["team_id"]),
     )
@@ -321,112 +360,278 @@ def launch_raid(ctx: Ctx, raid_id: int, user_id: int | None) -> dict:
     return {**get_raid(ctx, raid_id), "launched": True}
 
 
-@dataclass
-class Raider:
-    user_id: int
-    side: str
-    attack: float
-    min_attack: float
-    reduction: float
-    hp: float
-    attacks: int = 0
-    hits_taken: int = 0
-    gear_ids: dict | None = None
-    downed_by: int | None = None  # who dealt the blow that made them fall (bounties)
+# ---------------- the chest's defenses ----------------
+DEFENSES: dict[str, str] = {"walls": "🧱 Walls", "archers": "🏹 Archers", "golem": "🛡️ Iron Golem"}
 
 
-def fight(rng: random.Random, attackers: list[Raider], defenders: list[Raider]) -> tuple[str, list[str]]:
-    """Both sides strike at once each round, every fighter on a random enemy still standing.
-    Returns the winning side ("attack" / "defend") and the story."""
-    d = settings.get()["duel"]
-    log: list[str] = []
-    for rnd in range(1, int(_cfg()["raid_max_rounds"]) + 1):
-        hits = []
-        for side, foes in ((attackers, defenders), (defenders, attackers)):
-            for f in side:
-                alive = [x for x in foes if x.hp > 0]
-                if f.hp <= 0 or not alive:
-                    continue
-                target = rng.choice(alive)
-                f.attacks += 1
-                dmg = rng.uniform(min(f.min_attack, f.attack), f.attack)
-                if rng.random() < float(d["crit_chance"]):
-                    dmg *= float(d["crit_multiplier"])
-                dmg = max(float(d["min_hit_after_armor"]), dmg * (1 - target.reduction))
-                hits.append((f, target, dmg))
-        for f, target, dmg in hits:  # at once: a fighter falling this round still strikes
-            if target.hp > 0 and target.hp - dmg <= 0:
-                target.downed_by = f.user_id
-            target.hp = max(0.0, target.hp - dmg)
-            target.hits_taken += 1
-        down_a = sum(1 for f in attackers if f.hp <= 0)
-        down_d = sum(1 for f in defenders if f.hp <= 0)
-        log.append(f"Round {rnd}: attackers standing {len(attackers) - down_a}/{len(attackers)}, "
-                   f"defenders {len(defenders) - down_d}/{len(defenders)}")
-        if down_a == len(attackers) or down_d == len(defenders):
-            break
-    hp_a = sum(f.hp for f in attackers)
-    hp_d = sum(f.hp for f in defenders)
-    return ("attack" if hp_d <= 0 or (hp_a > 0 and hp_a > hp_d) else "defend"), log[-6:]
+def defenses(ctx: Ctx, team_id: int) -> dict[str, list]:
+    """kind -> [level (0-3), solidity (0-1)]."""
+    row = ctx.one("SELECT defenses FROM teams WHERE team_id=?;", (team_id,))
+    saved = json.loads(row["defenses"]) if row and row["defenses"] else {}
+    return {k: list(saved.get(k, [0, 1.0])) for k in DEFENSES}
 
 
-def _raider(ctx: Ctx, user_id: int, side: str) -> Raider:
+def _save_defenses(ctx: Ctx, team_id: int, d: dict) -> None:
+    ctx.execute("UPDATE teams SET defenses=? WHERE team_id=?;", (json.dumps(d), team_id))
+
+
+def defense_price(kind: str, level: int) -> int:
+    return int(_cfg()["defenses"][kind]["price"][level - 1])
+
+
+def repair_price(kind: str, level: int, solidity: float) -> int:
+    return int(round(defense_price(kind, level) * float(_cfg()["defenses"]["repair"]) * (1 - solidity)))
+
+
+def _leader_team(ctx: Ctx, user_id: int) -> dict:
+    team = teams.team_of(ctx, user_id)
+    if team is None or team["leader_id"] != user_id:
+        raise GameError("Only your team's leader can do that.")
+    if teams.in_raid(ctx, team["team_id"]):
+        raise GameError("Not during a raid.")
+    return team
+
+
+def _pay_from_chest(ctx: Ctx, team_id: int, price: int) -> None:
+    have = chest(ctx, team_id)
+    if price > have:
+        raise GameError(f"That costs **{price:,}** emeralds from the chest: it only holds **{have:,}**.")
+    move_chest(ctx, team_id, -price)
+
+
+def buy_defense(ctx: Ctx, user_id: int, kind: str) -> dict:
+    """The leader builds the next level of a defense with the chest's emeralds (spent)."""
+    if kind not in DEFENSES:
+        raise GameError("Unknown defense.")
+    team = _leader_team(ctx, user_id)
+    d = defenses(ctx, team["team_id"])
+    level, solidity = d[kind]
+    if level >= 3:
+        raise GameError(f"Your {DEFENSES[kind]} are already at the highest level.")
+    price = defense_price(kind, level + 1)
+    _pay_from_chest(ctx, team["team_id"], price)
+    d[kind] = [level + 1, 1.0]
+    _save_defenses(ctx, team["team_id"], d)
+    return {"team": team, "kind": kind, "level": level + 1, "price": price, "chest": chest(ctx, team["team_id"])}
+
+
+def repair_defense(ctx: Ctx, user_id: int, kind: str) -> dict:
+    """The leader repairs a defense worn by raids, with the chest's emeralds."""
+    if kind not in DEFENSES:
+        raise GameError("Unknown defense.")
+    team = _leader_team(ctx, user_id)
+    d = defenses(ctx, team["team_id"])
+    level, solidity = d[kind]
+    if level <= 0 or solidity >= 1:
+        raise GameError(f"Your {DEFENSES[kind]} don't need repairs.")
+    price = repair_price(kind, level, solidity)
+    _pay_from_chest(ctx, team["team_id"], price)
+    d[kind] = [level, 1.0]
+    _save_defenses(ctx, team["team_id"], d)
+    return {"team": team, "kind": kind, "level": level, "price": price, "chest": chest(ctx, team["team_id"])}
+
+
+def _wear_defenses(ctx: Ctx, team_id: int) -> list[str]:
+    """After a raid on the team: every defense loses some solidity; at 0 it loses a level. Returns the lost ones."""
+    d = defenses(ctx, team_id)
+    lost = []
+    for kind, (level, solidity) in d.items():
+        if level <= 0:
+            continue
+        solidity = round(solidity - float(_cfg()["defenses"]["wear"]), 4)
+        if solidity <= 0:
+            level, solidity = level - 1, 1.0
+            lost.append(kind)
+        d[kind] = [level, solidity]
+    _save_defenses(ctx, team_id, d)
+    return lost
+
+
+# ---------------- the assault ----------------
+def _fighter(ctx: Ctx, user_id: int, side: str) -> Fighter:
+    """A player as they go in: their gear and species like in a duel, and their team chest's Combat bonus."""
     f, equipped = duel.make_fighter(ctx, user_id)
-    return Raider(user_id, side, f.attack, f.min_attack, f.reduction, float(settings.get()["duel"]["hp"]),
-                  gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
+    bonus = teams.chest_bonus(ctx, user_id, "combat")
+    return Fighter(user_id, side, f.attack * (1 + bonus), f.min_attack * (1 + bonus),
+                   1 - (1 - f.reduction) * (1 - bonus), float(settings.get()["duel"]["hp"]),
+                   potion_boost=f.potion_boost, blocks_left=f.blocks_left,
+                   gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
 
 
-def _wear(ctx: Ctx, r: Raider) -> None:
-    pieces = gear.get_pieces(ctx, r.gear_ids or {})
-    if pieces.get("sword") and r.attacks:
-        gear.wear(ctx, pieces["sword"], r.attacks)
-    for slot in ARMOR:
-        if pieces.get(slot) and r.hits_taken:
-            gear.wear(ctx, pieces[slot], r.hits_taken)
+def _golem(level: int) -> Fighter:
+    g = _cfg()["defenses"]["golem"]
+    i = level - 1
+    return Fighter(GOLEM, "defend", float(g["max_damage"][i]), float(g["min_damage"][i]), float(g["reduction"][i]),
+                   float(g["hp"][i]))
+
+
+def _new_fight(ctx: Ctx, raid: dict) -> RaidFight | None:
+    """The fight of a raid, or None when nobody (no player, no golem) defends the chest."""
+    d = defenses(ctx, raid["defender_team"])
+    attackers = [_fighter(ctx, uid, "attack") for uid in raid["attackers"]]
+    defenders = [_fighter(ctx, uid, "defend") for uid in raid["defenders"]]
+    if d["golem"][0] > 0:
+        defenders.append(_golem(d["golem"][0]))
+    if not defenders:
+        return None
+    a = _cfg()["defenses"]["archers"]
+    walls, archers = d["walls"][0], d["archers"][0]
+    return RaidFight(
+        RaidFight.order(attackers, defenders),
+        walls=float(_cfg()["defenses"]["walls"]["reduction"][walls - 1]) if walls else 0.0,
+        arrows=int(a["arrows"][archers - 1]) if archers else 0,
+        arrow_damage=(float(a["min_damage"]), float(a["max_damage"])),
+    )
+
+
+def _turn_deadline(ctx: Ctx) -> int:
+    return int(ctx.now + int(settings.get()["gate_bosses"]["turn_seconds"]))
+
+
+def fight_of(raid: dict) -> RaidFight | None:
+    return RaidFight.from_json(raid["state"]) if raid.get("state") else None
+
+
+def _auto_turns(ctx: Ctx, fight: RaidFight) -> None:
+    """Players who missed afk_turns turns in a row: their turns play by themselves."""
+    while not fight.over and fight.current.afk >= int(settings.get()["gate_bosses"]["afk_turns"]):
+        fight.attack(ctx.rng, fight.current.user_id)
+
+
+def _save_fight(ctx: Ctx, raid: dict, fight: RaidFight) -> dict:
+    _auto_turns(ctx, fight)
+    if fight.over:
+        return _finish(ctx, raid, fight)
+    ctx.execute("UPDATE raids SET state=?, deadline=? WHERE raid_id=?;",
+                (fight.to_json(), _turn_deadline(ctx), raid["raid_id"]))
+    return get_raid(ctx, raid["raid_id"])
 
 
 def resolve_raid(ctx: Ctx, raid_id: int) -> dict:
-    """The assault: attackers against defenders. Won (or nobody defended): a share of the chest is taken."""
-    c = _cfg()
+    """The assault: nobody defends (no player, no golem) = the chest is plundered; otherwise the fight starts."""
     raid = get_raid(ctx, raid_id)
     if raid["status"] != "defending":
         raise GameError("This raid isn't waiting for its assault.")
-    attackers = [_raider(ctx, uid, "attack") for uid in raid["attackers"]]
-    defenders = [_raider(ctx, uid, "defend") for uid in raid["defenders"]]
+    fight = _new_fight(ctx, raid)
+    if fight is None:
+        return _finish(ctx, raid, None)
+    fight.log.append("⚔️ **The assault begins!**")
+    fight.start(ctx.rng)
+    ctx.execute("UPDATE raids SET status='fighting' WHERE raid_id=?;", (raid_id,))
+    return {**_save_fight(ctx, {**raid, "status": "fighting"}, fight), "started": True}
+
+
+def _fighting(ctx: Ctx, raid_id: int) -> tuple[dict, RaidFight]:
+    raid = get_raid(ctx, raid_id)
+    if raid["status"] != "fighting":
+        raise GameError("This raid isn't being fought.")
+    return raid, fight_of(raid)
+
+
+def raid_present(ctx: Ctx, raid_id: int, user_id: int) -> None:
+    """A fighter clicked: they're here, their turns stop playing by themselves (saved on its own)."""
+    raid = get_raid(ctx, raid_id)
+    fight = fight_of(raid) if raid["status"] == "fighting" else None
+    f = next((x for x in fight.fighters if x.user_id == user_id and not x.golem), None) if fight else None
+    if f is not None and f.afk:
+        f.afk = 0
+        ctx.execute("UPDATE raids SET state=? WHERE raid_id=?;", (fight.to_json(), raid_id))
+
+
+def raid_attack(ctx: Ctx, raid_id: int, user_id: int, block: bool = False) -> dict:
+    raid, fight = _fighting(ctx, raid_id)
+    fight.fighter(user_id).afk = 0
+    fight.attack(ctx.rng, user_id, block)
+    return _save_fight(ctx, raid, fight)
+
+
+def raid_drink(ctx: Ctx, raid_id: int, user_id: int, key: str) -> dict:
+    """The current fighter drinks a potion from their inventory, then still has to attack."""
+    raid, fight = _fighting(ctx, raid_id)
+    fight.check_potion(user_id, key)
+    potions.drink(ctx, user_id, key)
+    fight.drink(ctx.rng, user_id, key)
+    fight.current.afk = 0
+    if fight.over:
+        return _finish(ctx, raid, fight)
+    ctx.execute("UPDATE raids SET state=? WHERE raid_id=?;", (fight.to_json(), raid_id))
+    return get_raid(ctx, raid_id)
+
+
+def clear_fight_log(ctx: Ctx, raid_id: int) -> None:
+    """The log was shown: start a new one."""
+    raid = get_raid(ctx, raid_id)
+    if raid["status"] == "fighting" and raid.get("state"):
+        fight = fight_of(raid)
+        fight.log = []
+        ctx.execute("UPDATE raids SET state=? WHERE raid_id=?;", (fight.to_json(), raid_id))
+
+
+def play_out(ctx: Ctx, raid_id: int) -> dict:
+    """Play the rest of a fight by itself (staff, tests)."""
+    raid, fight = _fighting(ctx, raid_id)
+    while not fight.over:
+        fight.attack(ctx.rng, fight.current.user_id)
+    return _finish(ctx, raid, fight)
+
+
+def _finish(ctx: Ctx, raid: dict, fight: RaidFight | None) -> dict:
+    """The raid is over: the loot, the points, the wear of the gear and of the defenses, the bounties."""
+    c = _cfg()
     claimed = []
-    if defenders:
-        winner, log = fight(ctx.rng, attackers, defenders)
-        for r in attackers + defenders:
-            _wear(ctx, r)
-            got = bounty.claim(ctx, r.downed_by, r.user_id, "raid") if r.downed_by is not None else None
+    if fight is None:
+        winner, log = "attack", ["Nobody came to defend the chest."]
+    else:
+        winner, log = fight.result, fight.log[-12:]
+        for f in fight.fighters:
+            if f.golem:
+                continue
+            pieces = gear.get_pieces(ctx, f.gear_ids)
+            if pieces.get("sword") and f.attacks:
+                gear.wear(ctx, pieces["sword"], f.attacks)
+            for slot in ARMOR:
+                if pieces.get(slot) and f.hits_taken:
+                    gear.wear(ctx, pieces[slot], f.hits_taken)
+            if f.blocks_used and pieces.get(SHIELD):
+                gear.wear_shield(ctx, pieces[SHIELD], f.blocks_used)
+            got = bounty.claim(ctx, f.downed_by, f.user_id, "raid") if f.downed_by is not None else None
             if got:
                 claimed.append(got)
-    else:
-        winner, log = "attack", ["Nobody came to defend the chest."]
     stolen = 0
     if winner == "attack":
         stolen = min(int(chest(ctx, raid["defender_team"]) * float(c["raid_steal"])), int(c["raid_steal_max"]))
-        ctx.execute("UPDATE teams SET chest = chest - ? WHERE team_id=?;", (stolen, raid["defender_team"]))
-        ctx.execute("UPDATE teams SET chest = chest + ? WHERE team_id=?;", (stolen, raid["attacker_team"]))
+        move_chest(ctx, raid["defender_team"], -stolen)
+        move_chest(ctx, raid["attacker_team"], stolen)
         add_points(ctx, raid["attacker_team"], "raid", raid["leader_id"], raid["defender_team"])
         for uid in raid["attackers"]:
             players.bump_stat(ctx, uid, "raids_won")
     else:
-        add_points(ctx, raid["defender_team"], "raid_defended", raid["defenders"][0], raid["attacker_team"])
+        add_points(ctx, raid["defender_team"], "raid_defended",
+                   raid["defenders"][0] if raid["defenders"] else None, raid["attacker_team"])
         for uid in raid["defenders"]:
             players.bump_stat(ctx, uid, "raids_defended")
-    ctx.execute("UPDATE raids SET status=?, stolen=?, log=?, deadline=? WHERE raid_id=?;",
-                ("won" if winner == "attack" else "lost", stolen, json.dumps(log), int(ctx.now), raid_id))
-    return {**get_raid(ctx, raid_id), "bounties": claimed}
+    worn = _wear_defenses(ctx, raid["defender_team"]) if teams.get_team(ctx, raid["defender_team"]) else []
+    ctx.execute("UPDATE raids SET status=?, stolen=?, log=?, deadline=?, state=NULL WHERE raid_id=?;",
+                ("won" if winner == "attack" else "lost", stolen, json.dumps(log), int(ctx.now), raid["raid_id"]))
+    return {**get_raid(ctx, raid["raid_id"]), "bounties": claimed, "worn": worn}
 
 
 def due_raids(ctx: Ctx) -> list[dict]:
-    """Called every minute: parties gathered long enough leave, assaults whose time came are fought."""
+    """Called every few seconds: parties gathered long enough leave, assaults whose time came start, and a fighter
+    who didn't play in time attacks (their missed turns count)."""
     out = []
-    for r in ctx.all("SELECT raid_id, status FROM raids WHERE status IN ('gathering', 'defending') AND deadline <= ?;",
-                     (int(ctx.now),)):
+    for r in ctx.all("SELECT raid_id, status FROM raids WHERE status IN ('gathering', 'defending', 'fighting') "
+                     "AND deadline <= ?;", (int(ctx.now),)):
         if r["status"] == "gathering":
             out.append(launch_raid(ctx, r["raid_id"], None))
-        else:
+        elif r["status"] == "defending":
             out.append(resolve_raid(ctx, r["raid_id"]))
+        else:
+            raid, fight = _fighting(ctx, r["raid_id"])
+            f = fight.current
+            if not fight.drank:  # drinking a potion is playing: only a turn with nothing done counts as missed
+                f.afk += 1
+            fight.log.append(f"⏳ {f.mention} didn't play in time: they attack.")
+            fight.attack(ctx.rng, f.user_id)
+            out.append(_save_fight(ctx, raid, fight))
     return out

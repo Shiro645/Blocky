@@ -102,6 +102,66 @@ def invite_view(team_id: int, user_id: int) -> discord.ui.View:
     return view
 
 
+def chest_effect(kind: str, tier: int) -> str:
+    value = teams.chest_bonus_value(kind, tier)
+    return f"×{1 + value:g}" if kind == "luck" else f"+{value:.0%}"
+
+
+def defense_lines(defenses: dict) -> list[str]:
+    d = settings.get()["war"]["defenses"]
+    out = []
+    for key, label in war.DEFENSES.items():
+        level, solidity = defenses.get(key, [0, 1.0])
+        if level:
+            if key == "walls":
+                what = f"hits on the defenders -{float(d['walls']['reduction'][level - 1]):.0%}"
+            elif key == "archers":
+                what = f"{d['archers']['arrows'][level - 1]} arrow(s) at the attackers every round"
+            else:
+                what = f"a defender with {d['golem']['hp'][level - 1]:g} HP that fights even when nobody comes"
+            state = f"solidity {solidity:.0%}" + (f", repair {em(war.repair_price(key, level, solidity))}"
+                                                 if solidity < 1 else "")
+            line = f"{label} **{level}/3**: {what} ({state})"
+        else:
+            line = f"{label}: none"
+        if level < 3:
+            line += f" · next level {em(war.defense_price(key, level + 1))}"
+        out.append(line)
+    return out
+
+
+def chest_embed(team: dict, amount: int, safe: int = 0, defenses: dict | None = None) -> discord.Embed:
+    w = settings.get()["war"]
+    tier = teams.chest_tier(amount)
+    kind = team.get("chest_bonus")
+    lines = [f"💰 **{em(amount)}** in the chest. Members put emeralds in (`/team chest deposit`), only the leader "
+             "takes them out. A personal /rob can't reach it, but other teams can **raid** it (`/team raid`)."]
+    if kind:
+        label, what = teams.CHEST_BONUSES[kind]
+        effect = chest_effect(kind, tier) if tier else "nothing yet"
+        lines.append(f"\n**Bonus: {label}** ({what}): tier **{tier}/4** → {effect} for every member.")
+    else:
+        lines.append("\n**No bonus picked yet**: the leader picks one with `/team chest bonus`.")
+    if team.get("chest_debt"):
+        lines.append(f"⚠️ The chest owes {em(int(team['chest_debt']))} to the gang war's pot (it was emptied before "
+                     "a Monday levy): the next emeralds put in pay it first.")
+    tiers = [f"{'✅' if amount >= int(need) else '⬛'} **{em(int(need))}**: "
+             + " · ".join(f"{teams.CHEST_BONUSES[k][0].split()[0]} {chest_effect(k, i)}" for k in teams.CHEST_BONUSES)
+             for i, need in enumerate(w["chest_tiers"], start=1)]
+    embed = discord.Embed(title=f"💰 [{team['tag']}] {team['name']}'s chest", description="\n".join(lines),
+                          color=discord.Color.gold())
+    embed.add_field(name="Tiers", value="\n".join(tiers), inline=False)
+    if defenses is not None:
+        embed.add_field(name="Defenses (`/team chest defense`, paid from the chest)",
+                        value="\n".join(defense_lines(defenses)), inline=False)
+    if safe:
+        embed.add_field(name="🛡️ Raided recently", value=f"Safe until <t:{safe}:f>.", inline=False)
+    embed.set_footer(text=f"Raids take {float(w['raid_steal']):.0%} of it ({int(w['raid_steal_max']):,} max). Every "
+                          f"Monday {float(w['levy']):.0%} of its average over the week goes into the gang war's pot "
+                          "(/war).")
+    return embed
+
+
 class TeamsCog(commands.Cog):
     team = app_commands.Group(name="team", description="Teams: play together and win the weekly team season.")
     channel = app_commands.Group(name="channel", description="LEADER: The channels of your team's category.",
@@ -614,24 +674,44 @@ class TeamsCog(commands.Cog):
             f"💰 {interaction.user.mention} took {em(amount)} out of **[{res['team']['tag']}]**'s chest "
             f"(now {em(res['chest'])}).", allowed_mentions=discord.AllowedMentions.none())
 
-    @chest.command(name="view", description="Your team's chest, and what the gang war takes and gives.")
+    @chest.command(name="view", description="Your team's chest: its bonus, its defenses, what the gang war takes and gives.")
     async def chest_view(self, interaction: discord.Interaction):
         def load(ctx):
             team = teams.team_of(ctx, interaction.user.id)
             if team is None:
                 raise GameError("You're not in a team.")
-            return team, war.chest(ctx, team["team_id"]), war.protected_until(ctx, team["team_id"])
+            return (team, war.chest(ctx, team["team_id"]), war.protected_until(ctx, team["team_id"]),
+                    war.defenses(ctx, team["team_id"]))
 
-        team, amount, safe = await self.bot.db.run(load)
-        w = settings.get()["war"]
-        text = (f"💰 **[{team['tag']}] {team['name']}**'s chest: {em(amount)}.\n"
-                f"Members put emeralds in (`/team chest deposit`), only the leader takes them out. A personal /rob "
-                f"can't reach it, but other teams can **raid** it (`/team raid`): {float(w['raid_steal']):.0%} of it "
-                f"is taken when they win. Every Monday {float(w['levy']):.0%} of it goes into the gang war's pot "
-                "(`/war`).")
-        if safe:
-            text += f"\n🛡️ Raided recently: safe until <t:{safe}:f>."
-        await interaction.response.send_message(text, ephemeral=True)
+        team, amount, safe, defenses = await self.bot.db.run(load)
+        await interaction.response.send_message(embed=chest_embed(team, amount, safe, defenses), ephemeral=True)
+
+    @chest.command(name="defense", description="LEADER: Build or repair the chest's defenses with its emeralds.")
+    @app_commands.describe(action="Build the next level, or repair what raids wore out", defense="Which defense")
+    @app_commands.choices(
+        action=[app_commands.Choice(name="Build the next level", value="buy"),
+                app_commands.Choice(name="Repair", value="repair")],
+        defense=[app_commands.Choice(name=label, value=key) for key, label in war.DEFENSES.items()],
+    )
+    async def chest_defense(self, interaction: discord.Interaction, action: str, defense: str):
+        run = war.buy_defense if action == "buy" else war.repair_defense
+        res = await self.bot.db.run(run, interaction.user.id, defense)
+        done = f"built **level {res['level']}**" if action == "buy" else f"repaired (level {res['level']})"
+        await interaction.response.send_message(
+            f"{war.DEFENSES[defense]} of **[{res['team']['tag']}]**'s chest: {done} for {em(res['price'])} from the "
+            f"chest (now {em(res['chest'])}).", allowed_mentions=discord.AllowedMentions.none())
+
+    @chest.command(name="bonus", description="LEADER: Pick your chest's bonus: the fuller the chest, the stronger.")
+    @app_commands.describe(bonus="The bonus every member gets")
+    @app_commands.choices(bonus=[app_commands.Choice(name=f"{label} ({what})"[:100], value=key)
+                                 for key, (label, what) in teams.CHEST_BONUSES.items()])
+    async def chest_bonus(self, interaction: discord.Interaction, bonus: str):
+        team = await self.bot.db.run(teams.pick_chest_bonus, interaction.user.id, bonus)
+        days = settings.get()["war"]["chest_bonus_days"]
+        await interaction.response.send_message(
+            f"✅ **[{team['tag']}]**'s chest now gives **{teams.CHEST_BONUSES[bonus][0]}** to every member "
+            f"(stronger as the chest fills up). It can be changed again in {days} days. `/team chest view`",
+            allowed_mentions=discord.AllowedMentions.none())
 
     @team.command(name="raid", description="Raid another team's chest: gather your team, then fight its defenders.")
     @app_commands.describe(team="Tag or name of the team to raid")

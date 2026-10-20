@@ -296,7 +296,7 @@ def _drop_team(ctx: Ctx, team: dict) -> None:
         (team["team_id"], team["name"], team["tag"]),
     )
     # Its open raids are called off (a raid's loot would have nowhere to go).
-    ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending') "
+    ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending', 'fighting') "
                 "AND (attacker_team=? OR defender_team=?);", (team["team_id"], team["team_id"]))
     # The chest goes back to the leader (not earned: it came from the members).
     left = ctx.one("SELECT chest FROM teams WHERE team_id=?;", (team["team_id"],))
@@ -315,7 +315,7 @@ def _delete(ctx: Ctx, team: dict) -> dict:
 
 def in_raid(ctx: Ctx, team_id: int) -> bool:
     """The team raids or is raided right now (game/war.py)."""
-    return ctx.one("SELECT 1 FROM raids WHERE status IN ('gathering', 'defending') AND (attacker_team=? OR "
+    return ctx.one("SELECT 1 FROM raids WHERE status IN ('gathering', 'defending', 'fighting') AND (attacker_team=? OR "
                    "defender_team=?);", (team_id, team_id)) is not None
 
 
@@ -329,6 +329,49 @@ def disband(ctx: Ctx, leader_id: int) -> dict:
 def remove(ctx: Ctx, query: str) -> dict:
     """Staff: delete any team (offensive name...)."""
     return _delete(ctx, find_team(ctx, query))
+
+
+# ---------------- the chest's bonus ----------------
+CHEST_BONUSES: dict[str, tuple[str, str]] = {
+    "mining": ("⛏️ Mining", "mining XP"),
+    "trade": ("💰 Trade", "/sell of blocks"),
+    "combat": ("⚔️ Combat", "more damage dealt, less taken: dungeon, gate bosses, raids"),
+    "luck": ("🍀 Luck", "rare blocks and drops"),
+}
+
+
+def chest_tier(amount: int) -> int:
+    """0 (no bonus) to 4: the tiers the chest reached (war.chest_tiers)."""
+    return sum(1 for t in settings.get()["war"]["chest_tiers"] if amount >= int(t))
+
+
+def chest_bonus_value(kind: str, tier: int) -> float:
+    return float(settings.get()["war"]["chest_bonus"][kind][tier - 1]) if tier > 0 else 0.0
+
+
+def chest_bonus(ctx: Ctx, user_id: int, kind: str) -> float:
+    """The bonus of the member's team chest for `kind` (0 when the team picked another one or has none).
+    Luck is a multiplier: ×(1 + this)."""
+    row = ctx.one("SELECT t.chest, t.chest_bonus FROM team_members m JOIN teams t USING(team_id) WHERE m.user_id=?;",
+                  (user_id,))
+    if row is None or row["chest_bonus"] != kind:
+        return 0.0
+    return chest_bonus_value(kind, chest_tier(int(row["chest"])))
+
+
+def pick_chest_bonus(ctx: Ctx, leader_id: int, kind: str) -> dict:
+    """The leader picks the chest's bonus (once every war.chest_bonus_days)."""
+    if kind not in CHEST_BONUSES:
+        raise GameError("Unknown bonus.")
+    team = _require_leader(ctx, leader_id)
+    if team.get("chest_bonus") == kind:
+        raise GameError(f"Your chest's bonus is already **{CHEST_BONUSES[kind][0]}**.")
+    wait = float(settings.get()["war"]["chest_bonus_days"]) * 86_400
+    if team.get("chest_bonus") and team.get("chest_bonus_at") and ctx.now < team["chest_bonus_at"] + wait:
+        raise GameError(f"You can change the chest's bonus again <t:{int(team['chest_bonus_at'] + wait)}:R>.")
+    ctx.execute("UPDATE teams SET chest_bonus=?, chest_bonus_at=? WHERE team_id=?;",
+                (kind, int(ctx.now), team["team_id"]))
+    return get_team(ctx, team["team_id"])
 
 
 # ---------------- team bonus ----------------

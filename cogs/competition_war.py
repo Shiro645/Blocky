@@ -7,17 +7,19 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from game import settings, teams, war
+from cogs.games_boss import PotionSelect, bar
+from game import potions, settings, teams, war
 from game.errors import GameError
+from game.raid_fight import Fighter, RaidFight
 from utils.checks import check_game_channel, staff_only
-from utils.ui import em, join_lines, report_error
+from utils.ui import BaseView, em, join_lines, potion_icon, report_error
 
 log = logging.getLogger("war")
 
 REASONS = {"duel": "⚔️ duel won", "rob": "🦹 robbery", "rob_stopped": "🚨 robbery stopped",
            "raid": "🏴 raid won", "raid_defended": "🛡️ raid pushed back"}
-COLORS = {"gathering": discord.Color.orange(), "defending": discord.Color.red(), "won": discord.Color.dark_red(),
-          "lost": discord.Color.green(), "cancelled": discord.Color.dark_grey()}
+COLORS = {"gathering": discord.Color.orange(), "defending": discord.Color.red(), "fighting": discord.Color.dark_red(),
+          "won": discord.Color.dark_red(), "lost": discord.Color.green(), "cancelled": discord.Color.dark_grey()}
 
 
 def tag(team: dict | None) -> str:
@@ -38,35 +40,68 @@ def raid_embed(raid: dict) -> discord.Embed:
                      "the chest is plundered.")
     elif raid["status"] == "cancelled":
         lines.append("This raid was called off.")
+    elif raid["status"] == "fighting":
+        fight = war.fight_of(raid)
+        lines.append(f"⚔️ **The assault on {d}'s chest!** Round {fight.rounds + 1}/{w['raid_max_rounds']}"
+                     + (f" · 🧱 walls -{fight.walls:.0%}" if fight.walls else "")
+                     + (f" · 🏹 {fight.arrows} arrow(s) a round" if fight.arrows else ""))
+        if fight.log:
+            lines.append("")
+            lines += fight.log[-12:]
+        lines.append(f"\n**{fight.current.mention}'s turn** (before <t:{raid['deadline']}:R>, else they attack): "
+                     "drink a potion if you want, then **Attack** (a random enemy) or **Attack + block**.")
     else:
-        lines += [f"`{line}`" for line in raid["log"]]
+        lines += list(raid["log"])
         if raid["status"] == "won":
             lines.append(f"\n🏴 **{a} plundered {d}'s chest: {em(raid['stolen'])} taken!**")
         else:
             lines.append(f"\n🛡️ **{d} pushed the raid back!**")
         lines += [f"🎯 <@{b['hunter_id']}> claims the bounty on <@{b['target_id']}>'s head: {em(b['amount'])}!"
                   for b in raid.get("bounties", [])]
+        if raid.get("worn"):
+            lines.append("🔨 Worn out by the raid: " + ", ".join(war.DEFENSES[k] for k in raid["worn"])
+                         + " lost a level.")
     embed = discord.Embed(title=f"🏴 Raid on {d}", description=join_lines(lines, 4000),
                           color=COLORS.get(raid["status"]))
-    embed.add_field(name=f"Attackers ({len(raid['attackers'])})",
-                    value=join_lines([f"<@{u}>" for u in raid["attackers"]], empty="—"), inline=True)
-    embed.add_field(name=f"Defenders ({len(raid['defenders'])})",
-                    value=join_lines([f"<@{u}>" for u in raid["defenders"]], empty="—"), inline=True)
+    fight = war.fight_of(raid) if raid["status"] == "fighting" else None
+    if fight is not None:
+        for side, name in (("attack", "Attackers"), ("defend", "Defenders")):
+            embed.add_field(name=name, value=join_lines([fighter_line(fight, f) for f in fight.side(side)]),
+                            inline=False)
+    else:
+        embed.add_field(name=f"Attackers ({len(raid['attackers'])})",
+                        value=join_lines([f"<@{u}>" for u in raid["attackers"]], empty="—"), inline=True)
+        embed.add_field(name=f"Defenders ({len(raid['defenders'])})",
+                        value=join_lines([f"<@{u}>" for u in raid["defenders"]], empty="—"), inline=True)
     return embed
 
 
+def fighter_line(fight: RaidFight, f: Fighter) -> str:
+    if not f.alive:
+        return f"☠️ {f.mention} — fallen"
+    turn = "▶️ " if fight.current is f else ""
+    extra = [f"🛡️ {f.blocks_left}"] if f.blocks_left else []
+    if not f.golem and f.afk >= int(settings.get()["gate_bosses"]["afk_turns"]):
+        extra.append("💤 auto")
+    return (f"{turn}{f.mention} `{bar(f.hp, f.max_hp, 8)}` ❤️ {f.hp:.1f}/{f.max_hp:g} · ⚔️ {f.damage:.0f}"
+            + (" · " + " · ".join(extra) if extra else ""))
+
+
 class RaidButton(discord.ui.DynamicItem[discord.ui.Button],
-                 template=r"blocky:raid:(?P<action>join|launch|leave|defend):(?P<raid_id>\d+)"):
+                 template=r"blocky:raid:(?P<action>join|launch|leave|defend|attack|block|potion):(?P<raid_id>\d+)"):
     """The buttons of a raid. They survive restarts."""
 
     LOOK = {"join": ("Join the raid", "🏴", discord.ButtonStyle.danger),
             "launch": ("Launch", "▶️", discord.ButtonStyle.primary),
             "leave": ("Leave", "🚪", discord.ButtonStyle.secondary),
-            "defend": ("Defend", "🛡️", discord.ButtonStyle.success)}
+            "defend": ("Defend", "🛡️", discord.ButtonStyle.success),
+            "attack": ("Attack", "⚔️", discord.ButtonStyle.danger),
+            "block": ("Attack + block", "🛡️", discord.ButtonStyle.primary),
+            "potion": ("Potion", "🧪", discord.ButtonStyle.secondary)}
 
-    def __init__(self, action: str, raid_id: int) -> None:
+    def __init__(self, action: str, raid_id: int, disabled: bool = False) -> None:
         label, emoji, style = self.LOOK[action]
-        super().__init__(discord.ui.Button(label=label, emoji=emoji, style=style,
+        super().__init__(discord.ui.Button(label=label, emoji=emoji, style=style, disabled=disabled,
                                            custom_id=f"blocky:raid:{action}:{raid_id}"))
         self.action, self.raid_id = action, raid_id
 
@@ -91,9 +126,24 @@ def raid_view(raid: dict) -> discord.ui.View | None:
             view.add_item(RaidButton(action, raid["raid_id"]))
     elif raid["status"] == "defending":
         view.add_item(RaidButton("defend", raid["raid_id"]))
+    elif raid["status"] == "fighting":
+        fight = war.fight_of(raid)
+        view.add_item(RaidButton("attack", raid["raid_id"]))
+        view.add_item(RaidButton("block", raid["raid_id"], disabled=fight.current.blocks_left <= 0))
+        view.add_item(RaidButton("potion", raid["raid_id"],
+                                 disabled=fight.drank or fight.potions_left(fight.current) <= 0))
     else:
         return None
     return view
+
+
+class RaidPotionView(BaseView):
+    """PotionSelect (cogs/games_boss.py) calls cog.drink(interaction, fight_id, key): here fight_id is the raid's."""
+
+    def __init__(self, cog: "WarCog", user_id: int, raid_id: int, owned: dict[str, int]):
+        super().__init__(allowed_ids={user_id}, timeout=60)
+        self.cog, self.fight_id = cog, raid_id
+        self.add_item(PotionSelect(owned))
 
 
 class WarCog(commands.Cog):
@@ -161,11 +211,39 @@ class WarCog(commands.Cog):
             raid = await db.run(war.join_raid, raid_id, uid)
         elif action == "leave":
             raid = await db.run(war.leave_raid, raid_id, uid)
-        else:
+        elif action == "launch":
             raid = await db.run(war.launch_raid, raid_id, uid)
+        elif action in ("attack", "block"):
+            await db.run(war.raid_present, raid_id, uid)
+            raid = await db.run(war.raid_attack, raid_id, uid, action == "block")
+        else:  # potion
+            await db.run(war.raid_present, raid_id, uid)
+            raid = await db.run(war.get_raid, raid_id)
+            fight = war.fight_of(raid) if raid["status"] == "fighting" else None
+            if fight is None:
+                raise GameError("This fight is over.")
+            if fight.current.user_id != uid or fight.current.golem:
+                raise GameError(f"It's {fight.current.mention}'s turn.")
+            owned = await db.run(potions.owned, uid)
+            if not owned:
+                raise GameError("You have no potions.")
+            await interaction.response.send_message("Which potion?", view=RaidPotionView(self, uid, raid_id, owned),
+                                                    ephemeral=True)
+            return
         await interaction.response.edit_message(embed=raid_embed(raid), view=raid_view(raid))
+        await self.after(raid)
         if raid.get("launched"):
             await self.call_defenders(raid)
+
+    async def drink(self, interaction: discord.Interaction, raid_id: int, key: str) -> None:
+        raid = await self.bot.db.run(war.raid_drink, raid_id, interaction.user.id, key)
+        await interaction.response.edit_message(content=f"{potion_icon(key)} You drank {potions.label(key)}.", view=None)
+        await self.refresh(raid)
+
+    async def after(self, raid: dict) -> None:
+        """Once a message showed the fight's log, start a new one."""
+        if raid["status"] == "fighting":
+            await self.bot.db.run(war.clear_fight_log, raid["raid_id"])
 
     async def call_defenders(self, raid: dict) -> None:
         """The party left: ping the defending team's members where the raid is."""
@@ -182,6 +260,19 @@ class WarCog(commands.Cog):
         except discord.HTTPException:
             log.warning("Could not call the defenders of raid %s", raid["raid_id"])
 
+    async def call_fighters(self, raid: dict) -> None:
+        """The assault starts: ping everyone in it, it's played turn by turn."""
+        channel = self.bot.get_channel(raid["channel_id"] or 0)
+        if not isinstance(channel, discord.abc.Messageable):
+            return
+        ids = raid["attackers"] + raid["defenders"]
+        try:
+            await channel.send(" ".join(f"<@{u}>" for u in ids) + " ⚔️ The assault begins: it's played turn by turn "
+                               "on the raid's message. Don't miss your turn!",
+                               allowed_mentions=discord.AllowedMentions(users=[discord.Object(u) for u in ids]))
+        except discord.HTTPException:
+            log.warning("Could not call the fighters of raid %s", raid["raid_id"])
+
     async def refresh(self, raid: dict) -> None:
         channel = self.bot.get_channel(raid["channel_id"] or 0)
         if not isinstance(channel, discord.abc.Messageable) or not raid["message_id"]:
@@ -190,9 +281,10 @@ class WarCog(commands.Cog):
             await channel.get_partial_message(raid["message_id"]).edit(embed=raid_embed(raid), view=raid_view(raid))
         except discord.HTTPException:
             log.warning("Could not update a raid message", exc_info=True)
+        await self.after(raid)
 
     # ---------- background ----------
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=10)  # the raids' turns last 30 s
     async def war_loop(self):
         try:
             res = await self.bot.db.run(war.weekly)
@@ -205,6 +297,8 @@ class WarCog(commands.Cog):
                 await self.refresh(raid)
                 if raid.get("launched"):
                     await self.call_defenders(raid)
+                if raid.get("started"):
+                    await self.call_fighters(raid)
         except Exception:  # an error must never stop the loop
             log.exception("War loop failed")
 

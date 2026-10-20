@@ -471,7 +471,15 @@ FIELDS: list[Field] = [
     # ---- gang wars ----
     _b("war.min_members", "war", "Members to be at war", "A team with fewer members isn't in the weekly war.",
        min=1, max=50),
-    _pct("war.levy", "war", "Weekly levy on each chest", "Taken every Monday into the week's pot."),
+    _pct("war.levy", "war", "Weekly levy on each chest", "Taken every Monday into the week's pot, on the chest's "
+         "average over the week (what can't be taken is owed, paid by the next emeralds put in)."),
+    *[_b(f"war.chest_tiers.{i}", "war", f"Chest bonus: tier {ROMAN[i]}", "Emeralds in the chest for this tier.",
+         min=1, max=100_000_000) for i in range(4)],
+    *[_pct(f"war.chest_bonus.{kind}.{i}", "war", f"Chest bonus {kind}: tier {ROMAN[i]}",
+           {"mining": "Mining XP.", "trade": "/sell of blocks.", "combat": "Damage dealt up and damage taken down "
+            "(dungeon, gate bosses, raids).", "luck": "Rare blocks and drops ×(1 + this)."}[kind], max=5)
+      for kind in ("mining", "trade", "combat", "luck") for i in range(4)],
+    _b("war.chest_bonus_days", "war", "Days between two bonus changes", min=0, max=60),
     _pct("war.tax", "war", "Tax on the pot", "Taken before the podium is paid."),
     *[_pct(f"war.prizes.{i}", "war", f"Pot share of #{i + 1}", "After the tax, paid into the team's chest.")
       for i in range(3)],
@@ -490,7 +498,23 @@ FIELDS: list[Field] = [
     _b("war.raid_steal_max", "war", "Raid: most emeralds taken", max=10_000_000),
     _b("war.raids_per_day", "war", "Raids a team launches a day", min=1, max=20),
     _b("war.raid_protection_hours", "war", "Hours a raided chest is safe", kind="float", max=720),
-    _b("war.raid_max_rounds", "war", "Raid: fight rounds (max)", min=1, max=500),
+    _b("war.raid_max_rounds", "war", "Raid: fight rounds (max)", "Then the side with the most health left wins.",
+       min=1, max=500),
+    *[_b(f"war.defenses.{kind}.price.{i}", "war", f"{label}: level {ROMAN[i]} price", "Paid from the chest.",
+         min=1, max=100_000_000) for kind, label in (("walls", "Walls"), ("archers", "Archers"), ("golem", "Golem"))
+      for i in range(3)],
+    *[_pct(f"war.defenses.walls.reduction.{i}", "war", f"Walls {ROMAN[i]}: hits on defenders -", max=0.9)
+      for i in range(3)],
+    *[_b(f"war.defenses.archers.arrows.{i}", "war", f"Archers {ROMAN[i]}: arrows a round", max=20) for i in range(3)],
+    _b("war.defenses.archers.min_damage", "war", "Arrow: smallest hit", "Before armor.", kind="float", max=100),
+    _b("war.defenses.archers.max_damage", "war", "Arrow: biggest hit", "Before armor.", kind="float", max=100),
+    *[_b(f"war.defenses.golem.{key}.{i}", "war", f"Golem {ROMAN[i]}: {label}", kind="float", min=0, max=1000)
+      for key, label in (("hp", "health"), ("min_damage", "smallest hit"), ("max_damage", "biggest hit"))
+      for i in range(3)],
+    *[_pct(f"war.defenses.golem.reduction.{i}", "war", f"Golem {ROMAN[i]}: armor", "Share of every hit stopped.",
+           max=0.9) for i in range(3)],
+    _pct("war.defenses.wear", "war", "Defenses: solidity lost a raid", "At 0 a level is lost.", max=1),
+    _pct("war.defenses.repair", "war", "Defenses: repair price", "Of the level's price, for a full solidity.", max=5),
     # ---- biomes of the week ----
     _pct("biomes.bonus", "biomes", "Bonus of a biome", "A percent effect: +this (or -this for a cooldown, prices, "
          "damage taken).", max=0.9),

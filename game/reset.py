@@ -44,9 +44,9 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             ctx.execute("DELETE FROM loan_offers WHERE status='open';")
             out["bounties"] = bounty.cancel_all(ctx)
             # The team chests, the gang war's pot and the raids on chests go too.
-            ctx.execute("UPDATE teams SET chest=0;")
+            ctx.execute("UPDATE teams SET chest=0, chest_area=0, chest_from=NULL, chest_touched=NULL;")
             ctx.execute("UPDATE war_weeks SET pot=0 WHERE settled_at IS NULL;")
-            ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending');")
+            ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending', 'fighting');")
         else:
             ctx.execute(
                 "UPDATE robberies SET status='stopped' WHERE status='active' AND (thief_id=? OR victim_id=?);",

@@ -326,14 +326,19 @@ SECTIONS: tuple[Section, ...] = (
         "`/team channel create`, `/team channel rename` and `/team channel delete`.\n\n"
         "**🏴 The gang war** (`/war`): every week, all the teams of at least 2 members are at war with each other. "
         "Each team has a **chest** (`/team chest deposit`, the leader `/team chest withdraw`, `/team chest view`): "
-        "a personal /rob can't reach it, but every Monday a share of it goes into the war's **pot**, and other teams "
+        "a personal /rob can't reach it, but every Monday a share of its weekly average goes into the war's **pot**, and other teams "
         "can **raid** it. Points come from **duels** won against members of other teams (a few a day for the same "
         "pair), **robberies** on them (and stopping theirs) and **raids**. `/team raid <team>` opens a raid: a few "
-        "of your teammates join, then the target's members are pinged and have a while to **Defend**; then both "
-        "sides fight it out with their gear. Won, or nobody defended: you take a share of their chest. When the "
-        "week ends, the top teams share the pot, into their chests. No raids at night, one raid a day per team, "
-        "and a raided chest is safe for a day.",
-        ("team create", "team banner", "team category", "war", "team chest deposit", "team raid"),
+        "of your teammates join, then the target's members are pinged and have a while to **Defend**; then the "
+        "assault is played **turn by turn** in the message (like the gate bosses). Won, or nobody defended: you "
+        "take a share of their chest. When the week ends, the top teams share the pot, into their chests. No raids "
+        "at night, one raid a day per team, and a raided chest is safe for a day.\n\n"
+        "**The chest's bonus and defenses**: the leader picks a bonus for every member (`/team chest bonus`): "
+        "⛏️ Mining XP, 💰 /sell, ⚔️ Combat or 🍀 Luck, stronger the fuller the chest is (4 tiers, from 5,000 to "
+        "100,000 emeralds). And builds defenses with the chest's emeralds (`/team chest defense`): 🧱 walls, 🏹 "
+        "archers and a 🛡️ Iron Golem that defends even when nobody comes. Raids wear them out; repair them.",
+        ("team create", "team banner", "team category", "war", "team chest deposit", "team chest bonus",
+         "team chest defense", "team raid"),
     ),
     Section(
         "profile", "🎨 Your profile and customization",
