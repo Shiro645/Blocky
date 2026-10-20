@@ -756,6 +756,10 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_night_attacks_status ON night_attacks(status, deadline);
     """,
+    # 40: when each player last played (a command or mining): the night monsters only go after active players
+    """
+    ALTER TABLE users ADD COLUMN last_seen INTEGER;
+    """,
 ]
 
 

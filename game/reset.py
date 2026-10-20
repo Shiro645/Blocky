@@ -43,6 +43,10 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             out["loans"] = ctx.execute("DELETE FROM loans WHERE status IN ('active', 'late');").rowcount
             ctx.execute("DELETE FROM loan_offers WHERE status='open';")
             out["bounties"] = bounty.cancel_all(ctx)
+            # The team chests, the gang war's pot and the raids on chests go too.
+            ctx.execute("UPDATE teams SET chest=0;")
+            ctx.execute("UPDATE war_weeks SET pot=0 WHERE settled_at IS NULL;")
+            ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending');")
         else:
             ctx.execute(
                 "UPDATE robberies SET status='stopped' WHERE status='active' AND (thief_id=? OR victim_id=?);",
@@ -82,6 +86,7 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
             # week must stay who it was (the champion role follows the latest winner).
             ctx.execute("DELETE FROM season_results;")
             ctx.execute("DELETE FROM team_season_results;")
+            ctx.execute("DELETE FROM war_points;")  # the gang war's standings start over
             # The server's Beacon goes out and starts over (the next Wither victory lights it again).
             ctx.execute("UPDATE beacon SET lit_at=NULL, lit_by=NULL, step=0, progress=0, upkeep_week=NULL, "
                         "upkeep_paid=0 WHERE id=1;")

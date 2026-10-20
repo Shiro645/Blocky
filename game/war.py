@@ -17,7 +17,7 @@ import json
 import random
 from dataclasses import dataclass
 
-from game import botstate, bounty, duel, gear, players, robbery, settings, teams
+from game import botstate, bounty, duel, gear, loans, players, robbery, settings, teams
 from game.catalog import ARMOR
 from game.db import Ctx
 from game.errors import GameError
@@ -41,6 +41,7 @@ def deposit(ctx: Ctx, user_id: int, amount: int) -> dict:
         raise GameError("You're not in a team.")
     if amount <= 0:
         raise GameError("Put at least 1 emerald.")
+    loans.check_not_late(ctx, user_id, "chest deposits")  # a late borrower's wealth stays where it can be garnished
     players.spend_emeralds(ctx, user_id, amount)
     ctx.execute("UPDATE teams SET chest = chest + ? WHERE team_id=?;", (amount, team["team_id"]))
     players.bump_stat(ctx, user_id, "chest_deposits", amount)
@@ -53,6 +54,9 @@ def withdraw(ctx: Ctx, user_id: int, amount: int) -> dict:
         raise GameError("Only your team's leader can take emeralds out of the chest.")
     if amount <= 0:
         raise GameError("Take at least 1 emerald.")
+    if ctx.one("SELECT 1 FROM raids WHERE defender_team=? AND status IN ('gathering', 'defending');",
+               (team["team_id"],)):
+        raise GameError("Your chest is being raided: nothing comes out of it until the raid is over.")
     have = chest(ctx, team["team_id"])
     if amount > have:
         raise GameError(f"The chest only holds **{have:,}** emeralds.")
@@ -162,8 +166,10 @@ def weekly(ctx: Ctx) -> dict | None:
         if week["settled_at"] is None:
             ranked = [t for t in standings(ctx, last) if t["points"] > 0][: len(c["prizes"])]
             share = week["pot"] * (1 - float(c["tax"]))
+            carried = int(share)  # what no team takes (fewer teams scored than places) goes to the next pot
             for place, (team, prize) in enumerate(zip(ranked, c["prizes"]), start=1):
                 paid = int(share * float(prize))
+                carried -= paid
                 ctx.execute("UPDATE teams SET chest = chest + ? WHERE team_id=?;", (paid, team["team_id"]))
                 podium.append({**team, "place": place, "paid": paid})
                 if place == 1:
@@ -171,6 +177,8 @@ def weekly(ctx: Ctx) -> dict | None:
                         players.bump_stat(ctx, m["user_id"], "wars_won")
             ctx.execute("UPDATE war_weeks SET settled_at=?, results=? WHERE week_id=?;",
                         (int(ctx.now), json.dumps(podium), last))
+            _week(ctx, ctx.week_id)
+            ctx.execute("UPDATE war_weeks SET pot = pot + ? WHERE week_id=?;", (max(0, carried), ctx.week_id))
     # This week's pot: a share of every chest of the teams at war.
     pot = 0
     for t in ctx.all("SELECT team_id, chest FROM teams;"):

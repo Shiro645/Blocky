@@ -148,5 +148,5 @@ def finish_due(ctx: Ctx) -> list[dict]:
 
         out = {**rob, "status": "done", "stolen": stolen}
         done.append({**out, "war_points": war.on_rob(ctx, out),
-                     "bounty": bounty.claim(ctx, rob["thief_id"], rob["victim_id"], "rob")})
+                     "bounty": bounty.claim(ctx, rob["thief_id"], rob["victim_id"], "rob") if stolen > 0 else None})
     return done

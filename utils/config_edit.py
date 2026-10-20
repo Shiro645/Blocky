@@ -512,6 +512,8 @@ FIELDS: list[Field] = [
     _b("night.fight_minutes", "night", "Minutes to fight a monster", "Not fought by then: the target loses emeralds.",
        min=1, max=240),
     _b("night.min_level", "night", "Level to be attacked", max=1000),
+    _b("night.active_hours", "night", "Only players active in the last … hours", "A player who didn't use a "
+       "command or mine for this long isn't attacked (probably not around).", min=1, max=24 * 30),
     *[_b(f"night.strength.{k}", "night", f"{k.capitalize()}: strength ×", "Its dungeon health and damage times this "
          "(alone: ~80% won in iron gear at 10.3).", kind="float", min=0.1, max=100) for k in ("zombie", "skeleton",
                                                                                            "spider", "creeper")],

@@ -295,6 +295,9 @@ def _drop_team(ctx: Ctx, team: dict) -> None:
         "INSERT OR REPLACE INTO team_archive(team_id, name, tag) VALUES(?, ?, ?);",
         (team["team_id"], team["name"], team["tag"]),
     )
+    # Its open raids are called off (a raid's loot would have nowhere to go).
+    ctx.execute("UPDATE raids SET status='cancelled' WHERE status IN ('gathering', 'defending') "
+                "AND (attacker_team=? OR defender_team=?);", (team["team_id"], team["team_id"]))
     # The chest goes back to the leader (not earned: it came from the members).
     left = ctx.one("SELECT chest FROM teams WHERE team_id=?;", (team["team_id"],))
     if left and left["chest"]:
@@ -310,8 +313,17 @@ def _delete(ctx: Ctx, team: dict) -> dict:
     return team
 
 
+def in_raid(ctx: Ctx, team_id: int) -> bool:
+    """The team raids or is raided right now (game/war.py)."""
+    return ctx.one("SELECT 1 FROM raids WHERE status IN ('gathering', 'defending') AND (attacker_team=? OR "
+                   "defender_team=?);", (team_id, team_id)) is not None
+
+
 def disband(ctx: Ctx, leader_id: int) -> dict:
-    return _delete(ctx, _require_leader(ctx, leader_id))
+    team = _require_leader(ctx, leader_id)
+    if in_raid(ctx, team["team_id"]):
+        raise GameError("Your team is in a raid: you can't disband it until the raid is over.")
+    return _delete(ctx, team)
 
 
 def remove(ctx: Ctx, query: str) -> dict:

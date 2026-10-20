@@ -455,6 +455,7 @@ DEFAULTS: dict[str, Any] = {
         "margin_minutes": 30,  # no monster in the first and last minutes of the night
         "fight_minutes": 15,
         "min_level": 10,
+        "active_hours": 24,  # only players who played (a command, mining) in the last hours are attacked
         "strength": {"zombie": 10.3, "skeleton": 10.3, "spider": 10.3, "creeper": 12.8},
         "phantom": {"hp": 37.1, "min_damage": 2.09, "max_damage": 6.84},
         "rewards": {"zombie": 40, "skeleton": 50, "spider": 60, "creeper": 80, "phantom": 200},

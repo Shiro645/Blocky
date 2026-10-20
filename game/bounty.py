@@ -58,6 +58,9 @@ def place(ctx: Ctx, payer_id: int, target_id: int, amount: int) -> dict:
         raise GameError(f"<@{target_id}> is below level **{need}**: no bounty on them yet.")
     if teammates(ctx, payer_id, target_id):
         raise GameError("You can't put a bounty on a teammate.")
+    from game import loans  # here: loans is only needed for this check
+
+    loans.check_not_late(ctx, payer_id, "bounties")  # a friend claiming it would move a late borrower's wealth
     safe = protected_until(ctx, target_id)
     if safe:
         raise GameError(f"<@{target_id}> just lost a bounty: no new one on them before <t:{safe}:f>.")

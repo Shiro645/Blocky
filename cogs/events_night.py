@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 import discord
 from discord import app_commands
@@ -11,6 +12,7 @@ from game import night, pve, settings
 from utils.ui import em, join_lines, report_error
 
 log = logging.getLogger("night")
+SEEN_EVERY = 600  # seconds: a player's activity is written at most this often
 
 COLORS = {"waiting": discord.Color.dark_purple(), "won": discord.Color.green(), "lost": discord.Color.dark_red(),
           "fled": discord.Color.dark_grey()}
@@ -33,9 +35,9 @@ def attack_embed(a: dict) -> discord.Embed:
                 f"{float(share):.0%} of your emeralds ({em(int(top))} at most).\n"
                 "*Sleep with `/sleep` at night and no monster comes for you.*")
     elif a["status"] == "won":
-        text = "\n".join(f"`{line}`" for line in a["log"]) + f"\n\n🏆 {who} beat the **{name}**: +{em(a['amount'])}!"
+        text = "\n".join(a["log"]) + f"\n\n🏆 {who} beat the **{name}**: +{em(a['amount'])}!"
     elif a["status"] == "lost":
-        text = ("\n".join(f"`{line}`" for line in a["log"]) + f"\n\n☠️ The **{name}** beat {who}"
+        text = ("\n".join(a["log"]) + f"\n\n☠️ The **{name}** beat {who}"
                 + (f" and took {em(a['amount'])}." if a["amount"] else "."))
     else:
         text = f"💨 {who} never came: the **{name}** left" + (f" with {em(a['amount'])}." if a["amount"] else ".")
@@ -74,6 +76,7 @@ class NightCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._seen: dict[int, float] = {}  # user -> when their activity was last written (monotonic)
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(FightButton)
@@ -113,6 +116,26 @@ class NightCog(commands.Cog):
             f"💤 Good night! No monster comes for you until <t:{res['dawn']}:t>, and your next `/daily` pays "
             f"+{res['bonus']:.0%}.", ephemeral=True)
 
+    # ---------- activity (only active players are attacked) ----------
+    async def note(self, user_id: int) -> None:
+        now = time.monotonic()
+        if now - self._seen.get(user_id, -SEEN_EVERY) < SEEN_EVERY:
+            return
+        self._seen[user_id] = now
+        try:
+            await self.bot.db.run(night.seen, user_id)
+        except Exception:
+            log.debug("Could not note an activity", exc_info=True)
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction) -> None:
+        if not interaction.user.bot:
+            await self.note(interaction.user.id)
+
+    @commands.Cog.listener()
+    async def on_blocky_mined(self, message: discord.Message, result: dict) -> None:
+        await self.note(message.author.id)
+
     # ---------- background ----------
     def candidates(self) -> list[int]:
         guild = getattr(self.bot, "main_guild", None)
@@ -124,6 +147,7 @@ class NightCog(commands.Cog):
     async def post(self, a: dict) -> None:
         channel = self.channel()
         if channel is None:
+            await self.bot.db.run(night.unposted, a["attack_id"])  # no fight button anywhere: no attack
             return
         try:
             message = await channel.send(
@@ -133,6 +157,7 @@ class NightCog(commands.Cog):
             await self.bot.db.run(night.set_message, a["attack_id"], message.channel.id, message.id)
         except discord.HTTPException:
             log.warning("Could not post a night monster", exc_info=True)
+            await self.bot.db.run(night.unposted, a["attack_id"])
 
     async def refresh(self, a: dict) -> None:
         channel = self.bot.get_channel(a["channel_id"] or 0)

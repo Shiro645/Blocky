@@ -23,6 +23,7 @@ from game.errors import GameError
 MINUTE = 60
 KINDS = ("zombie", "skeleton", "spider", "creeper")
 PHANTOM = "phantom"
+PHANTOM_SLOT = 999  # its own slot: changing night.monsters during a night never makes it come twice
 LATE = 10 * MINUTE  # a slot missed by more than this (the bot was off) is skipped
 
 
@@ -80,8 +81,9 @@ def slots(ctx: Ctx, night: date) -> list[tuple[int, int, str]]:
     if hi <= lo:
         lo, hi = dusk.timestamp(), dawn.timestamp()
     rng = random.Random(f"blocky-night-{night.isoformat()}")
+    phantom_at = int(rng.uniform(lo, hi))  # drawn first: the number of monsters doesn't move it
     out = [(i, int(rng.uniform(lo, hi)), rng.choice(KINDS)) for i in range(int(c["monsters"]))]
-    out.append((len(out), int(rng.uniform(lo, hi)), PHANTOM))
+    out.append((PHANTOM_SLOT, phantom_at, PHANTOM))
     return out
 
 
@@ -153,12 +155,20 @@ def _loss(ctx: Ctx, user_id: int, kind: str) -> int:
     return amount
 
 
+def seen(ctx: Ctx, user_id: int) -> None:
+    """The player just played (a command, mining)."""
+    ctx.execute("UPDATE users SET last_seen=? WHERE user_id=?;", (int(ctx.now), user_id))
+
+
 def _targets(ctx: Ctx, candidates: list[int], night: date, phantom: bool) -> list[int]:
     c = _cfg()
+    since = ctx.now - float(c["active_hours"]) * 3600
     out = []
     for uid in dict.fromkeys(candidates):
         row = ctx.one("SELECT * FROM users WHERE user_id=?;", (uid,))
         if row is None or row["level"] < int(c["min_level"]) or row["last_sleep"] == night.isoformat():
+            continue
+        if (row["last_seen"] or 0) < since:  # not played lately: probably not around
             continue
         if ctx.one("SELECT 1 FROM night_attacks WHERE target_id=? AND status='waiting';", (uid,)):
             continue
@@ -200,6 +210,12 @@ def tick(ctx: Ctx, candidates: list[int]) -> dict:
             if status == "waiting":
                 spawned.append(get(ctx, int(cur.lastrowid)))
     return {"spawned": spawned, "ended": ended}
+
+
+def unposted(ctx: Ctx, attack_id: int) -> None:
+    """The attack couldn't be shown (no channel, Discord refused): nobody can fight it, so it never happened."""
+    ctx.execute("UPDATE night_attacks SET status='nobody', target_id=NULL WHERE attack_id=? AND status='waiting';",
+                (attack_id,))
 
 
 def set_message(ctx: Ctx, attack_id: int, channel_id: int, message_id: int) -> None:

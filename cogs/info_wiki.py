@@ -90,6 +90,7 @@ class WikiCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.lock = asyncio.Lock()
+        self._warned = False
 
     async def cog_load(self) -> None:
         self.wiki_loop.start()
@@ -101,16 +102,32 @@ class WikiCog(commands.Cog):
         raw = await self.bot.db.run(botstate.get, WIKI_KEY)
         return json.loads(raw) if raw else None
 
+    async def save_partial(self, cid: int, ids: list[int], old: dict | None) -> None:
+        """While a new wiki is being posted: remember its messages (to delete them if it fails) and the old ones."""
+        partial = {"channel": cid, "messages": ids, "keys": [], "hashes": [],
+                   "old": (old or {}).get("old") or ({"channel": old["channel"], "messages": old["messages"]}
+                                                     if old and old.get("messages") else None)}
+        await self.bot.db.run(botstate.put, WIKI_KEY, json.dumps(partial))
+
+    async def warn_staff(self, text: str) -> None:
+        if self._warned:
+            return  # once until it works again
+        self._warned = True
+        await self.bot.announcer.send(text, channel="staff_log")
+
     async def delete_old(self, state: dict | None) -> None:
-        """Best effort: the wiki messages of a channel that isn't the wiki channel anymore."""
-        channel = self.bot.get_channel(state["channel"]) if state else None
-        if not isinstance(channel, discord.TextChannel):
+        """Best effort: the messages of a wiki that was replaced (and of an older one a failed repost left)."""
+        if not state:
             return
-        for mid in state["messages"]:
-            try:
-                await channel.get_partial_message(mid).delete()
-            except discord.HTTPException:
-                pass
+        for part in (state, state.get("old") or {}):
+            channel = self.bot.get_channel(part.get("channel") or 0)
+            if not isinstance(channel, discord.TextChannel):
+                continue
+            for mid in part.get("messages", []):
+                try:
+                    await channel.get_partial_message(mid).delete()
+                except discord.HTTPException:
+                    pass
 
     async def ensure(self, check: bool = False) -> None:
         """Post the wiki, or edit the messages whose content changed.
@@ -136,8 +153,9 @@ class WikiCog(commands.Cog):
         n = len(parts) + 2  # contents, the sections, the contents again at the bottom
         same = bool(state and state["channel"] == cid and state.get("keys") == keys and len(state["messages"]) == n)
         if same and check:
-            try:
+            try:  # the top and the bottom: a /clear of the newest messages takes the bottom first
                 await channel.fetch_message(state["messages"][0])
+                await channel.fetch_message(state["messages"][-1])
             except discord.NotFound:
                 same = False
             except discord.HTTPException:
@@ -146,15 +164,16 @@ class WikiCog(commands.Cog):
             if same:
                 ids, hashes = list(state["messages"]), list(state["hashes"])
             else:
+                # The new wiki is posted first and the old one deleted only once it's all there: a failure on the
+                # way never leaves the channel empty. What was posted is saved as it goes, to be cleaned up.
+                placeholder = discord.Embed(title="📚 Blocky wiki", description="…", color=COLOR)
+                ids, hashes = [], []
+                for embeds in [[placeholder], *[e for _, e in parts], [placeholder]]:
+                    ids.append((await channel.send(embeds=embeds)).id)
+                    hashes.append("" if embeds[0] is placeholder else digest(embeds))
+                    await self.save_partial(cid, ids, state)
                 if state:
                     await self.delete_old(state)
-                placeholder = discord.Embed(title="📚 Blocky wiki", description="…", color=COLOR)
-                ids, hashes = [(await channel.send(embed=placeholder)).id], [""]
-                for _, embeds in parts:
-                    ids.append((await channel.send(embeds=embeds)).id)
-                    hashes.append(digest(embeds))
-                ids.append((await channel.send(embed=placeholder)).id)
-                hashes.append("")
             lines = links(channel, keys, ids[1:-1])
             top = f"https://discord.com/channels/{channel.guild.id}/{channel.id}/{ids[0]}"
             wanted = [[contents_embed(lines)], *[embeds for _, embeds in parts], [bottom_embed(lines, top)]]
@@ -164,17 +183,21 @@ class WikiCog(commands.Cog):
                     await channel.get_partial_message(ids[i]).edit(embeds=embeds)
                     hashes[i] = h
         except discord.NotFound:
-            # A wiki message was deleted: post it all again (once).
-            await self.bot.db.run(botstate.put, WIKI_KEY, json.dumps({"channel": cid, "messages": [], "keys": [],
-                                                                      "hashes": []}))
+            # A wiki message was deleted: post it all again (once); what's left of the old one is deleted after.
+            await self.bot.db.run(botstate.put, WIKI_KEY, json.dumps({
+                "channel": (state or {}).get("channel", cid), "messages": (state or {}).get("messages", []),
+                "keys": [], "hashes": []}))
             if again:
                 await self._ensure(False, again=False)
             return
         except discord.HTTPException as exc:
             log.warning("Could not update the wiki: %s (check Send Messages and Embed Links)", exc)
+            await self.warn_staff(f"⚠️ I couldn't update the wiki in <#{cid}>: {exc}. Check that I can **Send "
+                                  "Messages** and **Embed Links** there; I'll try again within the hour.")
             return
         await self.bot.db.run(botstate.put, WIKI_KEY, json.dumps({"channel": cid, "messages": ids, "keys": keys,
                                                                   "hashes": hashes}))
+        self._warned = False
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -190,7 +213,10 @@ class WikiCog(commands.Cog):
 
     @tasks.loop(hours=1)
     async def wiki_loop(self) -> None:
-        await self.ensure(check=True)
+        try:
+            await self.ensure(check=True)
+        except Exception:  # an error must never stop the loop (the wiki would never be fixed again)
+            log.exception("Wiki loop failed")
 
     @wiki_loop.before_loop
     async def before_wiki(self) -> None:
