@@ -149,9 +149,15 @@ SECTIONS: tuple[Section, ...] = (
         "each one adds half of what the level before added, and Protection IV+ raises the armor's damage reduction "
         "cap instead. You can't apply a book above your maximum. `/enchant info` lists your "
         "books, your lapis and every effect.\n"
+        "Combat: **Fire Aspect** (sword) sets the target on fire for a few turns, **Thorns** (armor) sends part of the "
+        "damage back, **Sweeping Edge** (sword) also hits a second monster in the dungeon.\n\n"
+        "🪄 **Enchanting table**: `/craft item:enchanting_table` (obsidian, diamond ingots and any book), made once. "
+        "`/enchant table <piece>` gives a piece **without enchantments** 1 to 3 random ones for lapis, your maximum "
+        "level very rarely. Sometimes a **curse** comes with them: **Binding** (it stays on you until it breaks) or "
+        "**Vanishing** (it vanishes if you fall in a fight).\n"
         "Enchantments stay on the piece when you trade or sell it, and are lost if it breaks: repair it in time! "
         "The Mage species makes every effect stronger.",
-        ("enchant info",),
+        ("enchant info", "enchant table"),
     ),
     Section(
         "species", "🧬 Species",

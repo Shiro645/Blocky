@@ -13,7 +13,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import potions, settings
+from game import gear, potions, settings
 from game.errors import GameError
 
 GOLEM = 0  # the Iron Golem's user_id
@@ -45,6 +45,11 @@ class Fighter:
     speed_chance: float = 0.0
     afk: int = 0
     downed_by: int | None = None  # who dealt the blow that made them fall (bounties)
+    fire: float = 0.0  # Fire Aspect: health the target loses each round it burns
+    thorns: float = 0.0  # Thorns: share of the damage taken sent back to the attacker
+    burning: int = 0  # rounds left on fire
+    burn_damage: float = 0.0
+    burner: int | None = None  # whose fire it is (bounties)
     gear_ids: dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -138,7 +143,35 @@ class RaidFight:
         if before > 0 and target.hp <= 0:
             target.downed_by = by.user_id if by is not None and not by.golem else None
             down = " ☠️"
+        if by is None:
+            return f"{what} {target.mention} -{damage:.1f}{down}"
+        if by.fire > 0 and target.alive and (not target.burning or by.fire >= target.burn_damage):
+            target.burning, target.burn_damage, target.burner = gear.burn_turns(), by.fire, by.user_id
+        reflected = min(by.hp, damage * target.thorns)
+        if reflected > 0:
+            by.hp -= reflected
+            target.damage += reflected
+            if not by.alive:
+                by.downed_by = None if target.golem else target.user_id
+            down += f" · 🌵 -{reflected:.1f} to {by.mention}" + (" ☠️" if not by.alive else "")
         return f"{what} {target.mention} -{damage:.1f}{down}"
+
+    def _burn(self) -> None:
+        """At the end of a round, every fighter on fire loses health."""
+        for f in self.fighters:
+            if not f.alive or f.burning <= 0:
+                continue
+            f.burning -= 1
+            damage = min(f.burn_damage, f.hp)
+            f.hp -= damage
+            for x in self.fighters:
+                if x.user_id == f.burner and x.side != f.side:
+                    x.damage += damage
+            down = ""
+            if not f.alive:
+                f.downed_by = f.burner if f.burner else None
+                down = " ☠️"
+            self.log.append(f"🔥 {f.mention} burns -{damage:.1f}{down}")
 
     def _hit_raw(self, rng: random.Random, f: Fighter, min_bonus: float = 0.0) -> tuple[float, bool]:
         d = settings.get()["duel"]
@@ -214,9 +247,9 @@ class RaidFight:
         self._swing(rng, f, self.min_bonus)
         if f.speed_turns > 0:
             f.speed_turns -= 1
-            if rng.random() < f.speed_chance:
+            if f.alive and rng.random() < f.speed_chance:
                 self._swing(rng, f)
-        if block:
+        if block and f.alive:
             f.blocking = True
             f.blocks_left -= 1
         self.drank, self.min_bonus = False, 0.0
@@ -256,6 +289,7 @@ class RaidFight:
             if not foes:
                 break
             self.log.append(self._strike(rng, None, rng.choice(foes), rng.uniform(*self.arrow_damage), "🏹 An arrow hits"))
+        self._burn()
         self.rounds += 1
         if self._check_end():
             return

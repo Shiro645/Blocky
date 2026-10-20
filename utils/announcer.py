@@ -82,6 +82,11 @@ class Announcer:
         icon = gear_icon(notice.item, notice.material)
         await self.send(f"🔨 <@{notice.user_id}>'s {icon} **{notice.material} {notice.item}** broke! Time to craft a new one.")
 
+    async def on_GearVanished(self, notice: n.GearVanished) -> None:
+        icon = gear_icon(notice.item, notice.material)
+        await self.send(f"☠️ <@{notice.user_id}> fell and their {icon} **{notice.material} {notice.item}** vanished "
+                        "(Curse of Vanishing)!")
+
     async def on_GuideProgress(self, notice: n.GuideProgress) -> None:
         # The guide cog updates the player's checklist (cogs/player_guide.py).
         self.bot.dispatch("guide_progress", notice)

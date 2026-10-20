@@ -255,13 +255,43 @@ def _enchant_effects(s: Settings) -> list[str]:
         f"+{levels('protection_cap_bonus', pct, 3)} per piece",
         "mending": f"your XP repairs it first (**{num(e['mending_durability_per_xp'])}** durability per XP); one level, "
         f"from the villager or a gate boss ({pct(e['boss_mending_chance'])})",
+        "fire_aspect": f"the target burns **{num(e['fire_aspect_turns'])}** turns, losing {levels('fire_aspect_damage')} "
+        "health each (through the armor; duels, raids, bosses, the dungeon, the night)",
+        "sweeping_edge": f"{levels('sweeping_edge_share', pct)} of each hit also hits another monster (the dungeon)",
+        "thorns": f"each piece sends back {levels('thorns_reflect', pct)} of the damage taken to the attacker",
+        "binding": "curse: once worn, the piece can't be taken off, replaced, sold or traded until it breaks",
+        "vanishing": "curse: the piece vanishes if you fall in the dungeon, against a gate boss or at night",
     }
     lines = ["Effects, levels I to VII:"]
     for ench in enchants.ENCHANTS.values():
         items = "any gear" if len(ench.items) > 4 else ", ".join(ench.items)
-        if ench.key == "protection":
+        if ench.key in ("protection", "thorns"):
             items = "armor"
         lines.append(f"**{ench.name}** ({items}): {effects[ench.key]}")
+    return lines
+
+
+def _table_recipe(s: Settings) -> str:
+    t = s["enchanting_table"]
+    return (f"Enchanting table: **{num(t['obsidian'])}** obsidian + **{num(t['diamond_ingots'])}** diamond ingots + "
+            f"**{num(t['books'])}** enchanted book (the least valuable one)")
+
+
+def _table(s: Settings) -> list[str]:
+    t = s["enchanting_table"]
+    counts = t["count_weights"]
+    total = sum(float(w) for w in counts) or 1.0
+    lines = [_table_recipe(s), f"A use: **{num(t['lapis'])}** lapis",
+             "Enchantments: " + " · ".join(f"{i + 1}: **{pct(float(w) / total)}**" for i, w in enumerate(counts))]
+    for top in (3, 5, 7):
+        weights = [float(w) for w in t["level_weights"][:top]]
+        weights[-1] = float(t["top_level_weight"])
+        level_total = sum(weights) or 1.0
+        lines.append(f"Levels with a maximum of {enchants.ROMAN[top]}: "
+                     + " · ".join(f"{enchants.ROMAN[i + 1]} {pct(w / level_total)}" for i, w in enumerate(weights)))
+    curses = t["curse_weights"]
+    lines.append(f"Curse: **{pct(t['curse_chance'])}** of the uses (Binding {num(curses['binding'])} : Vanishing "
+                 f"{num(curses['vanishing'])})")
     return lines
 
 
@@ -834,11 +864,14 @@ PAGES: list[Page] = [
         "**Netherite**: `item:netherite_ingot` turns netherite scraps (found in the Nether) and gold ingots into a "
         "netherite ingot; then `material:netherite` upgrades one of your **diamond** pieces (the worn one first) with "
         "1 netherite ingot: it keeps its enchantments and is as good as new.\n"
+        "The **enchanting table** (`item:enchanting_table`, no material) is made once and never wears out: see "
+        "/enchant table.\n"
         "Everyone in the channel sees what you crafted.",
         lambda s: ["Durability: " + listing(s["gear"]["durability"]), _shield(s),
-                   f"Anvil: **{num(s['repair']['anvil_iron'])}** iron ingots", "Recipes and prices: /craftlist"],
+                   f"Anvil: **{num(s['repair']['anvil_iron'])}** iron ingots", _table_recipe(s),
+                   "Recipes and prices: /craftlist"],
         examples=("/craft item:pickaxe material:iron", "/craft item:anvil", "/craft item:netherite_ingot",
-                  "/craft item:sword material:netherite"),
+                  "/craft item:sword material:netherite", "/craft item:enchanting_table"),
         related=("craftlist", "market", "equip_best", "repair", "dimensions"),
     ),
     Page(
@@ -880,7 +913,7 @@ PAGES: list[Page] = [
     Page(
         "unequip", "gear",
         "Takes off the piece in a slot, or **every piece** when you don't pick a slot. They go back to your "
-        "inventory.",
+        "inventory. A piece with the **Curse of Binding** stays on until it breaks.",
         examples=("/unequip slot:sword", "/unequip"),
         related=("equip", "gear"),
     ),
@@ -916,6 +949,20 @@ PAGES: list[Page] = [
         related=("enchant apply", "enchant info"),
     ),
     Page(
+        "enchant table", "gear",
+        "Enchants a piece of gear **without any enchantment** (sword, tools or armor; not the shield) on your "
+        "**enchanting table**, at random, for lapis only: 1 to 3 different enchantments, each at a level up to your "
+        "maximum (**III** in the overworld, +1 per dimension). Your maximum level itself is very rare. Mending never "
+        "comes from the table. Then books can add more, as on any piece.\n"
+        "Sometimes a **curse** comes on top, and it can't be removed: **Binding** (once worn, the piece can't be taken "
+        "off, replaced, sold or traded until it breaks) or **Vanishing** (the piece vanishes if you fall in the "
+        "dungeon, against a gate boss or at night).\n"
+        "The table is crafted once with `/craft item:enchanting_table` and never wears out.",
+        _table,
+        examples=("/enchant table piece:diamond sword",),
+        related=("enchant apply", "enchant info", "craft"),
+    ),
+    Page(
         "enchant info", "gear",
         "Shows your books and lapis lazuli, and what each enchantment does. "
         "Books come from drops, bosses (top damage dealer), completing all the weekly challenges, the villager "
@@ -925,7 +972,7 @@ PAGES: list[Page] = [
             "Book levels from drops and challenges: " + per_level(s["enchants"]["book_weights"], lambda w: f"{num(w)}%"),
         ] + _enchant_effects(s),
         examples=("/enchant info",),
-        related=("enchant apply", "enchant combine", "villager"),
+        related=("enchant apply", "enchant combine", "enchant table", "villager"),
     ),
     # ---- xp ----
     Page(

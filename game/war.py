@@ -454,7 +454,7 @@ def _fighter(ctx: Ctx, user_id: int, side: str) -> Fighter:
     bonus = teams.chest_bonus(ctx, user_id, "combat")
     return Fighter(user_id, side, f.attack * (1 + bonus), f.min_attack * (1 + bonus),
                    1 - (1 - f.reduction) * (1 - bonus), float(settings.get()["duel"]["hp"]),
-                   potion_boost=f.potion_boost, blocks_left=f.blocks_left,
+                   potion_boost=f.potion_boost, blocks_left=f.blocks_left, fire=f.fire, thorns=f.thorns,
                    gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
 
 

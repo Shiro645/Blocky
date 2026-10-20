@@ -410,6 +410,8 @@ class DuelCog(commands.Cog):
         attacker = view.members[t.attacker].display_name
         defender = view.members[t.defender].display_name
         bits = []
+        if t.burn:
+            bits.append(f"🔥 burns **−{t.burn:g}**")
         if t.potion:
             text = f"{potion_icon(t.potion)} {potions.name(t.potion)}"
             if t.healed:
@@ -425,6 +427,8 @@ class DuelCog(commands.Cog):
                 continue
             prefix = "⚡ again " if i else ""
             bits.append(prefix + ("💥 CRIT " if hit.crit else "") + f"**{hit.damage:.1f}**")
+        if t.thorns:
+            bits.append(f"🌵 thorns **−{t.thorns:.1f}** to {attacker}")
         return f"**{attacker}** → {defender}: " + " · ".join(bits) + f" — {defender} {t.defender_hp:g} HP"
 
     def fighter_field(self, view: FightView, fighter: duel.Fighter) -> tuple[str, str]:
@@ -432,6 +436,8 @@ class DuelCog(commands.Cog):
         speed = f" · ⚡ {fighter.speed_turns} turn(s)" if fighter.speed_turns else ""
         if fighter.blocks_left or fighter.blocks_used:
             speed += f" · 🛡️ {fighter.blocks_left} block{'s' if fighter.blocks_left != 1 else ''} left"
+        if fighter.burning:
+            speed += f" · 🔥 burning {fighter.burning} turn(s)"
         value = (
             f"`{progress_bar(int(fighter.hp), int(fighter.max_hp), 12)}` {fighter.hp:.1f}/{fighter.max_hp:g} HP\n"
             f"⚔️ {fighter.min_attack:g}–{fighter.attack:g} · 🛡️ {fighter.reduction:.0%} · 🧪 {view.fight.potions_left(fighter)} left{speed}"

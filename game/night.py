@@ -238,6 +238,8 @@ def fight(ctx: Ctx, attack_id: int, user_id: int) -> dict:
     if pieces.get("sword") and hero.attacks:
         gear.wear(ctx, pieces["sword"], hero.attacks)
     gear.wear_one_piece_per_hit(ctx, pieces, hero.hits_taken)
+    if not hero.alive:
+        gear.vanish(ctx, pieces)  # the Curse of Vanishing
     if result["cleared"]:
         amount = reward(a["kind"])
         players.earn_emeralds(ctx, user_id, amount)

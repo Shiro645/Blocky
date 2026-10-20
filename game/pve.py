@@ -127,6 +127,9 @@ class Hero:
     attacks: int = 0
     hits_taken: int = 0
     gear_ids: dict[str, int] = field(default_factory=dict)
+    fire: float = 0.0  # Fire Aspect: health a monster loses each round it burns
+    thorns: float = 0.0  # Thorns: share of the damage taken sent back to the monster
+    sweep: float = 0.0  # Sweeping Edge: share of each hit that also hits another monster
 
     @property
     def alive(self) -> bool:
@@ -139,6 +142,9 @@ class Monster:
     hp: float
     dmg: tuple[float, float]
     fuse: int = 0
+    burning: int = 0  # rounds left on fire (Fire Aspect)
+    burn: float = 0.0
+    burner: int = 0  # whose fire it is (their kill)
 
     @property
     def alive(self) -> bool:
@@ -160,7 +166,8 @@ def make_hero(ctx: Ctx, user_id: int) -> Hero:
     taken = biomes.multiplier(ctx, "damage_taken") * (1 - team)  # the week's biome
     return Hero(user_id, f.attack * (1 + strength), f.min_attack * (1 + strength),
                 1 - (1 - f.reduction) * (1 - resistance) * taken, hp, hp, f.potion_boost,
-                gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()})
+                gear_ids={slot: piece["gear_id"] for slot, piece in equipped.items()},
+                fire=f.fire, thorns=f.thorns, sweep=gear.sweep(equipped))
 
 
 def spawn(wave: int, difficulty: str, heroes: int) -> list[Monster]:
@@ -197,6 +204,10 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
         damage = max(float(_cfg()["min_hit_after_armor"]), damage * (1 - hero.reduction))
         hero.hp = max(0.0, hero.hp - damage)
         hero.hits_taken += 1
+        if hero.thorns > 0 and not exploded and by.alive:
+            by.hp -= damage * hero.thorns
+            if not by.alive:
+                kills[hero.user_id] += 1
         if exploded:
             log.append(f"💥 A {by.name} exploded on <@{hero.user_id}> (-{damage:.1f} HP)")
         if not hero.alive:
@@ -248,7 +259,23 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
                 hero.attacks += 1
                 if not target.alive:
                     kills[hero.user_id] += 1
+                elif hero.fire > 0 and (not target.burning or hero.fire >= target.burn):
+                    target.burning, target.burn, target.burner = gear.burn_turns(), hero.fire, hero.user_id
+                others = [m for m in monsters if m.alive and m is not target] if hero.sweep > 0 else []
+                second = rng.choice(others) if others else None
+                if second is not None:
+                    second.hp -= damage * hero.sweep
+                    if not second.alive:
+                        kills[hero.user_id] += 1
         if not any(m.alive for m in monsters) or not any(h.alive for h in fighting):
+            break
+        for m in monsters:  # the fire burns before the monsters play
+            if m.alive and m.burning > 0:
+                m.burning -= 1
+                m.hp -= m.burn
+                if not m.alive and m.burner in kills:
+                    kills[m.burner] += 1
+        if not any(m.alive for m in monsters):
             break
         for m in monsters:
             if m.alive:
@@ -461,6 +488,8 @@ def _end_member(ctx: Ctx, run: dict, member: dict, status: str, pay: int = 0) ->
     if sword and hero.attacks:
         gear.wear(ctx, sword, hero.attacks)
     gear.wear_one_piece_per_hit(ctx, pieces, hero.hits_taken)  # many small hits here: one piece each
+    if status == "dead":
+        gear.vanish(ctx, pieces)  # the Curse of Vanishing
 
 
 def _close_if_empty(ctx: Ctx, run: dict) -> dict:
