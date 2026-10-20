@@ -512,6 +512,19 @@ def drink(ctx: Ctx, fight_id: int, user_id: int, key: str) -> dict:
     return get(ctx, fight_id)
 
 
+def present(ctx: Ctx, fight_id: int, user_id: int) -> None:
+    """A member clicked a button: they're here, so their turns stop playing by themselves. Saved on its own (a
+    click out of turn is then refused, which must not undo this)."""
+    row = ctx.one("SELECT state FROM gate_fights WHERE fight_id=? AND status='active';", (fight_id,))
+    if row is None:
+        return
+    fight = Fight.from_json(row["state"])
+    p = next((x for x in fight.players if x.user_id == user_id), None)
+    if p is not None and p.afk:
+        p.afk = 0
+        ctx.execute("UPDATE gate_fights SET state=? WHERE fight_id=?;", (fight.to_json(), fight_id))
+
+
 def attack(ctx: Ctx, fight_id: int, user_id: int, block: bool = False) -> dict:
     row = _active(ctx, fight_id)
     fight = row["fight"]
@@ -583,7 +596,8 @@ def expire(ctx: Ctx) -> list[dict]:
             continue
         fight = row["fight"]
         p = fight.current
-        p.afk += 1
+        if not fight.drank:  # drinking a potion is playing: only a turn with nothing done counts as missed
+            p.afk += 1
         fight.log.append(f"⏳ <@{p.user_id}> didn't play in time: they attack.")
         fight.attack(ctx.rng, p.user_id)
         out.append(_save(ctx, row, fight))

@@ -1208,7 +1208,7 @@ PAGES: list[Page] = [
         "Shimmer, the server's Beacon lit), what you start over and what you "
         "get. When you meet everything, the **Become Prestige** button asks to confirm, then the parts set by the "
         "staff start over (by default your emeralds, blocks and items, your gear, your talents (every point given "
-        "back to spend again), your achievements with their stats and challenges, and your dimensions). You keep "
+        "back to spend again), your achievements with their stats, and your dimensions). You keep "
         "your **level**, so no talent point is lost: the next prestige needs a higher level. Each prestige gives a bonus to mining XP and /sell **for good**, a ⭐ next to "
         "your name (profile, leaderboards), the Prestige role and earned cosmetics (titles Reborn and Mythic, the "
         "Prestige frame). Announced to everyone.",

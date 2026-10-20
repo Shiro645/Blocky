@@ -98,6 +98,8 @@ class BeaconCog(commands.Cog):
     async def give(self, interaction: discord.Interaction, material: str,
                    ingots: app_commands.Range[int, 9, 100_000]):
         res = await self.bot.db.run(beacon.give, interaction.user.id, material, ingots)
+        if res["settled"]:
+            await self.announce_weekly(res["settled"])
         parts = [f"🔆 {interaction.user.mention} gave {mat(material)} **{ingots} {material} ingots** to the Beacon "
                  f"({em(res['value'])})."]
         if res["upkeep"]:
@@ -127,15 +129,19 @@ class BeaconCog(commands.Cog):
         if lit and not was:
             await self.announce_lit(None)
 
+    async def announce_weekly(self, res: dict) -> None:
+        if res["undone"]:
+            m, level = res["undone"]
+            await self.bot.announcer.send(
+                f"🔆 The Beacon's upkeep wasn't given last week ({res['missing']} {res['material']} ingots "
+                f"missing): **level {level} in {m} crumbled**. `/beacon info`")
+
     @tasks.loop(minutes=10)
     async def beacon_loop(self):
         try:
             res = await self.bot.db.run(beacon.weekly)
-            if res and res["undone"]:
-                m, level = res["undone"]
-                await self.bot.announcer.send(
-                    f"🔆 The Beacon's upkeep wasn't given last week ({res['missing']} {res['material']} ingots "
-                    f"missing): **level {level} in {m} crumbled**. `/beacon info`")
+            if res:
+                await self.announce_weekly(res)
         except Exception:  # an error must never stop the loop
             log.exception("Beacon loop failed")
 

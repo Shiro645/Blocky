@@ -78,6 +78,14 @@ class AscendTests(PrestigeTestCase):
         self.assertEqual(await self.run_game(players.get_stat, ALICE, "blocks_mined"), 0)
         self.assertIn(PrestigeReached(ALICE, 1), self.notices)
 
+    async def test_not_with_a_loan_open(self):
+        await self.make_ready()
+        await self.run_game(lambda ctx: ctx.execute(
+            "INSERT INTO loans(lender_id, borrower_id, amount, interest, due, started_at, due_at) "
+            "VALUES(?, ?, 1000, 10, 1100, 0, 9999999999);", (BOB, ALICE)))
+        with self.assertRaisesRegex(GameError, "loans"):
+            await self.run_game(prestige.ascend, ALICE)
+
     async def test_the_reset_follows_the_settings(self):
         settings.load({"prestige": {"reset": {"wealth": False, "gear": True, "talents": False, "achievements": False,
                                               "dimensions": False}}})

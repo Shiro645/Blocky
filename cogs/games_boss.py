@@ -236,8 +236,10 @@ class GateBossCog(commands.Cog):
         elif action == "start":
             row = await db.run(gate.start, fight_id, uid)
         elif action in ("attack", "block"):
+            await db.run(gate.present, fight_id, uid)
             row = await db.run(gate.attack, fight_id, uid, action == "block")
         else:  # potion
+            await db.run(gate.present, fight_id, uid)
             row = await db.run(gate.get, fight_id)
             fight = row["fight"]
             if row["status"] != "active" or fight is None:

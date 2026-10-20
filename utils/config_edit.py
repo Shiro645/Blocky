@@ -769,7 +769,7 @@ FIELDS: list[Field] = [
       for key, label, text in (("wealth", "wealth", "emeralds, blocks and items"),
                                ("gear", "gear", "gear, enchantments and the anvil"),
                                ("talents", "talents", "the talents (every spent point given back)"),
-                               ("achievements", "achievements", "achievements, stats and challenges"),
+                               ("achievements", "achievements", "achievements and their stats"),
                                ("dimensions", "dimensions", "the dimensions (back to the overworld)"))],
     *[_b(f"prestige.skip_achievements.{code}", "prestige", f"Not needed: {name}"[:45], "On: a prestige doesn't need "
          "this achievement.", kind="bool", min=None)

@@ -318,9 +318,15 @@ def _biome_row(ctx: Ctx, user_id: int, c: Challenge):
                    (f"biome:{ctx.week_id}", user_id, c.code))
 
 
+def _biome_done(ctx: Ctx, user_id: int) -> bool:
+    """One biome challenge paid a week (the staff changing the biome mid-week doesn't pay a second one)."""
+    return ctx.one("SELECT 1 FROM challenge_progress WHERE week_id=? AND user_id=? AND completed_at IS NOT NULL;",
+                   (f"biome:{ctx.week_id}", user_id)) is not None
+
+
 def _advance_biome(ctx: Ctx, user_id: int, stat: str, amount: int) -> None:
     c = biome_challenge(ctx)
-    if c is None or c.stat != stat or c.target <= 0:
+    if c is None or c.stat != stat or c.target <= 0 or _biome_done(ctx, user_id):
         return
     key = f"biome:{ctx.week_id}"
     ctx.execute(
@@ -345,8 +351,9 @@ def biome_progress(ctx: Ctx, user_id: int) -> dict | None:
     if c is None:
         return None
     row = _biome_row(ctx, user_id, c)
+    done = _biome_done(ctx, user_id)
     return {"text": c.text, "target": c.target, "reward": c.reward,
-            "progress": min(row["progress"], c.target) if row else 0, "completed": bool(row and row["completed_at"])}
+            "progress": c.target if done else min(row["progress"], c.target) if row else 0, "completed": done}
 
 
 def _check_all_done(ctx: Ctx, user_id: int, week: str) -> None:

@@ -98,15 +98,17 @@ def apply(ctx: Ctx, parts: set[str] | list[str], user_id: int | None = None) -> 
         if "wealth" in parts:
             ctx.execute(f"DELETE FROM rewards_paid{where};", args)
             ctx.execute(f"UPDATE guides SET rewarded_at=NULL{where};", args)
-        # Titles and earned frames worn without their condition anymore are taken off.
+        # The streak goes back to 0 but today's daily stays claimed (no free second claim). Back to the overworld.
+        ctx.execute(f"UPDATE users SET daily_streak=0, dimension_level=0{where};", args)
+
+    if "progress" in parts or "levels" in parts:
+        # Titles and earned frames worn without their condition anymore (stats, level, prestige) are taken off.
         from game import profiles  # imported here: profiles imports game modules that import this one
 
         targets = [user_id] if user_id is not None else [
             r["user_id"] for r in ctx.all("SELECT user_id FROM profiles WHERE title IS NOT NULL OR frame IS NOT NULL;")]
         for uid in targets:
             profiles.check_worn(ctx, uid)
-        # The streak goes back to 0 but today's daily stays claimed (no free second claim). Back to the overworld.
-        ctx.execute(f"UPDATE users SET daily_streak=0, dimension_level=0{where};", args)
     return out
 
 
