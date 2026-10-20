@@ -211,14 +211,9 @@ FIELDS: list[Field] = [
     Field("ch_staff_log", "channels", "Staff channel", ("channels", "staff_log"), "channel",
           help="/link requests and the log of every staff action."),
     Field("ch_mining", "channels", "Mining channels", ("channels", "mining"), "channels",
-          help="Chatting there mines overworld blocks and gives XP and drops (their threads too). Not set = every "
-               "channel mines the overworld (except the other dimensions' channels). Set = the other channels give "
-               "nothing (spam channels keep their tiny reward)."),
-    *[Field(f"ch_mining_{d}", "channels", f"{DIMENSION_NAMES[d]} mining channels", ("channels", f"mining_{d}"), "channels",
-            help=f"Chatting there mines {DIMENSION_NAMES[d]} blocks (their threads too), for the players who unlocked "
-                 f"the {DIMENSION_NAMES[d]}; the others get nothing there. Hide them with the {DIMENSION_NAMES[d]} "
-                 "role (see Roles).")
-      for d in DIMENSIONS[1:]],
+          help="Chatting there mines and gives XP and drops (their threads too), in the dimension each player is in "
+               "(/portal). Not set = every channel mines. Set = the other channels give nothing (spam channels keep "
+               "their tiny reward)."),
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
@@ -261,8 +256,8 @@ FIELDS: list[Field] = [
           help="Members with this role are out of the robberies: nobody can /rob them and they can't /rob anyone. "
                "The staff gives and takes it by hand. Not set = nobody is untouchable."),
     *[Field(f"role_dimension_{d}", "roles", f"{DIMENSION_NAMES[d]} role (dimension)", ("roles", f"dimension_{d}"), "role",
-            help=f"Given to every player who unlocked the {DIMENSION_NAMES[d]}, taken back if they lose it. Use it to "
-                 f"show the {DIMENSION_NAMES[d]} mining channels only to them.", item="assign")
+            help=f"Given to the players who are in the {DIMENSION_NAMES[d]} (/portal; one dimension role at a time, "
+                 "none in the overworld).", item="assign")
       for d in DIMENSIONS[1:]],
     *[Field(f"role_species_{key}", "roles", f"{name} role (species)", ("roles", f"species_{key}"), "role",
             help=f"Given to every {name} (/species), and taken back when they change species.", item="assign")
@@ -302,6 +297,14 @@ FIELDS: list[Field] = [
        min=1, max=100),
     _b("dimensions.gold_per_ingot", "dimensions", "Netherite ingot: gold ingots", "Gold ingots for one netherite ingot.",
        max=100),
+    *[_pct(f"dimensions.ore_chances.{ore}", "dimensions", f"{ore.capitalize()} ore: chance per mining reward",
+           f"From the {DIMENSION_NAMES[start]} on (it stays in the dimensions after): "
+           + ("this many emeralds (below)." if ore == "emerald" else "one ingot."))
+      for ore, start in (("gold", "nether"), ("iron", "end"), ("diamond", "deep_dark"), ("emerald", "shimmer"))],
+    _b("dimensions.emerald_ore_amount", "dimensions", "Emerald ore: emeralds", "What an emerald ore gives.",
+       max=10_000_000),
+    *[_pct(f"dimensions.ore_fortune_chance.{i}", "dimensions", f"Ores: Fortune {ROMAN[i]} chance of a 2nd",
+           "Fortune on the pickaxe: the chance an ore gives a second one.") for i in range(7)],
     *[_b(f"dimensions.multipliers.{d}", "dimensions", f"{DIMENSION_NAMES[d]}: tool bonus ×",
          "The pickaxe's and the shovel's extra blocks are worth their overworld value times this (in this "
          "dimension's blocks). Set so that with tools too the dimension pays as much more as without.", "float", max=100)

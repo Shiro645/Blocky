@@ -775,6 +775,10 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN enchanting_table INTEGER NOT NULL DEFAULT 0;  -- 1 = the player has one
     """,
+    # 43: one mining channel: each player mines in the dimension they went to (/portal; NULL = their highest)
+    """
+    ALTER TABLE users ADD COLUMN current_dimension TEXT;
+    """,
 ]
 
 

@@ -228,7 +228,8 @@ class StaffEconomyCog(commands.Cog):
         await self.answer(
             interaction, f"✅ {member.mention}: {dimensions.label(res['before'])} → **{dimensions.label(dimension)}** "
                          f"(unlocked: {opened}).",
-            member, f"🌍 The staff set your dimensions: you can now mine in {opened}",
+            member, f"🌍 The staff set your dimensions: you unlocked {opened}, and you are now in the "
+                    f"**{dimensions.label(dimension)}** (`/portal` to change).",
         )
         cog = self.bot.get_cog("DimensionsCog")
         if cog is not None:

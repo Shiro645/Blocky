@@ -77,7 +77,7 @@ def fight_embed(row: dict) -> discord.Embed:
                 text += f" (Looting +{em(r['looting'])})"
             text += f", a **{r['book']}** book, +{r['xp']} XP"
             if r["opened"]:
-                text += f" · **the {dimensions.label(r['opened'])} opens!**"
+                text += f" · **the {dimensions.label(r['opened'])} opens!** (they go through: `/portal` to move)"
             lines.append(text)
     if row.get("beacon_lit"):
         lines.append("🌟 **The Wither drops a Nether Star: the server's Beacon is lit!** (`/beacon info`)")

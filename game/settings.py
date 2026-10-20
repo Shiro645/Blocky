@@ -45,6 +45,13 @@ DEFAULTS: dict[str, Any] = {
         "scrap_chance": 0.012,
         "scraps_per_ingot": 4,
         "gold_per_ingot": 4,
+        # Ores: the chance a mining reward finds one (an ingot; the emerald ore gives emerald_ore_amount emeralds).
+        # Each is found from its dimension on and stays in the ones after: gold from the Nether, iron from the End,
+        # diamond from the Deep Dark, emerald in the Shimmer. Each adds about 20% to its dimension's income.
+        "ore_chances": {"gold": 0.005, "iron": 0.0015, "diamond": 0.0004, "emerald": 0.002},
+        "emerald_ore_amount": 1000,
+        # Fortune (pickaxe) I to VII: the chance an ore gives a second one.
+        "ore_fortune_chance": [0.10, 0.20, 0.30, 0.35, 0.375, 0.3875, 0.39375],
         # Tool bonuses (pickaxe, shovel) are worth their overworld value times this, given in the dimension's
         # blocks. Calibrated so that with tools too (gold to netherite) each dimension pays x1.25 / x1.5 / x1.75 /
         # x2 the overworld: the pickaxe's block upgrade is worth more in some dimensions than in others.

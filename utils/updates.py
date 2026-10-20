@@ -425,4 +425,18 @@ UPDATES: tuple[Update, ...] = (
              "attacker) and Sweeping Edge (a second monster gets hit in the dungeon). Books of them can drop too."),
         ),
     ),
+    Update(
+        "2026-10-portal", "2026-10-24", "Portals and ores",
+        "One mining channel for everyone, and the dimensions now hide ores.",
+        (
+            ("🌀 /portal",
+             "Mine in the mining channel: you mine in the dimension you are in. `/portal` takes you to any dimension "
+             "you unlocked, and unlocking a new one takes you there. Your dimension role follows you."),
+            ("💎 Ores",
+             "Gold from the Nether, iron from the End, diamond from the Deep Dark and an emerald ore (1,000 emeralds) "
+             "in the Shimmer. They add up: each dimension keeps the ores of the ones before."),
+            ("⛏️ Fortune",
+             "Fortune on your pickaxe gives a chance of a second ore."),
+        ),
+    ),
 )

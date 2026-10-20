@@ -124,6 +124,11 @@ def _dimensions(s: Settings) -> list[str]:
              for k in DIMENSIONS]
     return lines + [
         f"Ancient debris (Nether and beyond): **{pct(d['scrap_chance'])}** chance per mining reward, one netherite scrap",
+        "Ores per mining reward (from that dimension on): " + " · ".join(
+            f"{ore} ({DIMENSION_NAMES[start]}) **{pct(d['ore_chances'][ore])}**"
+            for ore, start in (("gold", "nether"), ("iron", "end"), ("diamond", "deep_dark"), ("emerald", "shimmer")))
+        + f" · an ingot each, the emerald ore **{num(d['emerald_ore_amount'])}** emeralds",
+        "Fortune on the pickaxe, chance an ore gives a second one: " + per_level(d["ore_fortune_chance"], pct),
         f"Netherite ingot: **{num(d['scraps_per_ingot'])}** scraps + **{num(d['gold_per_ingot'])}** gold ingots · "
         "netherite piece: a diamond piece + 1 netherite ingot",
     ]
@@ -758,12 +763,13 @@ PAGES: list[Page] = [
     Page(
         "mining", "mining",
         "There is no command to mine: **every message you send mines blocks**, at most once per cooldown (only in "
-        "the mining channels when the staff set some). "
+        "the mining channel when the staff set one). "
         "It's silent: check what you got with /inventory.\n"
-        "Each **dimension** (/dimensions) has its own mining channels and blocks: the overworld's, then the Nether, "
-        "the End, the Deep Dark and the Shimmer, each worth more than the one before. The channels of a dimension "
-        "you haven't unlocked give nothing. From the Nether on, mining can find **Ancient debris**: a netherite "
-        "scrap (a ⛏️ reaction shows it).\n"
+        "You mine in the **dimension you are in** (/dimensions): the overworld, then the Nether, the End, the Deep "
+        "Dark and the Shimmer, each with its blocks, worth more than the one before. /portal takes you to any "
+        "dimension you unlocked. From the Nether on, mining can find **Ancient debris** (a netherite scrap) and "
+        "**ores** that add up from one dimension to the next: gold from the Nether, iron from the End, diamond from "
+        "the Deep Dark, emerald in the Shimmer (a reaction on your message shows them).\n"
         "Your equipped tools add bonuses (/gear), your talents improve the odds (/talents), and teammates who "
         "mined today give you more XP (/team info). Mining also finds lapis lazuli, and sometimes makes a "
         "**drop** appear: the first player to click it gets the reward.\n\n"
@@ -771,21 +777,31 @@ PAGES: list[Page] = [
         "until it makes a whole emerald (no XP, no drops, doesn't count for the seasons). Messages in your private "
         "guide channel, in DMs or in another server don't mine at all.",
         _mining,
-        related=("inventory", "sell", "gear", "talents", "dimensions"),
+        related=("inventory", "sell", "gear", "talents", "dimensions", "portal"),
         title="⛏️ Mining (chat)",
     ),
     Page(
         "dimensions", "mining",
         "Shows the 5 dimensions: their blocks and what each is worth, how much a message mines there on average, "
-        "their mining channels, which ones you unlocked, and your netherite (scraps, ingots, pieces).\n"
-        "Unlocking a dimension opens every one before it. Mine a dimension's blocks in its channels; the server can "
-        "give a role per dimension to show those channels only to the players who reached it.\n"
+        "their ores, which ones you unlocked, where you are, and your netherite (scraps, ingots, pieces).\n"
+        "Unlocking a dimension opens every one before it and takes you there. You mine in the dimension you are in "
+        "(/portal to change), and you have its role, when the server set one.\n"
         "**Netherite** is a goal of its own: it's only found in the Nether and beyond (Ancient debris, one scrap). "
         "4 scraps + 4 gold ingots make a netherite ingot, and a diamond piece + 1 netherite ingot make the netherite "
         "piece (/craft). It can't be bought, sold, traded or put up for auction.",
         _dimensions,
         examples=("/dimensions",),
-        related=("mining", "craft", "inventory"),
+        related=("portal", "mining", "craft", "inventory"),
+    ),
+    Page(
+        "portal", "mining",
+        "Goes through a portal to another dimension **you unlocked**: from then on, your messages in the mining "
+        "channel mine there (its blocks and ores), and you get that dimension's role. No cooldown. Each dimension "
+        "pays more than the one before and has the ores of every one before it, so your furthest is usually the "
+        "best. Unlocking a new dimension takes you there.",
+        _dimensions,
+        examples=("/portal dimension:nether",),
+        related=("dimensions", "mining"),
     ),
     Page(
         "inventory", "start",
