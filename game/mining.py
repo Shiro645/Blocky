@@ -97,8 +97,34 @@ def upgrade_block(block: str, dimension: str = "overworld") -> str:
     return blocks[min(i + 1, len(blocks) - 1)]
 
 
-def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
-    """Mine once in a dimension with the equipped tools. Returns what was found and the next cooldown."""
+def ores(ctx: Ctx, user_id: int, dimension: str, pickaxe: dict | None) -> dict[str, int]:
+    """The ores a mining reward finds (those of the dimension and every one before it): an ingot each, or
+    emeralds for the emerald ore. Fortune on the pickaxe gives a chance of a second one."""
+    d = settings.get()["dimensions"]
+    level = enchants.level_of(pickaxe, "fortune")
+    lucky = 0.0
+    if level:
+        chances = d["ore_fortune_chance"]
+        lucky = float(chances[min(level, len(chances)) - 1]) * float(pickaxe.get("enchant_boost", 1.0))
+    found: dict[str, int] = {}
+    for ore in dimensions.ores(dimension):
+        if ctx.rng.random() >= float(d["ore_chances"][ore]):
+            continue
+        count = 2 if lucky and ctx.rng.random() < lucky else 1
+        found[ore] = count
+        if ore == "emerald":
+            players.earn_emeralds(ctx, user_id, count * int(d["emerald_ore_amount"]))
+        else:
+            players.add_item(ctx, user_id, "ingot", ore, count)
+        players.bump_stat(ctx, user_id, "ores_found", count)
+    return found
+
+
+def mine(ctx: Ctx, user_id: int, dimension: str | None = None) -> dict:
+    """Mine once with the equipped tools, in the dimension the player is in (or `dimension`). Returns what was
+    found and the next cooldown."""
+    if dimension is None:
+        dimension = dimensions.current(ctx, user_id)
     if not dimensions.has(ctx, user_id, dimension):
         raise GameError(f"You haven't unlocked the {dimensions.label(dimension)} yet.")
     g = settings.get()["gear"]
@@ -211,6 +237,8 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
             players.add_item(ctx, user_id, "scrap", "none", scrap)
             players.bump_stat(ctx, user_id, "scraps_found", scrap)
 
+    found = ores(ctx, user_id, dimension, tools.get("pickaxe"))
+
     cooldown = cooldown_seconds(user["efficiency_points"], enchants.effect(pickaxe, "efficiency"))
     speed = species.bonus(ctx, user_id, "miner")
     if speed and cooldown > 0:
@@ -228,6 +256,7 @@ def mine(ctx: Ctx, user_id: int, dimension: str = "overworld") -> dict:
         "bonus": bonus,
         "bonus_block": common,
         "scrap": scrap,
+        "ores": found,
         "sticks": sticks,
         "xp": xp,
         "team_bonus": team_bonus,

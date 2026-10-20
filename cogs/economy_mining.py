@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import dimensions, enchants, mining, players, settings, shop
-from game.catalog import BLOCK_TYPES, DIMENSION_BLOCKS, DIMENSIONS, block_name
+from game.catalog import BLOCK_TYPES, DIMENSION_BLOCKS, block_name
 from game.db import Ctx
 from game.errors import GameError
 from utils.config import channel_ids
@@ -24,15 +24,13 @@ def _inventory(ctx: Ctx, user_id: int) -> dict:
     }
 
 
-def channel_dimension(channel: discord.abc.GuildChannel | discord.Thread) -> str | None:
-    """The dimension a channel mines in (None: not a mining channel). A channel of a dimension's list mines that
-    dimension; any other channel mines the overworld when channels.mining is empty or lists it."""
-    ids = {channel.id, getattr(channel, "parent_id", None)}
-    for dimension in DIMENSIONS[1:]:
-        if ids & channel_ids(dimensions.channel_key(dimension)):
-            return dimension
-    overworld = channel_ids("mining")  # none set: every other channel mines the overworld
-    return "overworld" if not overworld or ids & overworld else None
+ORE_ICONS = {"gold": "🟨", "iron": "⬜", "diamond": "💎", "emerald": "💚"}  # when no custom emoji is set
+
+
+def is_mining_channel(channel: discord.abc.GuildChannel | discord.Thread) -> bool:
+    """channels.mining (and its threads); none set: every channel mines. Each player mines in their dimension."""
+    mining_ids = channel_ids("mining")
+    return not mining_ids or bool({channel.id, getattr(channel, "parent_id", None)} & mining_ids)
 
 
 class EconomyMiningCog(commands.Cog):
@@ -65,8 +63,7 @@ class EconomyMiningCog(commands.Cog):
         if spam and (channel.id in spam or getattr(channel, "parent_id", None) in spam):
             # No blocks, XP, drops or challenge progress here: only a tiny reward.
             return await self.spam_mine(user_id, now)
-        dimension = channel_dimension(channel)
-        if dimension is None:
+        if not is_mining_channel(channel):
             return  # not a mining channel: nothing
         if now < self._next_mine.get(user_id, 0.0):
             return
@@ -74,18 +71,16 @@ class EconomyMiningCog(commands.Cog):
         self._next_mine[user_id] = now + 3600
 
         try:
-            result = await self.bot.db.run(mining.mine, user_id, dimension)
-        except GameError:  # a dimension they haven't unlocked: nothing, and no cooldown
-            self._next_mine.pop(user_id, None)
-            return
+            result = await self.bot.db.run(mining.mine, user_id)  # in the dimension they are in
         except Exception:
             self._next_mine.pop(user_id, None)
             raise
         self._next_mine[user_id] = now + result["cooldown"]
         self.bot.dispatch("blocky_mined", message, result)
-        if result["scrap"]:
-            try:  # Ancient debris: rare enough to show
-                await message.add_reaction(scrap_icon())
+        found = ([scrap_icon()] if result["scrap"] else []) + [EMOJI.get(o) or ORE_ICONS[o] for o in result["ores"]]
+        for icon in found:  # Ancient debris and ores: rare enough to show
+            try:
+                await message.add_reaction(icon)
             except discord.HTTPException:
                 pass
 

@@ -57,7 +57,7 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "mining", "⛏️ Mining, selling and the daily reward",
         "**Chat to mine.** When you write a message in the server (not in your private guide channel; only in the "
-        "mining channels when the staff set some), you get a "
+        "mining channel when the staff set one), you get a "
         "**mining reward**: a pile of **1 to 6 blocks**. Big "
         "piles are dirt and cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come "
         "in smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
@@ -66,10 +66,12 @@ SECTIONS: tuple[Section, ...] = (
         "**Spam channels** (set by the staff) give only a tiny emerald reward: no blocks, XP, drops or challenge "
         "progress.\n\n"
         "**Dimensions**: after the overworld come the **Nether**, the **End**, the **Deep Dark** and the "
-        "**Shimmer**. Each has its own mining channels and blocks, and pays more per message than the one before "
-        "(about ×1.25, ×1.5, ×1.75 and ×2). Unlocking a dimension opens every one before it; the channels of a "
-        "dimension you haven't reached give nothing. `/dimensions` shows them all, with their blocks, their "
-        "channels and how much they pay.\n"
+        "**Shimmer**. Each has its blocks and pays more per message than the one before (about ×1.25, ×1.5, ×1.75 "
+        "and ×2). You mine in the dimension you are in: unlocking one takes you there, and `/portal` takes you to "
+        "any dimension you unlocked. **Ores** add up from one dimension to the next: gold from the Nether, iron "
+        "from the End, diamond from the Deep Dark and an emerald ore (a pile of emeralds) in the Shimmer; Fortune "
+        "on your pickaxe can double them. `/dimensions` shows them all, with their blocks, ores and how much they "
+        "pay.\n"
         "**Netherite** is a goal of its own: it's only found from the Nether on. Mining there sometimes finds "
         "**Ancient debris** (one netherite scrap, a reaction on your message shows it). 4 scraps + 4 gold ingots "
         "make a netherite ingot, and a **diamond** piece + 1 netherite ingot make the netherite piece, enchantments "
@@ -87,7 +89,7 @@ SECTIONS: tuple[Section, ...] = (
         "channel shows them too, above the auctions.\n"
         "**Daily reward**: `/daily` once a day. Coming back every day grows your **streak**: a bigger reward each "
         "day up to the cap, and a bonus ingot every few days in a row. Miss a day and the streak starts over.",
-        ("mining", "dimensions", "sell", "market", "daily"),
+        ("mining", "dimensions", "portal", "sell", "market", "daily"),
     ),
     Section(
         "xp", "⭐ XP, levels and talents",

@@ -10,7 +10,7 @@ from discord.ext import commands
 from game import dimensions, mining, players, settings
 from game.catalog import DIMENSION_BLOCKS, DIMENSIONS, block_name
 from utils.config import channel_ids, role_id
-from utils.ui import block_icon, em, scrap_icon
+from utils.ui import block_icon, em, mat, scrap_icon
 
 log = logging.getLogger("dimensions")
 
@@ -40,7 +40,7 @@ def income(dimension: str) -> float:
 
 
 class DimensionsCog(commands.Cog):
-    """/dimensions: where a player can mine, and the roles of the dimensions they unlocked."""
+    """/dimensions and /portal: the dimensions, where a player mines, and the role of the dimension they are in."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -48,7 +48,7 @@ class DimensionsCog(commands.Cog):
 
     # ---------- roles ----------
     async def sync_roles(self, user_id: int | None = None, old_role_id: int = 0) -> None:
-        """Give each player the role of every dimension they unlocked, and take the others back.
+        """Give each player the role of the dimension they are in (none in the overworld), and take the others back.
 
         `user_id`: only this player. `old_role_id`: a role set before a /config change, taken back from everyone.
         """
@@ -57,9 +57,10 @@ class DimensionsCog(commands.Cog):
             return
         async with self._role_lock:
             if user_id is None:
-                levels = await self.bot.db.run(dimensions.all_levels)
+                levels = await self.bot.db.run(dimensions.all_current)
             else:
-                levels = {user_id: await self.bot.db.run(dimensions.level, user_id)}
+                here = await self.bot.db.run(dimensions.current, user_id)
+                levels = {user_id: DIMENSIONS.index(here)}
             roles = dimension_roles(guild)
             changes: list[tuple[discord.Member, discord.Role, bool]] = []  # (member, role, give)
             old = guild.get_role(old_role_id) if old_role_id else None
@@ -68,17 +69,17 @@ class DimensionsCog(commands.Cog):
             for key, role in roles.items():
                 need = DIMENSIONS.index(key)
                 changes += [(m, role, False) for m in role.members
-                            if user_id in (None, m.id) and levels.get(m.id, 0) < need]
+                            if user_id in (None, m.id) and levels.get(m.id, 0) != need]
                 for uid, lvl in levels.items():
-                    member = guild.get_member(uid) if lvl >= need else None
+                    member = guild.get_member(uid) if lvl == need else None
                     if member is not None and role not in member.roles:
                         changes.append((member, role, True))
             for member, role, give in changes:
                 try:
                     if give:
-                        await member.add_roles(role, reason="Blocky: dimension unlocked")
+                        await member.add_roles(role, reason="Blocky: in this dimension")
                     else:
-                        await member.remove_roles(role, reason="Blocky: dimension locked")
+                        await member.remove_roles(role, reason="Blocky: not in this dimension")
                 except discord.HTTPException:
                     log.warning("Could not update the dimension role of %s (check Manage Roles and role order)", member)
 
@@ -98,29 +99,50 @@ class DimensionsCog(commands.Cog):
             await self.sync_roles(old_role_id=int(before or 0))
 
     # ---------- commands ----------
-    @app_commands.command(name="dimensions", description="The dimensions: where you mine, their blocks and your netherite.")
+    async def portal_autocomplete(self, interaction: discord.Interaction, current: str):
+        level = await self.bot.db.run(dimensions.level, interaction.user.id)
+        return [app_commands.Choice(name=dimensions.label(key), value=key) for key in DIMENSIONS[: level + 1]
+                if current.lower() in key.replace("_", " ")][:25]
+
+    @app_commands.command(name="portal", description="Go through a portal to another dimension you unlocked: you mine there.")
+    @app_commands.describe(dimension="Where to go (the dimensions you unlocked)")
+    @app_commands.autocomplete(dimension=portal_autocomplete)
+    async def portal(self, interaction: discord.Interaction, dimension: str):
+        res = await self.bot.db.run(dimensions.travel, interaction.user.id, dimension.strip().lower().replace(" ", "_"))
+        ores = dimensions.ores(res["after"])
+        found = (" Ores here: " + ", ".join(f"{mat(o)} {o}".strip() for o in ores) + ".") if ores else ""
+        await interaction.response.send_message(
+            f"🌀 {interaction.user.mention} goes through the portal: {dimensions.label(res['before'])} → "
+            f"**{dimensions.label(res['after'])}**. Your messages in the mining channel now mine here.{found}")
+        await self.sync_roles(interaction.user.id)
+
+    @app_commands.command(name="dimensions", description="The dimensions: where you mine, their blocks, ores and your netherite.")
     async def dimensions_cmd(self, interaction: discord.Interaction):
         me = await self.bot.db.run(dimensions.overview, interaction.user.id)
         base = income("overworld") or 1
+        chans = channel_ids("mining")
+        where = " ".join(f"<#{c}>" for c in sorted(chans)) if chans else "every channel"
         embed = discord.Embed(
             title="🌍 Dimensions",
-            description="Each dimension has its mining channels and its blocks, worth more than the one before. "
-                        "Unlocking a dimension opens every one before it.",
+            description=f"You are in the **{dimensions.label(me['current'])}**: you mine there ({where}). "
+                        "`/portal` takes you to any dimension you unlocked. Each one has its blocks, worth more than "
+                        "the one before, and the ores of every dimension before it plus its own.",
             color=discord.Color.dark_purple(),
         )
+        d = settings.get()["dimensions"]
         for i, key in enumerate(DIMENSIONS):
-            state = "✅ unlocked" if me["level"] >= i else "🔒 locked"
+            state = "📍 you are here" if key == me["current"] else "✅ unlocked" if me["level"] >= i else "🔒 locked"
             blocks = ", ".join(f"{block_icon(b)} {block_name(b)} {players.block_value(b)}" for b in DIMENSION_BLOCKS[key])
-            chans = channel_ids(dimensions.channel_key(key))
-            where = " ".join(f"<#{c}>" for c in sorted(chans)) if chans else (
-                "every channel" if key == "overworld" else "no channel yet")
             value = income(key)
+            ores = [f"{mat(o)} {o} {float(d['ore_chances'][o]) * 100:g}%".strip() for o in dimensions.ores(key)]
+            if i >= dimensions.NETHER:
+                ores.append(f"{scrap_icon()} debris {float(d['scrap_chance']) * 100:g}%")
             embed.add_field(
                 name=f"{dimensions.label(key)} — {state}",
-                value=f"{blocks}\n≈ {em(round(value, 1))} a message (×{value / base:.2f}) · {where}",
+                value=f"{blocks}\n≈ {em(round(value, 1))} a message (×{value / base:.2f})"
+                      + (f"\nOres: {', '.join(ores)}" if ores else ""),
                 inline=False,
             )
-        d = settings.get()["dimensions"]
         embed.add_field(
             name="🔥 Your netherite",
             value=(f"{scrap_icon()} **{me['scraps']}** scraps · **{me['ingots']}** ingot(s) · "
