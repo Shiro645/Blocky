@@ -50,9 +50,14 @@ def _sell_offer(ctx: Ctx) -> dict:
         asset = f"book:{name}:{level}"
     elif asset == "potion":
         asset = f"potion:{potions.random_kind(ctx.rng)}"
+    return {"kind": "sell", **priced(asset, amount)}
+
+
+def priced(asset: str, amount: int) -> dict:
+    """An offer to sell: its value and its price (with the villager's discount)."""
     value = int(round(assets.unit_value(asset) * amount))
     price = max(1, int(round(value * (1 - float(_cfg()["sell_discount"])))))
-    return {"kind": "sell", "asset": asset, "amount": amount, "price": price, "value": value}
+    return {"asset": asset, "amount": amount, "price": price, "value": value}
 
 
 def _buy_offer(ctx: Ctx) -> dict:

@@ -393,4 +393,20 @@ UPDATES: tuple[Update, ...] = (
              "counts. A won raid takes 30% of the chest (up to 30,000)."),
         ),
     ),
+    Update(
+        "2026-10-ingots-2-2-1", "2026-10-22", "Ingots and tools",
+        "Ingots are now precious, and tools really pay for themselves.",
+        (
+            ("💎 Ingots are worth much more",
+             "Gold 300, iron 1,000, diamond 5,000, netherite 20,000. They drop 10 times less often (1 ingot each). "
+             "The ingots you had were paid back at their old price."),
+            ("⛏️ Better tools",
+             "The pickaxe gives +3 cobblestone per tier (was +1), and every piece lasts much longer: gold 300, iron "
+             "1,000, diamond 3,000, netherite 5,000. Your gear already has its new durability."),
+            ("🎁 /daily",
+             "The bonus every few days in a row is now an iron ingot."),
+            ("🎰 Games of chance",
+             "The wheel, blackjack and mines now show what you won or lost and your balance, like the Lucky Block."),
+        ),
+    ),
 )

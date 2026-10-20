@@ -35,7 +35,7 @@ class DailyTests(GameTestCase):
         self.assertEqual(await self.run_game(players.item_amount, ALICE, "ingot", "diamond"), 1)
 
     async def test_the_bonus_ingot_follows_its_setting(self):
-        settings.load({"daily": {"bonus_every_days": 3}})
+        settings.load({"daily": {"bonus_every_days": 3, "weekly_bonus_item": "diamond"}})
         for day in range(1, 7):
             await self.run_game(daily.claim, ALICE)
             self.advance(DAY)

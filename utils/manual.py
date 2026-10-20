@@ -1886,7 +1886,18 @@ PAGES: list[Page] = [
         "You see what it would take and pay first, then confirm twice. A backup of the database is made just before "
         "(restore it to undo), the staff channel gets a summary and each player gets a DM with their refund.",
         examples=("/rewind_gear",),
-        related=("reset", "player dimension"),
+        related=("reset", "player dimension", "rewind_ingots"),
+    ),
+    Page(
+        "rewind_ingots", "staff_players",
+        "The 2.2.1 new prices for ingots, for **the whole server**: every ingot (in inventories or listed at the "
+        "auction house) is taken back and paid back at its **old** price (gold 5, iron 10, diamond 60, netherite "
+        "300), and every netherite scrap at 70. Gear isn't touched, and the refund doesn't count for the seasons. "
+        "The ingots the wandering villager still sells get the new prices. It can be done **once** only.\n"
+        "You see what it would take and pay first, then confirm twice. A backup of the database is made just before "
+        "(restore it to undo), the staff channel gets a summary and each player gets a DM with their refund.",
+        examples=("/rewind_ingots",),
+        related=("rewind_gear", "reset"),
     ),
     Page(
         "player xp_add", "staff_players",

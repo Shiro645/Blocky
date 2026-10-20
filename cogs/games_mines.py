@@ -30,7 +30,7 @@ def game_embed(game: dict, user: discord.abc.User | None = None) -> discord.Embe
         lines.append(f"Next safe block: **×{nxt:.2f}**")
         lines.append(f"*Dig a block or cash out* (no move <t:{game['deadline']}:R>: you cash out)")
     elif game["result"] == "boom":
-        lines.append(f"💥 **BOOM!** You hit the TNT: −{em(game['bet'])}")
+        lines.append(f"💥 **BOOM!** You hit the TNT: **−{em(game['bet'])}**")
         color = discord.Color.dark_grey()
     elif game["result"] == "refunded":
         lines.append("⏳ Nothing dug in time: your bet is back.")
@@ -38,8 +38,10 @@ def game_embed(game: dict, user: discord.abc.User | None = None) -> discord.Embe
     else:
         gain = game["paid"] - game["bet"]
         lines.append(f"💰 Cashed out at **×{mines.multiplier(dug, tnt):.2f}**: {em(game['paid'])} "
-                     + (f"(**+{em(gain)}**)" if gain > 0 else f"(−{em(-gain)})" if gain < 0 else ""))
+                     + (f"(**+{em(gain)}**)" if gain > 0 else f"(**−{em(-gain)}**)" if gain < 0 else ""))
         color = discord.Color.green() if gain > 0 else discord.Color.dark_grey()
+    if game["status"] != "active" and "balance" in game:
+        lines.append(f"Balance: {em(game['balance'])}")
     embed = discord.Embed(title="💣 Mines", description="\n".join(lines), color=color)
     if user is not None:
         embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
