@@ -41,7 +41,7 @@ class ConfigEditTests(unittest.TestCase):
         field = ce.FIELDS_BY_KEY["market.ingots.diamond"]
         cfg = ce.set_value(BASE, field.path, 40)
         cfg = ce.set_value(cfg, field.path, None)
-        self.assertEqual(ce.current_value(cfg, field), 60)  # default
+        self.assertEqual(ce.current_value(cfg, field), 5000)  # default
 
     def test_parse(self):
         price = ce.FIELDS_BY_KEY["market.ingots.diamond"]
@@ -150,7 +150,7 @@ class RegistryTests(unittest.TestCase):
 
     def test_setting_the_default_value_removes_the_override(self):
         price = ce.FIELDS_BY_KEY["market.ingots.diamond"]
-        self.assertEqual(ce.set_field(BASE, price, 60), BASE)
+        self.assertEqual(ce.set_field(BASE, price, 5000), BASE)
 
     def test_the_old_mining_cooldown_key_never_comes_back(self):
         cooldown = ce.FIELDS_BY_KEY["mining.cooldown_seconds"]

@@ -64,6 +64,7 @@ def get_game(ctx: Ctx, game_id: int) -> dict:
         raise GameError("This game doesn't exist anymore.")
     game = dict(row)
     game["state"] = json.loads(game["state"])
+    game["balance"] = players.get_emeralds(ctx, game["user_id"])  # shown once the game is over
     return game
 
 

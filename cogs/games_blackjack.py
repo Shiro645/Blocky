@@ -45,7 +45,9 @@ def game_embed(game: dict, user: discord.abc.User | None = None) -> discord.Embe
     if over:
         text, color = RESULTS.get(game["result"], ("Over.", discord.Color.dark_grey()))
         gain = game["paid"] - game["bet"]
-        lines.append(f"{text} " + (f"**+{em(gain)}**" if gain > 0 else f"−{em(-gain)}" if gain < 0 else ""))
+        lines.append(f"{text} " + (f"**+{em(gain)}**" if gain > 0 else f"**−{em(-gain)}**" if gain < 0 else ""))
+        if "balance" in game:
+            lines.append(f"Balance: {em(game['balance'])}")
     else:
         lines.append(f"*Hit, stand or double* (no move <t:{game['deadline']}:R>: you stand)")
     embed = discord.Embed(title="🃏 Blackjack", description="\n".join(lines), color=color)

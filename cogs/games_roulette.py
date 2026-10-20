@@ -109,7 +109,10 @@ class RouletteCog(commands.Cog):
             pass
 
         lines = [head, "", strip(self.rng, res["slot"]), f"The wheel stops on **{roulette.slot_label(res['slot'])}**."]
-        lines.append(f"🎉 You win **{em(res['payout'])}**!" if res["won"] else "💸 Lost. Better luck next spin!")
+        if res["won"]:
+            lines.append(f"🎉 You win **{em(res['payout'])}** (×{roulette.payout(bet)}): **+{em(res['payout'] - amount)}**")
+        else:
+            lines.append(f"💸 Lost: **−{em(amount)}**. Better luck next spin!")
         lines.append(f"Balance: {em(res['balance'])}")
         embed = discord.Embed(title=title, description="\n".join(lines),
                               color=discord.Color.green() if res["won"] else discord.Color.dark_grey())

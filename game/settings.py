@@ -71,7 +71,7 @@ DEFAULTS: dict[str, Any] = {
     "market": {
         "stick_pack": {"amount": 4, "price": 1},
         # Netherite isn't sold (it's mined in the Nether): its price is only its value (rewind refunds, fair prices).
-        "ingots": {"gold": 5, "iron": 10, "diamond": 60, "netherite": 300},
+        "ingots": {"gold": 300, "iron": 1000, "diamond": 5000, "netherite": 20000},
         "gear_sell_rate": 0.8,  # /sell gear: this share of its value (craft + books), times its durability left
     },
     "talents": {
@@ -97,13 +97,16 @@ DEFAULTS: dict[str, Any] = {
     "levels": {"xp_first_level": 100, "xp_growth_per_level": 1.05},
     "gear": {
         "tier": {"gold": 1, "iron": 2, "diamond": 3, "netherite": 4},
-        "durability": {"gold": 60, "iron": 250, "diamond": 800, "netherite": 1500},
+        # Uses (a mining reward where the tool helps, an attack, a hit taken). Calibrated with the ingot prices: a
+        # pickaxe gives back about twice its price over its life (gold ×1.1, iron ×2.2, diamond ×2, netherite ×1.9,
+        # in the overworld; more in the other dimensions).
+        "durability": {"gold": 300, "iron": 1000, "diamond": 3000, "netherite": 5000},
         # Armor pieces get this share of their material's durability, in Minecraft's proportions (11, 16, 15 and
         # 13 sixteenths): the chestplate lasts the longest, the helmet the least. Tools: all of it.
         "armor_durability_share": {"helmet": 0.6875, "chestplate": 1.0, "leggings": 0.9375, "boots": 0.8125},
         # Pickaxe: extra cobblestone per mining event, and a chance per tier to
         # upgrade the mined block (cobblestone -> gravel -> deepslate -> obsidian -> bedrock).
-        "pickaxe_extra_blocks_per_tier": 1,
+        "pickaxe_extra_blocks_per_tier": 3,
         "pickaxe_upgrade_chance_per_tier": 0.05,
         # Shovel: extra blocks per tier when the mined block is gravel.
         "shovel_extra_gravel_per_tier": 2,
@@ -142,7 +145,7 @@ DEFAULTS: dict[str, Any] = {
         "base_reward": 30,
         "streak_bonus_per_day": 10,
         "streak_cap_days": 7,
-        "weekly_bonus_item": "diamond",  # ingot given every bonus_every_days consecutive days
+        "weekly_bonus_item": "iron",  # ingot given every bonus_every_days consecutive days
         "bonus_every_days": 7,
         "xp": 25,
     },
@@ -190,9 +193,9 @@ DEFAULTS: dict[str, Any] = {
         # or {"potions": n} (random potions).
         "table": [
             {"weight": 40, "title": "An emerald pouch", "reward": {"emeralds": 50}},
-            {"weight": 25, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 3}},
+            {"weight": 3, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 1}},
             {"weight": 15, "title": "A bedrock cluster", "reward": {"block": "bedrock", "amount": 10}},
-            {"weight": 12, "title": "A diamond vein", "reward": {"ingot": "diamond", "amount": 2}},
+            {"weight": 1, "title": "A diamond vein", "reward": {"ingot": "diamond", "amount": 1}},
             {"weight": 12, "title": "A lapis vein", "reward": {"lapis": 4}},
             {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
             {"weight": 12, "title": "A witch's stash", "reward": {"potions": 2}},

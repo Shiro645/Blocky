@@ -9,7 +9,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import assets, backups, cooldowns, dimensions, players, profiles, reset, rewind, settings, species
+from game import (assets, backups, cooldowns, dimensions, players, profiles, reset, rewind, rewind_ingots, settings,
+                  species)
 from game.catalog import DIMENSIONS
 from game.errors import GameError
 from utils.autocomplete import owned_asset_choices
@@ -422,6 +423,71 @@ class StaffEconomyCog(commands.Cog):
                                "now found in the Nether (`/dimensions`).")
             except Exception:  # one closed DM must not stop the others
                 log.warning("Could not DM the rewind refund to %s", uid, exc_info=True)
+            await asyncio.sleep(1)
+
+    # ---------- /rewind_ingots ----------
+    @app_commands.command(name="rewind_ingots", description="STAFF: Take back every ingot and scrap and pay them back at the old prices.")
+    @staff_only()
+    async def rewind_ingots_cmd(self, interaction: discord.Interaction):
+        plan = await self.bot.db.run(rewind_ingots.plan)
+        total = rewind_ingots.summary(plan)
+        if not total["players"]:
+            raise GameError("Nobody has ingots or netherite scraps: nothing to rewind.")
+        old = ", ".join(f"{name} {em(value)}" for name, value in rewind_ingots.OLD_VALUES.items())
+        text = (
+            "♻️ **Rewind the ingots of the whole server?**\n"
+            f"Every ingot and netherite scrap (in inventories or listed at the auction house) is taken back and paid "
+            f"back at the **old** prices ({old}; scraps {em(rewind_ingots.SCRAP_VALUE)}). Gear isn't touched.\n"
+            f"• **{total['players']}** player(s) · **{total['ingots']}** ingot(s) · **{total['scraps']}** scrap(s) · "
+            f"**{total['listings']}** listing(s)\n"
+            f"• **{em(total['emeralds'])}** paid back in all\n"
+            "A backup is made first. Each player gets a DM with their refund. It can be done once only."
+        )
+
+        async def sure(i: discord.Interaction) -> None:
+            await i.response.edit_message(
+                content=text + "\n\n⚠️ **Last check**: this can only be undone by restoring the backup.",
+                view=ConfirmView(interaction.user.id, "Yes, rewind the ingots", go))
+
+        async def go(i: discord.Interaction) -> None:
+            await i.response.edit_message(content="♻️ Backing up, then rewinding…", view=None)
+            try:
+                target = await self.backup_first("rewound")
+            except GameError as error:
+                await i.edit_original_response(content=f"❌ {error}")
+                return
+            done = await self.bot.db.run(rewind_ingots.apply)
+            result = rewind_ingots.summary(done)
+            summary = (f"**{result['players']}** player(s) · **{result['ingots']}** ingot(s) · **{result['scraps']}** "
+                       f"scrap(s) · **{result['listings']}** listing(s) · **{em(result['emeralds'])}** paid back.")
+            await i.edit_original_response(content=f"✅ Ingots rewound. {summary}\nBackup: `{target.name}`.")
+            embed = discord.Embed(title="♻️ Ingots rewound", description=summary, color=discord.Color.dark_red())
+            embed.add_field(name="Backup made just before", value=f"`{target.name}` (restore it to undo)", inline=False)
+            embed.add_field(name="By", value=f"{interaction.user.mention} (`{interaction.user}`)", inline=False)
+            await self.bot.announcer.send(embed=embed, channel="staff_log")
+            log.warning("%s rewound the ingots: %s", interaction.user, result)
+            asyncio.create_task(self.dm_ingot_refunds(done))
+
+        await interaction.response.send_message(text, view=ConfirmView(interaction.user.id, "Rewind", sure),
+                                                ephemeral=True)
+
+    async def dm_ingot_refunds(self, refunds: dict[int, dict]) -> None:
+        """Tell each player what the ingot rewind took and paid back (in the background: DMs are slow)."""
+        for uid, e in refunds.items():
+            try:
+                user = self.bot.get_user(uid) or await self.bot.fetch_user(uid)
+                parts = []
+                if e["ingots"]:
+                    parts.append(f"{e['ingots']} ingot(s)")
+                if e["scraps"]:
+                    parts.append(f"{e['scraps']} netherite scrap(s)")
+                if e["listings"]:
+                    parts.append(f"{e['listings']} auction listing(s)")
+                await dm(user, f"♻️ **Ingots are worth much more now!** Your {', '.join(parts)} were taken back and "
+                               f"paid back at the old prices: **+{em(e['emeralds'])}**. Ingots are rarer now and "
+                               "cost far more at the `/market`.")
+            except Exception:  # one closed DM must not stop the others
+                log.warning("Could not DM the ingot refund to %s", uid, exc_info=True)
             await asyncio.sleep(1)
 
     async def sync_roles_of(self, user_ids: list[int]) -> None:
