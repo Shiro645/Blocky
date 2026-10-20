@@ -600,7 +600,7 @@ DEFAULTS: dict[str, Any] = {
         "late_penalty": 0.10,
         "garnish": 0.50,
     },
-    # Mini-games. They work in the channels of config.json channels.games (anywhere when there are none).
+    # Mini-games. The games of chance work in config.json channels.casino (anywhere when there is none).
     "games": {
         # Games of chance (Lucky Block, the wheel): bets, waiting time, and what a player may win in a day
         # (winnings minus losses at these games; then they can't play before tomorrow, 0 = no cap).
@@ -645,7 +645,7 @@ DEFAULTS: dict[str, Any] = {
         "blockdle_rewards": [300, 250, 200, 160, 130, 100, 80, 60, 50, 40],
         "blockdle_xp": 50,
         "blockdle_no_repeat_days": 60,  # a block isn't the block of the day again before this many days
-        "quiz_every_minutes": 60,  # a question in a games channel every X minutes (0 = only /event quiz)
+        "quiz_every_minutes": 60,  # a question in the events channel every X minutes (0 = only /event quiz)
         "quiz_every_jitter": 0.25,  # ...give or take 25%, so it isn't predictable
         "quiz_no_repeat": 40,  # the last 40 questions aren't asked again
         "quiz_seconds": 30,  # time to answer

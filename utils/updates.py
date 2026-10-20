@@ -439,4 +439,17 @@ UPDATES: tuple[Update, ...] = (
              "Fortune on your pickaxe gives a chance of a second ore."),
         ),
     ),
+    Update(
+        "2026-10-channels", "2026-10-24", "Every command in its place",
+        "Each command now has its own channel.",
+        (
+            ("🎰 Casino",
+             "The Lucky Block, the wheel, blackjack and mines are played in the casino."),
+            ("🌀 Portal",
+             "The dungeon, the gate bosses, `/portal` and `/dimensions` are in the portal channel."),
+            ("💬 Commands",
+             "`/rob` in the robberies channel, every other command in the commands channel. Typed in the wrong "
+             "place, a command tells you where it goes. The Minecraft quiz now comes in the events channel."),
+        ),
+    ),
 )

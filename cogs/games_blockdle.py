@@ -8,7 +8,6 @@ from discord import app_commands
 from discord.ext import commands
 
 from game import blockdle, settings
-from utils.checks import check_game_channel
 from utils.ui import em, join_lines
 
 ICONS = {"tool": "⛏️", "hardness": "🪨", "resistance": "💥", "transparent": "👁️", "craftable": "🛠️", "version": "📅"}
@@ -124,7 +123,6 @@ class BlockdleCog(commands.Cog):
     @app_commands.describe(block="A Minecraft block (start typing)")
     @app_commands.autocomplete(block=block_autocomplete)
     async def guess(self, interaction: discord.Interaction, block: str):
-        check_game_channel(interaction)
         state = await self.bot.db.run(blockdle.guess, interaction.user.id, block)
         title = "🧩 Blockdle — found!" if state["found"] else f"🧩 Blockdle — guess {state['tries']}"
         # Private: the others mustn't see the clues.

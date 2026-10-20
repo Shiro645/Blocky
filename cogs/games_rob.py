@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 
 from game import robbery, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.config import channel_id, role_id
 from utils.ui import dm, em, report_error
 
@@ -97,7 +96,6 @@ class RobCog(commands.Cog):
     @app_commands.describe(member="Who you rob", mode="Risky (they get pinged, big loot) or discreet (no ping, small loot)")
     @app_commands.choices(mode=MODE_CHOICES)
     async def rob(self, interaction: discord.Interaction, member: discord.Member, mode: str):
-        check_game_channel(interaction)
         if member.bot:
             raise GameError("Bots have nothing worth stealing.")
         if is_untouchable(member):

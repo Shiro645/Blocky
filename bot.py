@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 from game import restrictions, settings, shop
 from game.db import Database
 from utils.announcer import Announcer
-from utils.config import balance_overrides, load_config, staff_role_id
-from utils import staff_log, staff_visibility
+from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config, staff_role_id
+from utils import config_edit, routing, staff_log, staff_visibility
 from utils.checks import is_staff_command
 from utils.ui import load_application_emojis, mark_handled, report_error, take_handled
 
@@ -96,6 +96,21 @@ def build_intents() -> discord.Intents:
     return intents
 
 
+def migrate_config() -> None:
+    """config.json from before 2.2.4: the "games" channels become the casino (a copy is kept first)."""
+    try:
+        new = routing.migrate(read_config_file())
+        if new is None:
+            return
+        from game import backups
+
+        config_edit.write_config(CONFIG_PATH, new, backups.backup_dir(new.get("database_path", "economy.db")))
+        reload_config()
+        log.info("config.json: the game channels are now the casino channels")
+    except Exception:
+        log.exception("Could not move the game channels to the casino channels")
+
+
 class Bot(commands.Bot):
     def __init__(self) -> None:
         super().__init__(
@@ -108,6 +123,7 @@ class Bot(commands.Bot):
             allowed_contexts=app_commands.AppCommandContext(guild=True, dm_channel=False, private_channel=False),
             allowed_installs=app_commands.AppInstallationType(guild=True, user=False),
         )
+        migrate_config()
         cfg = load_config()
         valid, problems = settings.clean(balance_overrides(cfg))
         for problem in problems:
@@ -214,10 +230,29 @@ class Bot(commands.Bot):
                 await self.tell_elsewhere(interaction)
             return False
         block = self.block_of(interaction.user.id)
-        if block is None:
+        if block is not None:
+            if interaction.type is not discord.InteractionType.autocomplete:
+                await self.tell_blocked(interaction, block)
+            return False
+        return await self.in_its_place(interaction)
+
+    async def in_its_place(self, interaction: discord.Interaction) -> bool:
+        """Each player command works in its channel (utils/routing.py); elsewhere the player is told where."""
+        command = interaction.command
+        if command is None or not isinstance(command, (app_commands.Command, app_commands.Group)):
+            return True
+        root = command.root_parent or command
+        channel = interaction.channel
+        if channel is None or channel.id in getattr(self, "guide_channels", {}):
+            return True  # a player's guide channel: try everything there
+        place = routing.place_of(root.name, staff=is_staff_command(root))
+        if routing.allowed(place, channel.id, getattr(channel, "parent_id", None)):
             return True
         if interaction.type is not discord.InteractionType.autocomplete:
-            await self.tell_blocked(interaction, block)
+            try:
+                await interaction.response.send_message(routing.refusal(root.name, place), ephemeral=True)
+            except discord.HTTPException:
+                pass
         return False
 
     def gate_components(self) -> None:

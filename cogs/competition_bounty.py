@@ -8,7 +8,6 @@ from discord.ext import commands, tasks
 
 from game import bounty, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import em, join_lines
 
 log = logging.getLogger("bounty")
@@ -31,7 +30,6 @@ class BountyCog(commands.Cog):
     @group.command(name="place", description="Put a bounty on a player's head (anonymous): whoever beats them takes it.")
     @app_commands.describe(member="Who you want hunted", amount="One of the bounty tiers")
     async def place(self, interaction: discord.Interaction, member: discord.Member, amount: int):
-        check_game_channel(interaction)
         if member.bot:
             raise GameError("Bots have no head to put a bounty on.")
         res = await self.bot.db.run(bounty.place, interaction.user.id, member.id, amount)

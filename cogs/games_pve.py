@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 
 from game import potions, pve, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import BaseView, em, join_lines, potion_icon, report_error
 
 log = logging.getLogger("pve")
@@ -173,7 +172,6 @@ class PveCog(commands.Cog):
     @app_commands.choices(difficulty=[app_commands.Choice(name=f"{emoji} {name}", value=key)
                                       for key, (name, emoji) in pve.DIFFICULTIES.items()])
     async def start(self, interaction: discord.Interaction, difficulty: str):
-        check_game_channel(interaction)
         run = await self.bot.db.run(pve.create, interaction.user.id, difficulty)
         await interaction.response.send_message(embed=run_embed(run), view=run_view(run))
         message = await interaction.original_response()

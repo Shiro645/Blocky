@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands, tasks
 
 from game import quiz, settings
-from utils.config import channel_ids
+from utils.config import channel_id
 from utils.ui import BaseView, em
 
 log = logging.getLogger("quiz")
@@ -105,7 +105,7 @@ class AnswerButton(discord.ui.Button):
 
 
 class QuizCog(commands.Cog):
-    """A Minecraft question in a games channel every X minutes (and /event quiz)."""
+    """A Minecraft question in the events channel every X minutes (and /event quiz)."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -148,10 +148,9 @@ class QuizCog(commands.Cog):
             if time.monotonic() < self.next_at:
                 return
             self.schedule()
-            channels = [self.bot.get_channel(c) for c in sorted(channel_ids("games"))]
-            channels = [c for c in channels if isinstance(c, discord.abc.Messageable)]
-            if channels:
-                await self.post(self.rng.choice(channels))
+            channel = self.bot.get_channel(channel_id("events") or 0)  # the events channel
+            if isinstance(channel, discord.abc.Messageable):
+                await self.post(channel)
         except Exception:  # an error must never stop the loop
             log.exception("Quiz loop failed")
 

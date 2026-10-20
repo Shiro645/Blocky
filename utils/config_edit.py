@@ -207,7 +207,8 @@ FIELDS: list[Field] = [
     Field("ch_announcements", "channels", "Announcements channel", ("channels", "announcements"), "channel",
           help="Level-ups, achievements, challenges, season and tournament results."),
     Field("ch_events", "channels", "Events channel", ("channels", "events"), "channel",
-          help="Drops and bosses appear here (not set = where people chat)."),
+          help="Drops, events and the Minecraft quiz appear here (not set = drops where people chat, no automatic "
+               "quiz)."),
     Field("ch_staff_log", "channels", "Staff channel", ("channels", "staff_log"), "channel",
           help="/link requests and the log of every staff action."),
     Field("ch_mining", "channels", "Mining channels", ("channels", "mining"), "channels",
@@ -216,12 +217,17 @@ FIELDS: list[Field] = [
                "their tiny reward)."),
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
-    Field("ch_games", "channels", "Game channels", ("channels", "games"), "channels",
-          help="/luckyblock, /wheel, /blockdle, /rob, /pve start and /dummy hit only work there (and in the guide "
-               "channels), and the quiz is posted there (not set = they work anywhere, but no automatic quiz)."),
+    Field("ch_commands", "channels", "Commands channels", ("channels", "commands"), "channels",
+          help="Every player command that isn't of the casino, the portal or the robberies works only there (staff "
+               "commands, /help and guide channels: anywhere). Not set = anywhere."),
+    Field("ch_casino", "channels", "Casino channels", ("channels", "casino"), "channels",
+          help="/luckyblock, /wheel, /blackjack and /mines work only there. Not set = anywhere."),
+    Field("ch_portal", "channels", "Portal channels", ("channels", "portal"), "channels",
+          help="/pve (the dungeon), /boss, /portal and /dimensions work only there. Not set = anywhere."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
-          help="Robberies (/rob) are posted there, with the Stop the thief! button (the victim is pinged there for a "
-               "risky one). Best as a channel where members can't write. Not set = where /rob is used."),
+          help="/rob works only there, and robberies are posted there with the Stop the thief! button (the victim is "
+               "pinged there for a risky one). Members need Use Application Commands there, not Send Messages. Not "
+               "set = /rob works anywhere and is posted where it's used."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),
@@ -759,7 +765,7 @@ FIELDS: list[Field] = [
     _b("games.blockdle_no_repeat_days", "minigames", "Blockdle: days before a block comes back",
        "A block of the day isn't picked again for this many days (when there are enough blocks).", max=180),
     _b("games.quiz_every_minutes", "minigames", "Quiz: a question every X minutes",
-       "Posted in a game channel. 0 = only with /event quiz.", max=10_080),
+       "Posted in the events channel. 0 = only with /event quiz.", max=10_080),
     _pct("games.quiz_every_jitter", "minigames", "Quiz: give or take (%)",
          "25% = a question every 45 to 75 minutes when it's every 60.", max=0.9),
     _b("games.quiz_no_repeat", "minigames", "Quiz: questions not asked again soon",
