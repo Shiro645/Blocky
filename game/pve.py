@@ -1,4 +1,4 @@
-"""PVE dungeon (/pve): 5 waves of monsters, alone or in a group of up to 4.
+"""PVE dungeon (/pve): 5 waves of monsters, alone or in a group of up to `max_players` (5).
 
 - Waves: 1 zombies, 2 skeletons (they shoot before the first attack), 3 both,
   4 spiders (two bites a turn), a creeper (it explodes on its 2nd turn unless

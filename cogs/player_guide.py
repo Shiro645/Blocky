@@ -76,7 +76,8 @@ def checklist_embed(state: dict) -> discord.Embed:
         end = f"🎁 Do them all to get **{em(state['reward'])}**."
     text = "\n".join(lines) + f"\n\n{bar} **{done}/{total}**\n{end}"
     if state["channel_id"] and state["delete_at"]:
-        text += f"\n\n🗑️ This channel will be deleted <t:{state['delete_at']}:R>. `/guide` shows this checklist anywhere."
+        text += (f"\n\n🗑️ This channel will be deleted <t:{state['delete_at']}:R>. `/guide` shows this checklist "
+                 "in the commands channel.")
     embed = discord.Embed(title="📋 Your first steps", description=text, color=COLOR)
     embed.set_footer(text="Each step is checked by itself as soon as you do it (steps done before count too).")
     return embed
@@ -92,10 +93,10 @@ def guide_pages() -> list[discord.Embed]:
     t, v = s["tournament"], s["villager"]
     pages = [
         ("⛏️ 1. Mining and emeralds", (
-            "**Chat to mine.** Every message you write in the server mines **1 to 6 blocks**: cobblestone, gravel, "
+            "**Chat to mine.** Every message you write in the mining channel mines **1 to 6 blocks**: cobblestone, gravel, "
             f"deepslate, sometimes obsidian and, rarely, bedrock. It works once every **{s['mining']['cooldown_seconds']} s** "
             "(spam channels give almost nothing). Writing here, in your guide channel, doesn't mine: chat in the "
-            "server's channels.\n\n"
+            "mining channel.\n\n"
             "`/inventory` — your blocks, emeralds, items and gear.\n"
             f"`/sell` — sells your blocks (all of them, or pick a kind and an amount): cobblestone {values['cobblestone']}, gravel {values['gravel']}, "
             f"deepslate {values['deepslate']}, obsidian {values['obsidian']}, bedrock {values['bedrock']} emeralds each.\n"
@@ -167,7 +168,7 @@ def guide_pages() -> list[discord.Embed]:
             "put in it.\n\n"
             + (f"📚 The wiki <#{channel_id('wiki')}> explains every feature in detail, with the current numbers.\n"
                if channel_id("wiki") else "")
-            + "`/guide` shows your checklist anywhere. A question? Ask the staff. Have fun! 🧱"
+            + "`/guide` (in the commands channel or here) shows your checklist. A question? Ask the staff. Have fun! 🧱"
         )),
     ]
     return [discord.Embed(title=title, description=text, color=COLOR) for title, text in pages]

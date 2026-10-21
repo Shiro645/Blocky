@@ -74,7 +74,7 @@ _ACHIEVEMENTS: list[tuple[str, str, str, str, Callable[[int], str]]] = [
     ("dungeon_nightmare", "💀", "Nightmare Slayer", "stat:pve_clears_nightmare", lambda n: "Clear the dungeon in Nightmare"),
     ("challenger_10", "🎯", "Challenger", "stat:challenges_completed", lambda n: f"Complete {_plural(n, 'challenge')}"),
     ("challenger_50", "🏅", "Challenge Master", "stat:challenges_completed", lambda n: f"Complete {_plural(n, 'challenge')}"),
-    ("high_roller", "🎰", "High Roller", "stat:frenzy_games", lambda n: "Play the Lucky Block or the wheel during a Gambling Frenzy"),
+    ("high_roller", "🎰", "High Roller", "stat:frenzy_games", lambda n: "Play a game of chance during a Gambling Frenzy"),
     ("enchanter_10", "📚", "Enchanter", "stat:items_enchanted", lambda n: f"Apply {_plural(n, 'enchanted book')}"),
     ("handyman_10", "🔧", "Handyman", "stat:items_repaired", lambda n: f"Repair gear {n:,} times"),
     ("regular_20", "🧑‍🌾", "Regular Customer", "stat:villager_trades", lambda n: f"Make {_plural(n, 'deal')} with the wandering villager"),

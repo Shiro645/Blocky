@@ -1,8 +1,8 @@
 """Prestige (/prestige): start over for good bonuses, up to prestige.max times.
 
 - Prestige n+1 needs level prestige.base_level + prestige.level_step × n (50, 60, 70…), every achievement but
-  the ones of prestige.skip_achievements (only one winner each time, and level 100), every dimension (up to the
-  Shimmer) and the server's Beacon lit.
+  the ones of prestige.skip_achievements (only one winner each time, and level 100) and the ones whose game is
+  switched off (progress.achievement_open), every dimension (up to the Shimmer) and the server's Beacon lit.
 - The level stays. The parts switched on in prestige.reset start over: wealth (emeralds, blocks, items, auction
   listings, bounties put), gear (and its enchantments, the anvil), talents (every spent point is given back to
   spend again: they come from the level, so none is lost), achievements (with the stats they come from; the

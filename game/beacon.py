@@ -1,7 +1,7 @@
 """The server's Beacon (/beacon): built by everyone, it gives everyone its effects.
 
 - It is lit by the first victory against the Wither (its Nether Star). Before that, nothing can be given.
-- A pyramid of 4 levels (9, 25, 49 and 81 blocks = 81, 225, 441 and 729 ingots). It is built in 16 steps, in
+- A pyramid of 4 levels (beacon.level_ingots: 1, 3, 5 and 9 blocks = 9, 27, 45 and 81 ingots). It is built in 16 steps, in
   this order: the 4 levels in gold, then level 1 to 4 again in iron, then in diamond, then in netherite. A
   level rebuilt in a better material keeps working the whole time.
 - /beacon give: anyone gives ingots, by whole blocks (multiples of 9), of the material the Beacon needs now.

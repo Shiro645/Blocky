@@ -345,8 +345,9 @@ def repair(ctx: Ctx, user_id: int, gear_id: int, ingots: int | None = None) -> d
         raise GameError("Put at least 1 ingot.")
     use = min(needed, ingots if ingots is not None else have)
     if use <= 0:
+        where = "`/craft item:netherite_ingot` makes them" if material == "netherite" else "`/market` sells them"
         raise GameError(f"Repairing your {name} takes **{material} ingots** ({needed} for a full repair): you "
-                        "have none (`/market` sells them).")
+                        f"have none ({where}).")
     if have < use:
         raise GameError(f"You only have **{have}** {material} ingot(s).")
     missing = piece["max_durability"] - piece["durability"]

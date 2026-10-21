@@ -3,7 +3,7 @@
 - 🎰 Gambling Frenzy: the maximum bet and the daily cap of the games of chance are multiplied.
 - ⛏️ Mining Rush: more XP when mining.
 - 💰 Golden Hour: /sell pays more for blocks.
-- 🍀 Lucky Hour: obsidian and bedrock are more likely when mining.
+- 🍀 Lucky Hour: the rarest blocks (obsidian and bedrock in the overworld) are more likely when mining.
 - 🏷️ Market Sale: /market is cheaper.
 
 One event at a time. The staff starts one with /event start (and ends it with /event stop), and one
@@ -50,13 +50,14 @@ def describe(kind: str) -> str:
     c = _cfg()
     if kind == "gambling_frenzy":
         x = f"×{float(c['frenzy_multiplier']):g}"
-        return f"Bets and the daily limit of the Lucky Block and the wheel {x}"
+        return f"Bets and the daily limit of the games of chance {x}"
     if kind == "mining_rush":
         return f"Mining XP ×{float(c['rush_xp_multiplier']):g}"
     if kind == "golden_hour":
         return f"/sell pays +{float(c['golden_sell_bonus']):.0%} for blocks"
     if kind == "lucky_hour":
-        return f"Obsidian and bedrock ×{float(c['lucky_rare_multiplier']):g} more likely when mining"
+        x = f"×{float(c['lucky_rare_multiplier']):g}"
+        return f"The rarest blocks (obsidian and bedrock in the overworld) {x} more likely when mining"
     return f"/market costs {float(c['market_sale_discount']):.0%} less"
 
 

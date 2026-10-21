@@ -226,9 +226,10 @@ def _gear(s: Settings) -> list[str]:
     g = s["gear"]
     return [
         "Tiers: " + listing(g["tier"]),
-        f"Pickaxe: **+{num(g['pickaxe_extra_blocks_per_tier'])}** cobblestone per tier each reward, "
+        f"Pickaxe: **+{num(g['pickaxe_extra_blocks_per_tier'])}** common blocks (cobblestone, netherrack…) per tier each reward, "
         f"**{pct(g['pickaxe_upgrade_chance_per_tier'])}** chance per tier to upgrade the block",
-        f"Shovel: **+{num(g['shovel_extra_gravel_per_tier'])}** gravel per tier when you mine gravel",
+        f"Shovel: **+{num(g['shovel_extra_gravel_per_tier'])}** gravel per tier when you mine gravel (or its "
+        "dimension's block of that rank)",
         f"Axe: **{pct(g['axe_stick_chance'])}** chance to find sticks (as many as its tier)",
         f"Hoe: **+{pct(g['hoe_xp_bonus_per_tier'])}** XP per tier",
         _sword(s),
@@ -251,7 +252,7 @@ def _enchant_effects(s: Settings) -> list[str]:
 
     effects = {
         "efficiency": f"mining cooldown -{levels('efficiency_seconds')} s",
-        "fortune": f"+{levels('fortune_bonus')} blocks (pickaxe cobblestone, shovel gravel, axe sticks), "
+        "fortune": f"+{levels('fortune_bonus')} blocks (pickaxe common blocks and a chance of a second ore, shovel gravel, axe sticks), "
         f"hoe +{levels('fortune_hoe_xp', pct)} XP",
         "unbreaking": f"{levels('unbreaking_chance', pct)} chance that a use costs no durability",
         "sharpness": f"+{levels('sharpness_damage')} maximum damage",
@@ -325,7 +326,7 @@ def _talents(s: Settings) -> list[str]:
     effects = {
         "miner": "better odds of gravel and deepslate, and a chance of a bonus block",
         "trader": f"**+{pct(t['trader_bonus_per_point'])}** emeralds per point when you /sell",
-        "lucky": "more obsidian and bedrock on 1-block rolls",
+        "lucky": "more of the rarest blocks (obsidian and bedrock in the overworld) on 1-block rolls",
         "efficiency": f"mining cooldown **-{num(t['efficiency_seconds_per_point'])} s** per point "
         f"(never below {duration(s['mining']['min_cooldown_seconds'])})",
     }
@@ -486,7 +487,8 @@ def _prestige(s: Settings) -> list[str]:
         f"Bonus: **+{pct(p['bonus'])}** mining XP and /sell per prestige, for good",
         "Starts over: " + (", ".join(on) if on else "nothing") + " · the level stays",
         "Achievements not needed: " + (", ".join(a.name for a in progress.achievements()
-                                                   if p["skip_achievements"].get(a.code)) or "none"),
+                                                   if p["skip_achievements"].get(a.code)
+                                                   or not progress.achievement_open(a.code)) or "none"),
     ]
 
 
@@ -875,8 +877,9 @@ PAGES: list[Page] = [
     # ---- gear ----
     Page(
         "craft", "gear",
-        "Crafts a piece of gear from ingots and sticks (buy them with /market, or get them while mining, in "
-        "drops or from other players). If that slot is empty, the new piece is equipped right away.\n"
+        "Crafts a piece of gear from ingots and sticks (buy them with /market; ingots also come from ores when "
+        "mining from the Nether on and from drops, sticks from an axe while mining; or from other players). If "
+        "that slot is empty, the new piece is equipped right away.\n"
         "Every piece has durability: it wears out when used and is **destroyed at 0**, so /repair it in time "
         "(except the shield: at 0 it stays, unusable until repaired).\n"
         "The **shield** is made of iron only (6 ingots). The **anvil** (iron only) is what you repair gear and "
@@ -908,10 +911,10 @@ PAGES: list[Page] = [
         "gear", "gear",
         "Shows what you have equipped in each slot, what each piece does, its durability and enchantments, "
         "and your maximum damage and damage reduction for fights.\n"
-        "Tools wear out when they give their bonus while mining. The sword wears out in duels, the dungeon and "
-        "against bosses (1 per attack), armor in duels (every piece, 1 per hit taken) and in the dungeon (only one "
-        "piece per hit, drawn at random), the shield each time it blocks an attack in a duel. Tournament fights don't "
-        "wear anything (and nobody blocks there).",
+        "Tools wear out when they give their bonus while mining. The sword wears out in duels, the dungeon, at "
+        "night, against gate bosses and in raids (1 per attack), armor in duels, against gate bosses and in raids "
+        "(every piece, 1 per hit taken) and in the dungeon and at night (only one piece per hit, drawn at random), the shield each time it blocks an attack. Tournament "
+        "fights don't wear anything (and nobody blocks there).",
         _gear,
         examples=("/gear",),
         related=("equip", "equip_best", "repair", "enchant info"),
@@ -941,7 +944,8 @@ PAGES: list[Page] = [
         "repair", "gear",
         "Repairs a piece of gear on your **anvil** (`/craft item:anvil`) with ingots of its material: gold, iron, "
         "diamond or netherite (iron for the shield). Like in Minecraft, put as many ingots as you want: each one "
-        "gives back part of the durability, and the piece keeps its enchantments. Leave `ingots` empty to use as "
+        "gives back part of the durability (a first full repair takes half the ingots of the recipe), and the piece "
+        "keeps its enchantments. Leave `ingots` empty to use as "
         "many as needed (or all you have). The suggestions show the ingots for a full repair.\n"
         "**Each repair makes the next one cost more**, and the anvil wears out a little with each use "
         "(new → chipped → damaged → broken).",
@@ -985,7 +989,7 @@ PAGES: list[Page] = [
     Page(
         "enchant info", "gear",
         "Shows your books and lapis lazuli, and what each enchantment does. "
-        "Books come from drops, bosses (top damage dealer), completing all the weekly challenges, the villager "
+        "Books come from drops, gate bosses (each survivor of a victory), completing all the weekly challenges, the villager "
         "and other players. Lapis lazuli comes from mining.",
         lambda s: [
             _apply_cost(s),
@@ -1101,7 +1105,7 @@ PAGES: list[Page] = [
         "it keeps its enchantments and durability).",
         lambda s: [f"A proposal waits **{duration(float(s['trade']['offer_minutes']) * 60)}** for an answer"],
         examples=(
-            "/trade member:@Steve give:diamond ingot give_amount:3 get:emeralds get_amount:200",
+            "/trade member:@Steve give:diamond ingot give_amount:3 get:emeralds get_amount:15000",
             "/trade member:@Alex give:emeralds give_amount:50 → a gift",
         ),
         related=("pay", "auction sell"),
@@ -1111,7 +1115,7 @@ PAGES: list[Page] = [
         "Puts something up for sale for a **total** price. It leaves your inventory until it's sold, you "
         "cancel, or the listing expires (it then comes back to you). When it sells you get the price minus the tax.",
         _auction,
-        examples=("/auction sell item:diamond sword price:500", "/auction sell item:bedrock price:300 amount:20"),
+        examples=("/auction sell item:diamond sword price:10000", "/auction sell item:bedrock price:300 amount:20"),
         related=("auction browse", "auction mine", "auction cancel"),
     ),
     Page(
@@ -1119,7 +1123,7 @@ PAGES: list[Page] = [
         "Lists what's for sale, page by page, with the listing #number, price and seller. Filter by name with `search`.\n"
         "If the staff set a market channel, it always shows the market (fixed prices) and then every listing, "
         "each with a menu to buy.",
-        examples=("/auction browse search:netherite", "/auction browse page:2"),
+        examples=("/auction browse search:diamond", "/auction browse page:2"),
         related=("auction buy", "auction sell"),
     ),
     Page(
@@ -1266,7 +1270,7 @@ PAGES: list[Page] = [
         "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
         "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
         "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
-        "(Harming hits every monster at its start). Potions come from drops, bosses and the villager.",
+        "(Harming hits every monster at its start). Potions come from drops and the villager.",
         _potions,
         examples=("/potions",),
         related=("duel", "pve start", "villager"),
@@ -1275,8 +1279,9 @@ PAGES: list[Page] = [
         "challenges", "progress",
         "Shows today's and this week's challenges (the same for everyone) and your progress. Each completed "
         "challenge pays emeralds, and they count for the season. New daily challenges every day at midnight, new "
-        "weekly ones every Monday, never the same as the ones before. Mining, selling, duels, the Lucky Block, the "
-        "wheel, Blockdle, the quiz, the dungeon, the training dummy, robberies…",
+        "weekly ones every Monday, never the same as the ones before. Mining, selling, duels, damage to monsters, the "
+        "Lucky Block, the wheel, Blockdle, the quiz, the dungeon, the training dummy, robberies, and weekly only "
+        "bedrock, crafting, drops, the daily reward and trades.",
         _challenges,
         examples=("/challenges",),
         related=("achievements", "season"),
@@ -1290,7 +1295,8 @@ PAGES: list[Page] = [
     Page(
         "prestige", "progress",
         "**Prestige**: the end of the game, and a new start. Shows what the next prestige needs (a level, every "
-        "achievement but the ones only one player or team wins each time and level 100, every dimension up to the "
+        "achievement but the ones only one player or team wins each time, level 100 and the ones whose game is "
+        "switched off, every dimension up to the "
         "Shimmer, the server's Beacon lit), what you start over and what you "
         "get. When you meet everything, the **Become Prestige** button asks to confirm, then the parts set by the "
         "staff start over (by default your emeralds, blocks and items, your gear, your talents (every point given "
@@ -1385,9 +1391,9 @@ PAGES: list[Page] = [
         "events", "events",
         "Shows the **timed event** on now, whether **today's event** already came (which one and when), and what "
         "each one does. For a while (an hour by default) everyone gets a "
-        "bonus: 🎰 **Gambling Frenzy** (bigger bets and daily limit at the Lucky Block and the wheel), ⛏️ **Mining "
-        "Rush** (more mining XP), 💰 **Golden Hour** (/sell pays more), 🍀 **Lucky Hour** (more obsidian and "
-        "bedrock) or 🏷️ **Market Sale** (/market cheaper). One comes by itself every day at a random time, and the "
+        "bonus: 🎰 **Gambling Frenzy** (bigger bets and daily limit at the games of chance), ⛏️ **Mining "
+        "Rush** (more mining XP), 💰 **Golden Hour** (/sell pays more), 🍀 **Lucky Hour** (more of the rarest "
+        "blocks) or 🏷️ **Market Sale** (/market cheaper). One comes by itself every day at a random time, and the "
         "staff can start one. It's announced in the events channel.",
         _live_events,
         examples=("/events",),
@@ -2017,8 +2023,8 @@ PAGES: list[Page] = [
     Page(
         "player dimension", "staff_players",
         "Sets the furthest dimension a member reached: they get every dimension up to it (and lose the ones after "
-        "it; the Overworld locks them all). Their dimension roles follow. The member gets a DM. Until the gate "
-        "bosses arrive, it's the only way to unlock a dimension.",
+        "it; the Overworld locks them all) and takes them there: they get the role of that dimension (the one they "
+        "are in). The member gets a DM.",
         _dimensions,
         examples=("/player dimension member:@Steve dimension:🔥 Nether",),
         related=("dimensions", "rewind_gear"),
@@ -2047,7 +2053,7 @@ PAGES: list[Page] = [
         "player cooldowns", "staff_players",
         "Resets a member's waiting times so they can play again right away: one of them, or all of them when "
         "`timer` is empty. Robbing again, the protection after being robbed, the dungeon, the training dummy, a "
-        "boss attack, duels, the Lucky Block and roulette, mining, changing species, and the daily reward (today's "
+        "gate boss fight, duels, the games of chance, mining, changing species, and the daily reward (today's "
         "claim is undone: claiming again gives today's reward once more, the streak doesn't grow twice). The "
         "member gets a DM and the staff channel keeps a trace.",
         examples=("/player cooldowns member:@Steve", "/player cooldowns member:@Steve timer:Robbing again"),

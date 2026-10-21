@@ -452,4 +452,21 @@ UPDATES: tuple[Update, ...] = (
              "place, a command tells you where it goes. The Minecraft quiz now comes in the events channel."),
         ),
     ),
+    Update(
+        "2026-10-rescale", "2026-10-25", "Rewards that match the prices",
+        "Since ingots got dearer, everything else follows.",
+        (
+            ("🎁 Bigger rewards",
+             "Challenges, /daily, the quiz, biomes, seasons, the tournament, achievements and drops pay much more. "
+             "The dungeon and the night monsters pay 5 times more."),
+            ("🔨 Repairs and the anvil",
+             "The anvil takes 31 iron like in Minecraft, and a full repair now costs half the piece's recipe (a sword "
+             "1 ingot, a pickaxe 2)."),
+            ("🔆 The Beacon",
+             "Its levels need 9 times fewer ingots (1, 3, 5 and 9 blocks)."),
+            ("🌙 Fairer nights",
+             "Night monsters are weaker: you can beat them even without gear. Bedrock challenges ask for less, and "
+             "a new challenge counts the damage you deal to monsters (dungeon, night, bosses)."),
+        ),
+    ),
 )

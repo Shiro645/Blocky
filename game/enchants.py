@@ -4,7 +4,7 @@ Books and lapis are stackable items (items table): ("book", "<enchant>:<level>")
 and ("lapis", "none"). Applying a book costs lapis and replaces a lower level
 of the same enchantment. Two identical books combine into the next level, on an anvil.
 Mending has a single level and is rare: never a random book (drops, challenges), only
-the villager's exclusive offer and, sometimes, a boss's top damage dealer.
+the villager's exclusive offer and, sometimes, the book of each survivor of a gate boss victory.
 Enchantments belong to the piece of gear: they follow it in trades and
 auctions, and disappear when it breaks.
 Random books are levels I to III. Levels IV to VII only come from combining, and a

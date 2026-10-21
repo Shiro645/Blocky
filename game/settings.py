@@ -37,7 +37,7 @@ DEFAULTS: dict[str, Any] = {
         "sculk": 2, "sculk_shrieker": 5,
         "shimmer_stone": 3,
     },
-    # Dimensions (game/dimensions.py): each has its mining channels and blocks. The odds work like the
+    # Dimensions (game/dimensions.py): each has its blocks. The odds work like the
     # overworld's (mining.odds_*); the Shimmer has a single block.
     "dimensions": {
         # Netherite scrap: the chance a mining reward in the Nether or beyond finds Ancient debris (one scrap).
@@ -94,7 +94,7 @@ DEFAULTS: dict[str, Any] = {
         "miner_deepslate_2_3": 2, "miner_deepslate_2_3_max": 30,
         "miner_bonus_block_chance": 0.05, "miner_bonus_block_max": 0.25,
         "miner_bonus_min_pile": 4,  # the bonus block only comes on piles of at least this many blocks (1-6)
-        # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
+        # Lucky: weight added to the two rarest blocks (obsidian and bedrock in the overworld) per point, on 1-block piles.
         "lucky_rare_weight": 1,
         # /talent_reset: every spent point back for reset_cost_per_point emeralds a point (never under reset_cost_min).
         "reset_cost_per_point": 50, "reset_cost_min": 100,
@@ -111,11 +111,11 @@ DEFAULTS: dict[str, Any] = {
         # Armor pieces get this share of their material's durability, in Minecraft's proportions (11, 16, 15 and
         # 13 sixteenths): the chestplate lasts the longest, the helmet the least. Tools: all of it.
         "armor_durability_share": {"helmet": 0.6875, "chestplate": 1.0, "leggings": 0.9375, "boots": 0.8125},
-        # Pickaxe: extra cobblestone per mining event, and a chance per tier to
-        # upgrade the mined block (cobblestone -> gravel -> deepslate -> obsidian -> bedrock).
+        # Pickaxe: extra common blocks per mining event (cobblestone, netherrack…), and a chance per tier to
+        # upgrade the mined block to the next one of its dimension (cobblestone -> gravel -> … -> bedrock).
         "pickaxe_extra_blocks_per_tier": 3,
         "pickaxe_upgrade_chance_per_tier": 0.05,
-        # Shovel: extra blocks per tier when the mined block is gravel.
+        # Shovel: extra blocks per tier when the mined block is gravel (or its dimension's block of that rank).
         "shovel_extra_gravel_per_tier": 2,
         # Axe: chance to find sticks while mining, sticks found = tier.
         "axe_stick_chance": 0.3,
@@ -353,7 +353,7 @@ DEFAULTS: dict[str, Any] = {
         "frenzy_multiplier": 2.0,  # Gambling Frenzy: the maximum bet and the daily cap of games of chance
         "rush_xp_multiplier": 2.0,  # Mining Rush: mining XP
         "golden_sell_bonus": 0.5,  # Golden Hour: /sell pays this much more for blocks
-        "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of obsidian and bedrock when mining
+        "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of the rarest blocks (obsidian, bedrock…) when mining
         "market_sale_discount": 0.25,  # Market Sale: /market costs this much less
     },
     # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
@@ -505,7 +505,8 @@ DEFAULTS: dict[str, Any] = {
     # the target fights alone within fight_minutes. Won: rewards[kind] and xp. Lost or ignored: loss of their
     # emeralds (loss_max at most; the Phantom: phantom_loss, phantom_loss_max). The Phantom only goes after players
     # who didn't sleep the phantom_nights nights before. Monsters: the dungeon's (pve.monsters) × strength[kind]
-    # (calibrated alone: ~80% won in iron gear, ~95% in diamond); the Phantom: its own (~50% iron, ~80% diamond).
+    # (calibrated alone: without gear ~2 in 3 against a zombie, gold gear 96%); the Phantom: its own (without gear
+    # 29%, iron 96%).
     "night": {
         "monsters": 4,
         "margin_minutes": 30,  # no monster in the first and last minutes of the night
@@ -525,8 +526,8 @@ DEFAULTS: dict[str, Any] = {
         "sleep_daily_bonus": 0.25,
     },
     # Prestige (/prestige, game/prestige.py): Prestige n needs level base_level + level_step × (n - 1), every
-    # achievement, every dimension and the Beacon lit. The level stays; the parts switched on in
-    # "reset" start over. Each prestige: +bonus mining XP and /sell for good.
+    # achievement (but skip_achievements and those whose game is switched off), every dimension and the Beacon lit.
+    # The level stays; the parts switched on in "reset" start over. Each prestige: +bonus mining XP and /sell for good.
     "prestige": {
         "base_level": 50,
         "level_step": 10,
@@ -586,7 +587,7 @@ DEFAULTS: dict[str, Any] = {
         "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
-        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, the wheel)
+        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, wheel, blackjack, mines)
     },
     # Loans between players (/loan). The lender picks the interest and the duration within these limits.
     "loans": {
@@ -604,7 +605,7 @@ DEFAULTS: dict[str, Any] = {
     },
     # Mini-games. The games of chance work in config.json channels.casino (anywhere when there is none).
     "games": {
-        # Games of chance (Lucky Block, the wheel): bets, waiting time, and what a player may win in a day
+        # Games of chance (Lucky Block, the wheel, blackjack, mines): bets, waiting time, and what a player may win in a day
         # (winnings minus losses at these games; then they can't play before tomorrow, 0 = no cap).
         "min_bet": 1,
         "max_bet": 200,
