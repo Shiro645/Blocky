@@ -10,6 +10,10 @@ import random
 from game import players, settings
 from game.db import Ctx
 
+# Whether the automatic quiz has a channel to be posted in (channels.events): set by the quiz cog. Without one,
+# no quiz comes by itself, so the quiz challenge and achievement can't be done.
+auto_channel = True
+
 # question, right answer, 3 wrong answers
 QUESTIONS: tuple[tuple[str, str, tuple[str, str, str]], ...] = (
     ("How many obsidian blocks does the smallest Nether portal frame need (without corners)?", "10", ("14", "8", "12")),

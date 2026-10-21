@@ -69,9 +69,9 @@ class ShieldTests(GameTestCase):
         self.assertEqual(shield["durability"], 0)  # still there, but unusable
         alice, _ = await self.run_game(duel.make_fighter, ALICE)
         self.assertEqual(alice.blocks_left, 0)
-        self.assertEqual(shop.ingots_needed(shield), 4)  # 25% of its durability per iron ingot
+        self.assertEqual(shop.ingots_needed(shield), 3)  # half of its recipe (6 iron)
         await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
-        await self.run_game(players.add_item, ALICE, "ingot", "iron", 4)
+        await self.run_game(players.add_item, ALICE, "ingot", "iron", 3)
         await self.run_game(shop.repair, ALICE, shield["gear_id"])
         self.assertEqual((await self.run_game(gear.get_equipped, ALICE))["shield"]["durability"], 100)
 

@@ -64,7 +64,7 @@ def status(ctx: Ctx, user_id: int) -> dict:
     if n >= out["max"]:
         return {**out, "next": None, "ready": False}
     skip = _cfg()["skip_achievements"]
-    every = [a for a in progress.achievements() if not skip.get(a.code)]
+    every = [a for a in progress.achievements() if not skip.get(a.code) and progress.achievement_open(a.code)]
     done = progress.unlocked_codes(ctx, user_id)
     missing = [a for a in every if a.code not in done]
     checks = {

@@ -311,10 +311,15 @@ def sell_gear(ctx: Ctx, user_id: int, gear_id: int, price: int | None = None) ->
     return {**offer, "piece": piece, "balance": players.get_emeralds(ctx, user_id)}
 
 
+def full_repair_ingots(item: str) -> int:
+    """Ingots for a first full repair: repair.recipe_share of the piece's recipe (rounded up, at least 1)."""
+    return max(1, math.ceil(RECIPES[item][0] * float(settings.get()["repair"]["recipe_share"]) - 1e-9))
+
+
 def per_ingot(piece: dict) -> float:
     """Durability one ingot gives back to this piece (less after each repair it already had)."""
     r = settings.get()["repair"]
-    base = piece["max_durability"] * float(r["durability_per_ingot"])
+    base = piece["max_durability"] / full_repair_ingots(piece["item"])
     return max(1.0, base / (1 + float(r["penalty_per_repair"]) * int(piece.get("repairs", 0))))
 
 

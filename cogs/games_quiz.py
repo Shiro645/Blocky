@@ -138,6 +138,8 @@ class QuizCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def quiz_loop(self):
         try:
+            # Without an events channel no quiz comes by itself: the quiz challenge isn't drawn then.
+            quiz.auto_channel = isinstance(self.bot.get_channel(channel_id("events") or 0), discord.abc.Messageable)
             minutes = float(settings.get()["games"]["quiz_every_minutes"])
             if minutes <= 0:
                 self.next_at = 0.0

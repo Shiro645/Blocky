@@ -217,9 +217,31 @@ def available(c: Challenge) -> bool:
     """A challenge that can be done now (the game it needs is on)."""
     s = settings.get()
     if c.stat == "quiz_wins":
-        return float(s["games"]["quiz_every_minutes"]) > 0
+        return quiz_on()
     if c.stat == "roulette_spins":
         return bool(s["games"]["roulette_enabled"])
+    return True
+
+
+def quiz_on() -> bool:
+    """The quiz comes by itself: a pace and a channel (channels.events) to be posted in."""
+    from game import quiz  # here: the quiz module is only needed for this flag
+
+    return float(settings.get()["games"]["quiz_every_minutes"]) > 0 and quiz.auto_channel
+
+
+def achievement_open(code: str) -> bool:
+    """An achievement whose game is on (prestige only asks for these: a game switched off in /config would make
+    it impossible)."""
+    s = settings.get()
+    if code in ("wheel_100", "bullseye"):
+        on = bool(s["games"]["roulette_enabled"])
+        return on and (code != "bullseye" or bool(s["games"]["roulette_bets"]["number"]))
+    if code == "quiz_10":
+        return quiz_on()
+    if code == "high_roller":  # a Gambling Frenzy must come by itself
+        e = s["live_events"]
+        return bool(e["daily_random"]) and bool(e["random_kinds"]["gambling_frenzy"])
     return True
 
 
