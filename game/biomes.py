@@ -72,7 +72,7 @@ BIOMES: dict[str, Biome] = {b.key: b for b in (
     Biome("ocean", "Ocean", "🌊", "drops", "Shipwrecks and buried treasure", "cooldown", "Mining underwater",
           "claim_drops"),
     Biome("mushroom", "Mushroom Fields", "🍄", "damage_taken", "No monster spawns here", "market",
-          "An island lost at sea", "boss_damage"),
+          "An island lost at sea", "dummy"),
     Biome("tundra", "Tundra", "❄️", "cooldown", "Ice roads", "drops", "Powder snow", "mine_blocks"),
 )}
 

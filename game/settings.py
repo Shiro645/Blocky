@@ -497,7 +497,7 @@ DEFAULTS: dict[str, Any] = {
                     "jungle": True, "swamp": True, "ocean": True, "mushroom": True, "tundra": True},
         "challenge_reward": 250,
         "challenges": {"desert": 30, "mountains": 1500, "badlands": 6, "forest": 3, "dark_forest": 3, "jungle": 20,
-                       "swamp": 3, "ocean": 3, "mushroom": 250, "tundra": 900},
+                       "swamp": 3, "ocean": 3, "mushroom": 15, "tundra": 900},
     },
     # Day and night (/time, /sleep, game/night.py): the night is rob.night_start_hour to rob.night_end_hour.
     # Every night `monsters` monsters (and a Phantom) attack random players of min_level+ who didn't /sleep;
@@ -664,7 +664,6 @@ DEFAULTS: dict[str, Any] = {
             "craft_gear": {"target": 3, "reward": 100},
             "win_duels": {"target": 3, "reward": 150},
             "claim_drops": {"target": 2, "reward": 100},
-            "boss_damage": {"target": 100, "reward": 150},
             "daily_rewards": {"target": 5, "reward": 150},
             "trades": {"target": 2, "reward": 75},
             "lucky_blocks": {"target": 25, "reward": 150},
@@ -776,6 +775,8 @@ def get() -> dict[str, Any]:
 # ---------------- validation ----------------
 # Dicts whose keys are free (not fixed by DEFAULTS): their values must look like the defaults' values.
 _FREE_KEYS = {("moderation", "warn_mutes"), ("villager", "buys")}
+# Settings that existed once: an old config.json may still have them, they're ignored without a warning.
+_RETIRED = {("challenges", "goals", "boss_damage"), ("challenges", "daily_goals", "boss_damage")}
 # Lists that grew in an update (enchantments: levels I-III, then I-VII): an older, shorter override keeps its
 # values and gets the defaults for the rest.
 _GROWN = {("enchants", k) for k in ("apply_cost", "efficiency_seconds", "fortune_bonus", "fortune_hoe_xp",
@@ -806,7 +807,8 @@ def _check(default: Any, value: Any, path: tuple[str, ...], problems: list[str])
             if free:
                 checked = _check(sample, sub, path + (str(key),), problems)
             elif key not in default:
-                problems.append(f"`{name}.{key}` doesn't exist (typo?).")
+                if path + (key,) not in _RETIRED:
+                    problems.append(f"`{name}.{key}` doesn't exist (typo?).")
                 continue
             else:
                 checked = _check(default[key], sub, path + (key,), problems)

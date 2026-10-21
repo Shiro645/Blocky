@@ -173,7 +173,7 @@ _ACHIEVEMENT_NAMES = {
 _CHALLENGE_NAMES = {
     "mine_blocks": "Mine blocks", "find_bedrock": "Find bedrock", "sell_blocks": "Earn emeralds by selling",
     "craft_gear": "Craft gear", "win_duels": "Win duels", "claim_drops": "Claim drops",
-    "boss_damage": "Damage bosses", "daily_rewards": "Claim the daily reward", "trades": "Complete trades",
+"daily_rewards": "Claim the daily reward", "trades": "Complete trades",
     "lucky_blocks": "Break Lucky Blocks", "wheel_spins": "Spin the wheel", "blockdle": "Find the Blockdle block",
     "quiz": "Win quiz questions", "pve_waves": "Clear dungeon waves", "dummy": "Hit the training dummy",
     "robs": "Rob players",

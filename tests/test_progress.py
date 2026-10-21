@@ -75,6 +75,16 @@ class ChallengeTests(GameTestCase):
             self.assertEqual(len(picks), 3)
             self.assertNotIn("boss_damage", [c.code for c in picks])
 
+    def test_nothing_needs_a_gate_boss(self):
+        from game import biomes, settings
+
+        self.assertNotIn("boss_damage", progress.CHALLENGE_CODES)  # bosses need the Nether: not for everyone
+        self.assertEqual(biomes.BIOMES["mushroom"].challenge, "dummy")
+        for b in biomes.BIOMES.values():
+            self.assertIn(b.challenge, progress.CHALLENGE_CODES)
+        old = {"challenges": {"goals": {"boss_damage": {"target": 100, "reward": 150}}}}
+        self.assertEqual(settings.problems(old), [])  # an old config.json is fine
+
     def test_no_challenge_for_a_game_that_is_off(self):
         from game import settings
 
