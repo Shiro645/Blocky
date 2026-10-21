@@ -234,6 +234,7 @@ def fight(ctx: Ctx, attack_id: int, user_id: int) -> dict:
         raise GameError("Too late: the monster left.")
     hero = pve.make_hero(ctx, user_id)
     result = pve.fight_wave(ctx.rng, [hero], 1, "normal", [_monster(a["kind"])])
+    players.bump_stat(ctx, user_id, "monster_damage", result["damage"].get(user_id, 0))
     pieces = gear.get_pieces(ctx, hero.gear_ids)
     if pieces.get("sword") and hero.attacks:
         gear.wear(ctx, pieces["sword"], hero.attacks)

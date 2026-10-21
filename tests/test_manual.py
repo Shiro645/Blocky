@@ -132,7 +132,8 @@ class ManualTests(unittest.TestCase):
 
     def test_no_boss_challenge(self):
         lines = manual.BY_NAME["challenges"].current_values(settings.get())
-        self.assertFalse(any("bosses" in line for line in lines))
+        self.assertFalse(any("damage to bosses" in line for line in lines))  # only bosses: not for everyone
+        self.assertTrue(any("damage to monsters" in line for line in lines))  # the dungeon counts too
 
     def test_find_and_search(self):
         self.assertEqual(manual.find("/Team  Create", staff=False).name, "team create")

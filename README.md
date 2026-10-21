@@ -12,8 +12,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 Every player command has its channel (`utils/routing.py`), set in `/config` → Channels:
 - 🎰 **Casino** (`channels.casino`): `/luckyblock`, `/wheel`, `/blackjack`, `/mines`;
 - 🌀 **Portal** (`channels.portal`): `/pve`, `/boss`, `/portal`, `/dimensions`;
-- 🦹 **Robberies** (`channels.robberies`): `/rob`;
-- 💬 **Commands** (`channels.commands`): every other player command.
+- 💬 **Commands** (`channels.commands`): every other player command (`/rob` too: the robbery the bot posts goes to `channels.robberies`).
 
 Staff commands and `/help` work everywhere, and so does everything in a player's guide channel. Buttons work on their message. A command typed elsewhere answers (only to the player) where it goes. A channel that isn't set lets its commands work anywhere, so they can be set one at a time. Mining happens by chatting in `channels.mining`, the quiz comes in `channels.events`.
 
@@ -244,7 +243,7 @@ The games of chance (`/luckyblock`, `/wheel`, `/blackjack`, `/mines`) work in th
   | 💀 Nightmare | 1,200 | ×1.42 | 3,360 | enchanted netherite ~35% (potions help) |
 
   Monsters get +10% health and damage every wave. Everything is tuned with `balance.pve` (`/config` → Combat → Dungeon and Dungeon monsters).
-- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). `/rob` is typed in the robberies channel (`channels.robberies`, `/config` → Channels; members need *Use Application Commands* there, not *Send Messages*) and the robbery is posted there — or anywhere, posted where `/rob` was used, when none is set — with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, **no robbery can start from 22:00 to 06:00** (server time; one started at 21:59 keeps going: `night_start_hour`, `night_end_hour`, the same hour twice = robberies all day), and stolen emeralds don't count for the seasons. Members with the **Untouchables** role (`roles.untouchable`, `/config` → Roles, given by hand by the staff) can't be robbed and can't rob anyone. All tuned with `balance.rob` (`/config` → Robberies).
+- `/rob <member> <mode>` — Rob a player. **Risky**: they get pinged, the loot is big (200-500 emeralds). **Discreet**: nobody is pinged, the loot is small (50-100). `/rob` is typed in the commands channel and the robbery is posted in the robberies channel (`channels.robberies`, `/config` → Channels; best where members can't write) — or where `/rob` was used when none is set — with a **Stop the thief!** button only the victim can use: if they click it within the hour the thief pays them a fine (10% of the loot), otherwise the thief takes the loot (never more than the victim has) and the victim gets a DM. A thief robs once every 6 h, a robbed player is safe for 12 h, players below level 5 can't be robbed, **no robbery can start from 22:00 to 06:00** (server time; one started at 21:59 keeps going: `night_start_hour`, `night_end_hour`, the same hour twice = robberies all day), and stolen emeralds don't count for the seasons. Members with the **Untouchables** role (`roles.untouchable`, `/config` → Roles, given by hand by the staff) can't be robbed and can't rob anyone. All tuned with `balance.rob` (`/config` → Robberies).
 - Tuned with `balance.games`: `min_bet`, `max_bet`, `cooldown_seconds`, `roulette_enabled`, `roulette_bets`, `roulette_zeros` (1 = 0 only, the default; 2 = 0 and 00), `blockdle_rewards` (by number of guesses), `blockdle_xp`, `blockdle_no_repeat_days` (days before a block of the day comes back), `quiz_every_minutes` (0 = only `/event quiz`), `quiz_every_jitter` (e.g. `0.25` = give or take 25%), `quiz_no_repeat` (the last questions not asked again), `quiz_seconds`, `quiz_reward`, `quiz_xp` — all in `/config` → Games & events (Games of chance, Blockdle & quiz).
 
 ### 🛡️ Teams
@@ -345,7 +344,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.announcements` | Channel for level-ups, achievements, challenges, season results (empty = no announcements) |
 | `channels.events` | Channel for drops, the wandering villager and the Minecraft quiz (empty = drops appear where people chat, no automatic quiz) |
 | `channels.staff_log` | Staff channel receiving `/link` requests (required for `/link`) |
-| `channels.robberies` | Robberies channel: `/rob` only works there, and every robbery is posted there with its *Stop the thief!* button (0 = `/rob` anywhere, posted where it's used) |
+| `channels.robberies` | Robberies channel: every robbery is posted there with its *Stop the thief!* button (0 = where `/rob` is used; `/rob` itself is typed in the commands channel) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.casino` | Casino channels: `/luckyblock`, `/wheel`, `/blackjack` and `/mines` only work there (empty = anywhere). The old `channels.games` is moved here at the first start |
 | `channels.portal` | Portal channels: `/pve`, `/boss`, `/portal` and `/dimensions` only work there (empty = anywhere) |

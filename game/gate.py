@@ -581,6 +581,7 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
     rewards: dict[int, dict] = {}
     for p in fight.players:
         players.bump_stat(ctx, p.user_id, "boss_damage", int(round(p.damage)))
+        players.bump_stat(ctx, p.user_id, "monster_damage", int(round(p.damage)))  # the combat challenge
         pieces = gear.get_pieces(ctx, p.gear_ids)  # the pieces worn when the fight started
         sword = pieces.get("sword")
         if sword and p.attacks:

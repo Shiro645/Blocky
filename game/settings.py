@@ -671,6 +671,7 @@ DEFAULTS: dict[str, Any] = {
             "blockdle": {"target": 4, "reward": 150},
             "quiz": {"target": 3, "reward": 150},
             "pve_waves": {"target": 15, "reward": 150},
+            "monster_damage": {"target": 200, "reward": 150},  # ≈ 3 solo dungeon runs, or one gate boss
             "dummy": {"target": 10, "reward": 100},
             "robs": {"target": 3, "reward": 150},
         },
@@ -685,6 +686,7 @@ DEFAULTS: dict[str, Any] = {
             "blockdle": {"target": 1, "reward": 40},
             "quiz": {"target": 1, "reward": 40},
             "pve_waves": {"target": 3, "reward": 40},
+            "monster_damage": {"target": 50, "reward": 40},  # a solo dungeon run, or two night monsters
             "dummy": {"target": 3, "reward": 25},
             "robs": {"target": 1, "reward": 50},
         },

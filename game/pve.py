@@ -199,13 +199,20 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     log: list[str] = []
     deaths: list[int] = []
     kills: dict[int, int] = {h.user_id: 0 for h in fighting}
+    dealt: dict[int, float] = {h.user_id: 0.0 for h in fighting}  # damage to monsters (the combat challenge)
+
+    def strike(uid: int, m: Monster, damage: float) -> None:
+        """A hero's damage to a monster: what it really took counts (not the overkill)."""
+        if uid in dealt:
+            dealt[uid] += min(damage, max(0.0, m.hp))
+        m.hp -= damage
 
     def hurt(hero: Hero, damage: float, by: Monster, exploded: bool = False) -> None:
         damage = max(float(_cfg()["min_hit_after_armor"]), damage * (1 - hero.reduction))
         hero.hp = max(0.0, hero.hp - damage)
         hero.hits_taken += 1
         if hero.thorns > 0 and not exploded and by.alive:
-            by.hp -= damage * hero.thorns
+            strike(hero.user_id, by, damage * hero.thorns)
             if not by.alive:
                 kills[hero.user_id] += 1
         if exploded:
@@ -234,7 +241,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
         if hero.harming:
             alive = [m for m in monsters if m.alive]
             for m in alive:
-                m.hp -= hero.harming
+                strike(hero.user_id, m, hero.harming)
             log.append(f"☠️ <@{hero.user_id}> throws a Harming potion: -{hero.harming:g} HP to every monster")
             kills[hero.user_id] += sum(1 for m in alive if not m.alive)  # only the ones this potion killed
     # Skeletons shoot first.
@@ -255,7 +262,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
                 damage = rng.uniform(low, hero.attack)
                 if rng.random() < crit_chance:
                     damage *= crit_mult
-                target.hp -= damage
+                strike(hero.user_id, target, damage)
                 hero.attacks += 1
                 if not target.alive:
                     kills[hero.user_id] += 1
@@ -264,7 +271,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
                 others = [m for m in monsters if m.alive and m is not target] if hero.sweep > 0 else []
                 second = rng.choice(others) if others else None
                 if second is not None:
-                    second.hp -= damage * hero.sweep
+                    strike(hero.user_id, second, damage * hero.sweep)
                     if not second.alive:
                         kills[hero.user_id] += 1
         if not any(m.alive for m in monsters) or not any(h.alive for h in fighting):
@@ -272,7 +279,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
         for m in monsters:  # the fire burns before the monsters play
             if m.alive and m.burning > 0:
                 m.burning -= 1
-                m.hp -= m.burn
+                strike(m.burner, m, m.burn)
                 if not m.alive and m.burner in kills:
                     kills[m.burner] += 1
         if not any(m.alive for m in monsters):
@@ -287,7 +294,8 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     for hero in fighting:  # potions last one wave
         hero.strength = hero.speed = hero.harming = 0.0
     summary = [f"⚔️ <@{uid}>: {n} kill{'s' if n != 1 else ''}" for uid, n in kills.items() if n]
-    return {"cleared": cleared, "log": log + summary, "deaths": deaths, "monsters": len(monsters)}
+    return {"cleared": cleared, "log": log + summary, "deaths": deaths, "monsters": len(monsters),
+            "damage": {uid: int(round(d)) for uid, d in dealt.items()}}
 
 
 # ---------------- runs ----------------
@@ -512,6 +520,7 @@ def _play(ctx: Ctx, run: dict) -> dict:
     xp = int(_cfg()["xp_per_wave"])
     for hero in heroes:
         _save_hero(ctx, run["run_id"], hero)
+        players.bump_stat(ctx, hero.user_id, "monster_damage", result["damage"].get(hero.user_id, 0))
         member = {**members[hero.user_id], "hero": hero}
         if not hero.alive:
             players.bump_stat(ctx, hero.user_id, "pve_deaths")
