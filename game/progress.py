@@ -173,7 +173,6 @@ _CHALLENGES: list[tuple[str, str, Callable[[int], str]]] = [
     ("craft_gear", "items_crafted", lambda n: f"Craft {_plural(n, 'piece')} of gear"),
     ("win_duels", "duels_won", lambda n: f"Win {_plural(n, 'duel')}"),
     ("claim_drops", "drops_claimed", lambda n: f"Claim {_plural(n, 'drop')}"),
-    ("boss_damage", "boss_damage", lambda n: f"Deal {n:,} damage to bosses"),
     ("daily_rewards", "daily_claims", lambda n: f"Claim your daily reward {_plural(n, 'time')}"),
     ("trades", "trades_completed", lambda n: f"Complete {_plural(n, 'trade')}"),
     ("lucky_blocks", "lucky_blocks", lambda n: f"Break {_plural(n, 'Lucky Block')}"),
@@ -216,8 +215,6 @@ def challenge_pool(kind: str = "week") -> list[Challenge]:
 def available(c: Challenge) -> bool:
     """A challenge that can be done now (the game it needs is on)."""
     s = settings.get()
-    if c.stat == "boss_damage":  # gate bosses need a group and a dimension: not a challenge for everyone
-        return False
     if c.stat == "quiz_wins":
         return float(s["games"]["quiz_every_minutes"]) > 0
     if c.stat == "roulette_spins":

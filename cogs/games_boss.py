@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 
 from game import dimensions, gate, potions, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import BaseView, em, join_lines, potion_icon, report_error
 
 log = logging.getLogger("gate")
@@ -178,7 +177,6 @@ class GateBossCog(commands.Cog):
     @app_commands.describe(boss="The boss (it lives in a dimension and opens the next one)")
     @app_commands.choices(boss=[app_commands.Choice(name=f"{b.emoji} {b.name}", value=b.key) for b in gate.BOSSES.values()])
     async def fight(self, interaction: discord.Interaction, boss: str):
-        check_game_channel(interaction)
         row = await self.bot.db.run(gate.create, interaction.user.id, boss)
         await interaction.response.send_message(embed=fight_embed(row), view=fight_view(row))
         message = await interaction.original_response()

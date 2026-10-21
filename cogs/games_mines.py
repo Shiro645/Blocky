@@ -10,7 +10,6 @@ from discord.ext import commands, tasks
 
 from game import gambling, mines, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import em, report_error
 
 log = logging.getLogger("mines")
@@ -117,7 +116,6 @@ class MinesCog(commands.Cog):
     @app_commands.describe(amount="Emeralds you bet", tnt="TNT hidden in the 20 blocks: more TNT, bigger multipliers")
     async def mines_cmd(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1],
                         tnt: app_commands.Range[int, 1, 19] = 3):
-        check_game_channel(interaction)
         now = time.monotonic()
         ready = self._next.get(interaction.user.id, 0.0)
         if now < ready:

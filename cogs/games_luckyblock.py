@@ -9,7 +9,6 @@ from discord.ext import commands
 
 from game import luckyblock, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import em
 
 
@@ -97,7 +96,6 @@ class LuckyBlockCog(commands.Cog):
     @app_commands.command(name="luckyblock", description="Bet emeralds and break a Lucky Block: anything can fall out!")
     @app_commands.describe(amount="Emeralds you bet")
     async def luckyblock_cmd(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1]):
-        check_game_channel(interaction)
         now = time.monotonic()
         ready = self._next.get(interaction.user.id, 0.0)
         if now < ready:

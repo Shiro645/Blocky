@@ -606,7 +606,7 @@ def _games(s: Settings) -> list[str]:
         f"**{duration(g['cooldown_seconds'])}** between two games",
         (f"Daily limit: once you won **{num(cap)}** emeralds today at games of chance (winnings minus losses), "
          "you play again tomorrow" if cap else "No daily limit"),
-        "Played in the game channels set by the staff (anywhere when there are none)",
+        "Played in the casino channel set by the staff (anywhere when there is none)",
     ]
 
 
@@ -669,7 +669,7 @@ def _blockdle(s: Settings) -> list[str]:
 
 def _quiz(s: Settings) -> list[str]:
     g = s["games"]
-    every = f"A question every **{duration(int(g['quiz_every_minutes']) * 60)}** or so, in a game channel" \
+    every = f"A question every **{duration(int(g['quiz_every_minutes']) * 60)}** or so, in the events channel" \
         if g["quiz_every_minutes"] else "Questions only come when the staff asks one (/event quiz)"
     return [every, f"**{duration(g['quiz_seconds'])}** to answer · reward: {em(g['quiz_reward'])} and "
                    f"**{num(g['quiz_xp'])}** XP"]
@@ -757,7 +757,11 @@ PAGES: list[Page] = [
         "help", "start",
         "Opens this manual. Pick a category in the menu, then a command to read its page: what it does, "
         "its options, its current numbers (they follow the server settings), examples and related commands.\n"
-        "You can also open a page directly with the `command` option.",
+        "You can also open a page directly with the `command` option. It works in every channel.\n"
+        "**Where commands go** (when the staff set the channels): 🎰 /luckyblock, /wheel, /blackjack and /mines in "
+        "the casino; 🌀 /pve, /boss, /portal and /dimensions in the portal channel; 🦹 /rob in the robberies "
+        "channel; 💬 every other command in the commands channel. A command typed elsewhere tells you where it goes; "
+        "in your guide channel everything works.",
         examples=("/help", "/help command:duel", "/help command:mining"),
     ),
     Page(
@@ -1559,7 +1563,7 @@ PAGES: list[Page] = [
     ),
     Page(
         "quiz", "events",
-        "Now and then a Minecraft question appears in a game channel with 4 answers. The first player to click the "
+        "Now and then a Minecraft question appears in the events channel with 4 answers. The first player to click the "
         "right one wins emeralds and XP. One try per player: a wrong answer leaves the others a chance.",
         _quiz,
         related=("wheel", "blockdle guess"),

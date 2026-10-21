@@ -38,6 +38,11 @@ SECTIONS: tuple[Section, ...] = (
         "**Blocky** is the game of this server: you **mine by chatting**, earn emeralds, craft gear, fight players and "
         "monsters, team up and climb the leaderboards. Everything is done with slash commands: type `/` and Discord "
         "lists them, with what each option means.\n\n"
+        "**Where to type what**: 🎰 the games of chance (`/luckyblock`, `/wheel`, `/blackjack`, `/mines`) in the "
+        "**casino**; 🌀 the dungeon, the gate bosses, `/portal` and `/dimensions` in the **portal** channel; 🦹 "
+        "`/rob` in the **robberies** channel; 💬 every other command in the **commands** channel. Mine by chatting in "
+        "the **mining** channel. `/help` works everywhere, and a command typed in the wrong place tells you where it "
+        "goes.\n\n"
         "**How to read this wiki**: one part per topic, from the basics to the end game (the contents at the top has a "
         "link to each part). Each part explains how things work, then lists the **📊 current numbers**: prices, "
         "rewards and waiting times as they are set on this server right now. They are updated here automatically.\n\n"
@@ -46,7 +51,8 @@ SECTIONS: tuple[Section, ...] = (
         "2. Claim `/daily` every day and `/sell` your blocks for emeralds.\n"
         "3. Buy ingots at the `/market` and `/craft` your first pickaxe and sword.\n"
         "4. Pick a species with `/species choose` (the first choice is free).\n"
-        "5. Hit the training dummy (`/dummy hit`), then try duels, the dungeon and bosses.\n\n"
+        "5. Hit the training dummy (`/dummy hit`), then try duels and the dungeon; the gate bosses come later, "
+        "from the Nether (the Nightmare dungeon opens it).\n\n"
         "**Need one detail?** `/help` has a page for every command: its options, examples and numbers. "
         "`/help command:<name>` opens one directly. `/guide` shows your checklist of first steps.\n"
         "**Public or private?** Rewards (`/daily`, `/sell`, `/craft`, drops…) are shown in the channel. Personal "
@@ -364,7 +370,8 @@ SECTIONS: tuple[Section, ...] = (
     ),
     Section(
         "games", "🎲 Mini-games",
-        "They're played in the game channels (and in your guide channel).\n"
+        "The games of chance are played in the **casino** (and in your guide channel), Blockdle in the commands "
+        "channel, and the quiz comes in the events channel.\n"
         "**Lucky Block**: `/luckyblock <amount>`: bet emeralds and break the block. A creeper explodes "
         "and you lose your bet; cobblestone gives half of it back, iron all of it, then gold, diamonds, emeralds and, "
         "very rarely, netherite pay more. The bank wins a little in the long run, and there's a daily limit on "

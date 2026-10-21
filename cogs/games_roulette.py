@@ -10,7 +10,6 @@ from discord.ext import commands
 
 from game import roulette, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import em
 
 SPIN_FRAMES = 3  # pictures of the turning wheel before the result
@@ -70,7 +69,6 @@ class RouletteCog(commands.Cog):
     @app_commands.autocomplete(bet=bet_autocomplete, number=number_autocomplete)
     async def wheel_cmd(self, interaction: discord.Interaction, bet: str, amount: app_commands.Range[int, 1],
                         number: app_commands.Range[str, 1, 2] | None = None):
-        check_game_channel(interaction)
         bet, _, picked = bet.strip().lower().partition(":")
         if bet.isdigit():  # a number typed in `bet`
             bet, number = "number", bet

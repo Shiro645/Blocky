@@ -6,7 +6,6 @@ from discord.ext import commands
 
 from game import dummy, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import join_lines
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -23,7 +22,6 @@ class DummyCog(commands.Cog):
 
     @group.command(name="hit", description="Hit the training dummy: your damage with your current gear.")
     async def hit(self, interaction: discord.Interaction):
-        check_game_channel(interaction)
         res = await self.bot.db.run(dummy.hit_series, interaction.user.id)
         hits = " · ".join(f"💥 **{h:g}**" if crit else f"{h:g}" for h, crit in res["hits"])
         low, high = res["attack"]

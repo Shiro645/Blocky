@@ -11,7 +11,7 @@ from cogs.games_boss import PotionSelect, bar
 from game import potions, settings, teams, war
 from game.errors import GameError
 from game.raid_fight import Fighter, RaidFight
-from utils.checks import check_game_channel, staff_only
+from utils.checks import staff_only
 from utils.ui import BaseView, em, join_lines, potion_icon, report_error
 
 log = logging.getLogger("war")
@@ -199,7 +199,6 @@ class WarCog(commands.Cog):
 
     # ---------- raids ----------
     async def start_raid(self, interaction: discord.Interaction, target: str) -> None:
-        check_game_channel(interaction)
         raid = await self.bot.db.run(war.start_raid, interaction.user.id, target)
         await interaction.response.send_message(embed=raid_embed(raid), view=raid_view(raid))
         message = await interaction.original_response()

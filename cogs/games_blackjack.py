@@ -10,7 +10,6 @@ from discord.ext import commands, tasks
 
 from game import blackjack, gambling, settings
 from game.errors import GameError
-from utils.checks import check_game_channel
 from utils.ui import em, report_error
 
 log = logging.getLogger("blackjack")
@@ -111,7 +110,6 @@ class BlackjackCog(commands.Cog):
     @app_commands.command(name="blackjack", description="Play a hand of blackjack against the dealer.")
     @app_commands.describe(amount="Emeralds you bet")
     async def blackjack_cmd(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1]):
-        check_game_channel(interaction)
         now = time.monotonic()
         ready = self._next.get(interaction.user.id, 0.0)
         if now < ready:
