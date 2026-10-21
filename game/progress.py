@@ -181,6 +181,7 @@ _CHALLENGES: list[tuple[str, str, Callable[[int], str]]] = [
                                                    "Find the Blockdle block of the day {n} times")),
     ("quiz", "quiz_wins", lambda n: _times(n, "Win a quiz question", "Win {n} quiz questions")),
     ("pve_waves", "pve_waves", lambda n: f"Clear {_plural(n, 'dungeon wave')}"),
+    ("monster_damage", "monster_damage", lambda n: f"Deal {n:,} damage to monsters (dungeon, night, gate bosses)"),
     ("dummy", "dummy_series", lambda n: _times(n, "Hit the training dummy", "Hit the training dummy {n} times")),
     ("robs", "robs_succeeded", lambda n: _times(n, "Rob a player successfully", "Rob {n} players successfully")),
 ]

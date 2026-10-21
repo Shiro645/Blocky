@@ -2,8 +2,8 @@
 
 - 🎰 the casino (channels.casino): the games of chance;
 - 🌀 the portal (channels.portal): the dungeon, the gate bosses and travelling between dimensions;
-- 🦹 the robberies channel (channels.robberies): /rob, where the robbery is posted;
-- 💬 the commands channel (channels.commands): every other player command.
+- 💬 the commands channel (channels.commands): every other player command (/rob too: only the robbery the bot
+  posts goes to channels.robberies).
 
 A place that isn't set lets its commands work anywhere. Staff commands and /help work anywhere, and so does
 everything in a player's private guide channel. Buttons aren't commands: they work where their message is.
@@ -12,17 +12,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from utils.config import channel_id, channel_ids
+from utils.config import channel_ids
 
 CASINO = ("luckyblock", "wheel", "blackjack", "mines")
 PORTAL = ("pve", "boss", "portal", "dimensions")
-ROBBERIES = ("rob",)
 ANYWHERE = ("help",)
 
 PLACES = {
     "casino": ("🎰", "the casino", CASINO),
     "portal": ("🌀", "the portal", PORTAL),
-    "robberies": ("🦹", "the robberies channel", ROBBERIES),
     "commands": ("💬", "the commands channel", ()),
 }
 
@@ -39,9 +37,6 @@ def place_of(command: str, staff: bool = False) -> str | None:
 
 def channels_of(place: str) -> set[int]:
     """The channels of a place (empty: not set, its commands work anywhere)."""
-    if place == "robberies":
-        rid = channel_id("robberies")
-        return {rid} if rid else set()
     return channel_ids(place)
 
 

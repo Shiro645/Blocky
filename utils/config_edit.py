@@ -175,7 +175,7 @@ _CHALLENGE_NAMES = {
     "craft_gear": "Craft gear", "win_duels": "Win duels", "claim_drops": "Claim drops",
 "daily_rewards": "Claim the daily reward", "trades": "Complete trades",
     "lucky_blocks": "Break Lucky Blocks", "wheel_spins": "Spin the wheel", "blockdle": "Find the Blockdle block",
-    "quiz": "Win quiz questions", "pve_waves": "Clear dungeon waves", "dummy": "Hit the training dummy",
+    "quiz": "Win quiz questions", "pve_waves": "Clear dungeon waves", "monster_damage": "Damage monsters", "dummy": "Hit the training dummy",
     "robs": "Rob players",
 }
 
@@ -218,16 +218,16 @@ FIELDS: list[Field] = [
     Field("ch_spam", "channels", "Spam channels", ("channels", "spam"), "channels",
           help="Messages there give no blocks, XP or drops, only a tiny reward (see Mining)."),
     Field("ch_commands", "channels", "Commands channels", ("channels", "commands"), "channels",
-          help="Every player command that isn't of the casino, the portal or the robberies works only there (staff "
+          help="Every player command that isn't of the casino or the portal works only there (staff "
                "commands, /help and guide channels: anywhere). Not set = anywhere."),
     Field("ch_casino", "channels", "Casino channels", ("channels", "casino"), "channels",
           help="/luckyblock, /wheel, /blackjack and /mines work only there. Not set = anywhere."),
     Field("ch_portal", "channels", "Portal channels", ("channels", "portal"), "channels",
           help="/pve (the dungeon), /boss, /portal and /dimensions work only there. Not set = anywhere."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
-          help="/rob works only there, and robberies are posted there with the Stop the thief! button (the victim is "
-               "pinged there for a risky one). Members need Use Application Commands there, not Send Messages. Not "
-               "set = /rob works anywhere and is posted where it's used."),
+          help="Robberies (/rob, typed in the commands channel) are posted there with the Stop the thief! button (the "
+               "victim is pinged there for a risky one). Best as a channel where members can't write. Not set = "
+               "where /rob is used."),
     Field("ch_market", "channels", "Market channel", ("channels", "market"), "channel",
           help="The bot keeps two messages there, always up to date: the market (fixed prices), then every "
                "auction listing, each with a menu to buy. Best as a channel where members can't write."),

@@ -448,7 +448,7 @@ UPDATES: tuple[Update, ...] = (
             ("🌀 Portal",
              "The dungeon, the gate bosses, `/portal` and `/dimensions` are in the portal channel."),
             ("💬 Commands",
-             "`/rob` in the robberies channel, every other command in the commands channel. Typed in the wrong "
+             "Every other command (`/rob` too) in the commands channel. Typed in the wrong "
              "place, a command tells you where it goes. The Minecraft quiz now comes in the events channel."),
         ),
     ),

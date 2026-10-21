@@ -79,6 +79,7 @@ class ChallengeTests(GameTestCase):
         from game import biomes, settings
 
         self.assertNotIn("boss_damage", progress.CHALLENGE_CODES)  # bosses need the Nether: not for everyone
+        self.assertIn("monster_damage", progress.CHALLENGE_CODES)  # the dungeon counts too: doable everywhere
         self.assertEqual(biomes.BIOMES["mushroom"].challenge, "dummy")
         for b in biomes.BIOMES.values():
             self.assertIn(b.challenge, progress.CHALLENGE_CODES)

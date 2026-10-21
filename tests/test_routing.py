@@ -25,7 +25,7 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(routing.place_of("blackjack"), "casino")
         self.assertEqual(routing.place_of("boss"), "portal")
         self.assertEqual(routing.place_of("portal"), "portal")
-        self.assertEqual(routing.place_of("rob"), "robberies")
+        self.assertEqual(routing.place_of("rob"), "commands")  # only the bot's robbery message goes elsewhere
         self.assertEqual(routing.place_of("blockdle"), "commands")
         self.assertEqual(routing.place_of("inventory"), "commands")
         self.assertIsNone(routing.place_of("help"))
@@ -46,9 +46,6 @@ class RoutingTests(unittest.TestCase):
             self.assertFalse(routing.allowed("casino", 11))
             self.assertIn("<#10>", routing.refusal("wheel", "casino"))
         self.assertTrue(routing.allowed(None, 11))
-        with mock.patch.object(routing, "channel_id", return_value=7):
-            self.assertTrue(routing.allowed("robberies", 7))
-            self.assertFalse(routing.allowed("robberies", 8))
 
     def test_the_game_channels_become_the_casino(self):
         self.assertIsNone(routing.migrate({"channels": {"mining": [1]}}))

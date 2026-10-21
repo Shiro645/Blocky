@@ -759,8 +759,8 @@ PAGES: list[Page] = [
         "its options, its current numbers (they follow the server settings), examples and related commands.\n"
         "You can also open a page directly with the `command` option. It works in every channel.\n"
         "**Where commands go** (when the staff set the channels): 🎰 /luckyblock, /wheel, /blackjack and /mines in "
-        "the casino; 🌀 /pve, /boss, /portal and /dimensions in the portal channel; 🦹 /rob in the robberies "
-        "channel; 💬 every other command in the commands channel. A command typed elsewhere tells you where it goes; "
+        "the casino; 🌀 /pve, /boss, /portal and /dimensions in the portal channel; 💬 every other command "
+        "(/rob too) in the commands channel. A command typed elsewhere tells you where it goes; "
         "in your guide channel everything works.",
         examples=("/help", "/help command:duel", "/help command:mining"),
     ),
