@@ -11,12 +11,12 @@
     "wiki": 0,
     "updates": 0,
     "robberies": 0,
+    "market": 0,
     "spam": [],
     "mining": [],
-    "mining_nether": [],
-    "mining_end": [],
-    "mining_deep_dark": [],
-    "mining_shimmer": []
+    "casino": [],
+    "portal": [],
+    "commands": []
   },
   "roles": {
     "level_roles": {
@@ -34,6 +34,7 @@
     "species_witch": 0,
     "species_mage": 0,
     "species_miner": 0,
+    "species_gambler": 0,
     "event_ping": 0,
     "untouchable": 0,
     "prestige": 0,

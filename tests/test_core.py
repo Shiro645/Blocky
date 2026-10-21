@@ -244,7 +244,8 @@ class BalanceTests(GameTestCase):
         await self.run_game(lambda ctx: ctx.execute("UPDATE users SET anvil=3 WHERE user_id=?;", (ALICE,)))
         with self.assertRaisesRegex(GameError, "you have none"):
             await self.run_game(shop.repair, ALICE, gid)
-        settings.load({"repair": {"anvil_damage_chance": 0}})
+        # A sword's recipe is 2 ingots: ×2 = 4 ingots for a first full repair (25% each).
+        settings.load({"repair": {"anvil_damage_chance": 0, "recipe_share": 2}})
         await self.run_game(players.add_item, ALICE, "ingot", "iron", 30)
 
         # 1 ingot = 25%: the player chooses how many to put in.

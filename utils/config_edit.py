@@ -243,8 +243,8 @@ FIELDS: list[Field] = [
                "(50 channels) the bot adds \"<name> 2\", \"<name> 3\"… Not set = no guide channels (/guide still "
                "shows the guide).", item="category"),
     Field("role_event_ping", "roles", "Role pinged for events", ("roles", "event_ping"), "role",
-          help="Mentioned when a boss appears, when the wandering villager arrives and when a tournament opens. "
-               "Nobody else is pinged."),
+          help="Mentioned when a timed event starts, when the wandering villager arrives and when a tournament "
+               "opens. Nobody else is pinged."),
     Field("role_champion", "roles", "Season champion role", ("roles", "season_champion"), "role",
           help="Given to the winner of the last weekly season.", item="assign"),
     Field("role_tournament", "roles", "Tournament champion role", ("roles", "tournament_champion"), "role",
@@ -343,7 +343,7 @@ FIELDS: list[Field] = [
     _b("talents.miner_bonus_min_pile", "xp", "Miner: bonus block from piles of", "The bonus block only comes on "
        "piles of at least this many blocks.", min=1, max=6),
     _b("talents.lucky_rare_weight", "xp", "Lucky: rare block weight/point",
-       "Added to obsidian and to bedrock on 1-block piles."),
+       "Added to the two rarest blocks (obsidian and bedrock in the overworld) on 1-block piles."),
     # ---- economy ----
     _b("market.stick_pack.price", "market", "Sticks: price of a pack", min=1),
     _b("market.stick_pack.amount", "market", "Sticks: sticks per pack", min=1),
@@ -367,10 +367,11 @@ FIELDS: list[Field] = [
        min=1, max=14),
     _b("daily.xp", "market", "Daily: XP"),
     # ---- tools ----
-    _pct("repair.durability_per_ingot", "tools", "/repair: durability per ingot",
-         "What one ingot of its material gives back to a piece, at its first repair (25% = 4 ingots).", max=1),
+    _pct("repair.recipe_share", "tools", "/repair: recipe share for a full repair",
+         "A first full repair takes this share of the piece's recipe ingots (rounded up, at least 1): 50% = a "
+         "sword 1, a pickaxe 2, a chestplate 4.", max=10),
     _pct("repair.penalty_per_repair", "tools", "/repair: costlier after each repair",
-         "25% = each repair the piece already had adds 25% to the ingots needed (4, 5, 6, 7 ingots…).", max=10),
+         "25% = each repair the piece already had adds 25% to the ingots needed.", max=10),
     _b("repair.anvil_iron", "tools", "Anvil: iron ingots to craft it", "The anvil is needed to repair and to "
        "combine books.", min=1, max=1000),
     _pct("repair.anvil_damage_chance", "tools", "Anvil: chance to wear at each use",
@@ -380,10 +381,12 @@ FIELDS: list[Field] = [
     *[_b(f"gear.durability.{m}", "tools", f"{m.capitalize()} durability", "Uses before a piece breaks (armor: its share of this, see Swords, "
          "armor & shield). Changing it adapts the pieces already made.", min=1, max=1_000_000)
       for m in MATERIALS],
-    _b("gear.pickaxe_extra_blocks_per_tier", "tools", "Pickaxe: extra cobblestone per tier", max=100),
+    _b("gear.pickaxe_extra_blocks_per_tier", "tools", "Pickaxe: extra common blocks per tier",
+       "Cobblestone, or the common block of the dimension (netherrack…).", max=100),
     _pct("gear.pickaxe_upgrade_chance_per_tier", "tools", "Pickaxe: upgrade chance per tier",
          "Chance that the mined block becomes the next rarer one."),
-    _b("gear.shovel_extra_gravel_per_tier", "tools", "Shovel: extra gravel per tier", max=100),
+    _b("gear.shovel_extra_gravel_per_tier", "tools", "Shovel: extra gravel per tier",
+       "When the mined block is gravel (or its dimension's block of that rank).", max=100),
     _pct("gear.axe_stick_chance", "tools", "Axe: chance to find sticks", "Sticks found = the axe's tier."),
     _pct("gear.hoe_xp_bonus_per_tier", "tools", "Hoe: XP bonus per tier", max=10),
     # ---- swords & armor ----
@@ -431,7 +434,7 @@ FIELDS: list[Field] = [
     _b("potions.strong_per_fight", "potions", "Reinforced (II) potions per fight", "Per duel and per dungeon run.",
        max=20),
     *[_b(f"potions.random_weights.{k}", "potions", f"Random potions: {name} weight",
-         "How often it comes in drops, bosses and the villager's goods (0 = never).", kind="float", max=1000)
+         "How often it comes in drops and the villager's goods (0 = never).", kind="float", max=1000)
       for k, name in (("strength", "Strength"), ("speed", "Speed"), ("healing", "Healing"), ("harming", "Harming"))],
     _b("potions.value", "potions", "Potion value (emeralds)", "Used for fortunes and fair prices."),
     _b("potions.value_ii", "potions", "Reinforced potion value (emeralds)", "Used for fortunes and fair prices."),
@@ -453,7 +456,8 @@ FIELDS: list[Field] = [
     *_per_level("enchants.efficiency_seconds", "enchant_effects", "Efficiency: seconds less", "Shorter mining cooldown.",
                 kind="float", max=3600, levels=7),
     *_per_level("enchants.fortune_bonus", "enchant_effects", "Fortune: extra blocks",
-                "Pickaxe cobblestone, shovel gravel, axe sticks (a fraction is a chance of one more).", kind="float",
+                "Pickaxe common blocks (cobblestone, netherrack…), shovel gravel, axe sticks (a fraction is a chance of one "
+                "more). On the pickaxe it also gives a chance of a second ore.", kind="float",
                 max=100, levels=7),
     *[_pct(f"enchants.fortune_hoe_xp.{i}", "enchant_effects", f"Fortune on a hoe: XP bonus ({ROMAN[i]})", max=10) for i in range(7)],
     *[_pct(f"enchants.unbreaking_chance.{i}", "enchant_effects", f"Unbreaking: chance to keep ({ROMAN[i]})",
@@ -580,7 +584,7 @@ FIELDS: list[Field] = [
     _b("night.active_hours", "night", "Only players active in the last … hours", "A player who didn't use a "
        "command or mine for this long isn't attacked (probably not around).", min=1, max=24 * 30),
     *[_b(f"night.strength.{k}", "night", f"{k.capitalize()}: strength ×", "Its dungeon health and damage times this "
-         "(alone: ~80% won in iron gear at 10.3).", kind="float", min=0.1, max=100) for k in ("zombie", "skeleton",
+         "(at 8, alone: 2 in 3 won without gear, 96% in gold).", kind="float", min=0.1, max=100) for k in ("zombie", "skeleton",
                                                                                            "spider", "creeper")],
     *[_b(f"night.phantom.{k}", "night", f"Phantom: {label}", kind="float", min=0.1 if k == "hp" else 0, max=1000)
       for k, label in (("hp", "health"), ("min_damage", "smallest hit"), ("max_damage", "biggest hit"))],
@@ -788,12 +792,12 @@ FIELDS: list[Field] = [
                         ("golden_hour", "💰 Golden Hour"), ("lucky_hour", "🍀 Lucky Hour"),
                         ("market_sale", "🏷️ Market Sale"))],
     _b("live_events.frenzy_multiplier", "live_events", "Gambling Frenzy: bets ×",
-       "The maximum bet and the daily limit of the Lucky Block and the wheel are multiplied by this.",
+       "The maximum bet and the daily limit of the games of chance are multiplied by this.",
        kind="float", min=1, max=10),
     _b("live_events.rush_xp_multiplier", "live_events", "Mining Rush: mining XP ×", kind="float", min=1, max=10),
     _pct("live_events.golden_sell_bonus", "live_events", "Golden Hour: /sell bonus for blocks",
          "Added to the price of blocks (it counts for the season, like the Trader bonus).", max=5),
-    _b("live_events.lucky_rare_multiplier", "live_events", "Lucky Hour: obsidian & bedrock ×",
+    _b("live_events.lucky_rare_multiplier", "live_events", "Lucky Hour: rarest blocks ×",
        "Their weight when mining is multiplied by this.", kind="float", min=1, max=10),
     _pct("live_events.market_sale_discount", "live_events", "Market Sale: /market discount"),
     _b("rob.risky_min", "rob", "Risky robbery: minimum loot", "The victim is pinged. Never more than they have."),
@@ -896,7 +900,7 @@ FIELDS: list[Field] = [
     _pct("species.mage_enchants", "species", "Mage: stronger enchantments", "Every enchantment effect."),
     _pct("species.miner_speed", "species", "Miner: shorter mining cooldown"),
     _pct("species.gambler_max_bet", "species", "Gambler: higher maximum bet",
-         "At the Lucky Block and the wheel: 50% = 300 when the others can bet 200.", max=10),
+         "At the games of chance: 50% = 300 when the others can bet 200.", max=10),
     # ---- loans ----
     _b("loans.min_amount", "loans", "Smallest loan", min=1),
     _b("loans.max_amount", "loans", "Biggest loan", min=1),

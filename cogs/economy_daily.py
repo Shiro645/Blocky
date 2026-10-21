@@ -26,7 +26,8 @@ class DailyCog(commands.Cog):
             lines.append(f"🛏️ Well rested: **+{float(settings.get()['night']['sleep_daily_bonus']):.0%}** for sleeping "
                          "last night (`/sleep`).")
         if res["bonus_item"]:
-            lines.append(f"🎁 7-day bonus: {mat(res['bonus_item'])} **1 {res['bonus_item']} ingot**!")
+            every = settings.get()["daily"]["bonus_every_days"]
+            lines.append(f"🎁 {every}-day bonus: {mat(res['bonus_item'])} **1 {res['bonus_item']} ingot**!")
         if res["lost_streak"]:
             lines.append(f"💔 You lost your {res['lost_streak']}-day streak. Don't miss a day!")
         lines.append(f"Tomorrow: **{em(res['next_reward'])}**")

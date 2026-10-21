@@ -37,7 +37,7 @@ DEFAULTS: dict[str, Any] = {
         "sculk": 2, "sculk_shrieker": 5,
         "shimmer_stone": 3,
     },
-    # Dimensions (game/dimensions.py): each has its mining channels and blocks. The odds work like the
+    # Dimensions (game/dimensions.py): each has its blocks. The odds work like the
     # overworld's (mining.odds_*); the Shimmer has a single block.
     "dimensions": {
         # Netherite scrap: the chance a mining reward in the Nether or beyond finds Ancient debris (one scrap).
@@ -94,7 +94,7 @@ DEFAULTS: dict[str, Any] = {
         "miner_deepslate_2_3": 2, "miner_deepslate_2_3_max": 30,
         "miner_bonus_block_chance": 0.05, "miner_bonus_block_max": 0.25,
         "miner_bonus_min_pile": 4,  # the bonus block only comes on piles of at least this many blocks (1-6)
-        # Lucky: weight added to obsidian and to bedrock per point, on 1-block piles.
+        # Lucky: weight added to the two rarest blocks (obsidian and bedrock in the overworld) per point, on 1-block piles.
         "lucky_rare_weight": 1,
         # /talent_reset: every spent point back for reset_cost_per_point emeralds a point (never under reset_cost_min).
         "reset_cost_per_point": 50, "reset_cost_min": 100,
@@ -111,11 +111,11 @@ DEFAULTS: dict[str, Any] = {
         # Armor pieces get this share of their material's durability, in Minecraft's proportions (11, 16, 15 and
         # 13 sixteenths): the chestplate lasts the longest, the helmet the least. Tools: all of it.
         "armor_durability_share": {"helmet": 0.6875, "chestplate": 1.0, "leggings": 0.9375, "boots": 0.8125},
-        # Pickaxe: extra cobblestone per mining event, and a chance per tier to
-        # upgrade the mined block (cobblestone -> gravel -> deepslate -> obsidian -> bedrock).
+        # Pickaxe: extra common blocks per mining event (cobblestone, netherrack…), and a chance per tier to
+        # upgrade the mined block to the next one of its dimension (cobblestone -> gravel -> … -> bedrock).
         "pickaxe_extra_blocks_per_tier": 3,
         "pickaxe_upgrade_chance_per_tier": 0.05,
-        # Shovel: extra blocks per tier when the mined block is gravel.
+        # Shovel: extra blocks per tier when the mined block is gravel (or its dimension's block of that rank).
         "shovel_extra_gravel_per_tier": 2,
         # Axe: chance to find sticks while mining, sticks found = tier.
         "axe_stick_chance": 0.3,
@@ -138,19 +138,20 @@ DEFAULTS: dict[str, Any] = {
         "shield_durability": 100,
         "shield_wear_per_block": 10,
     },
-    # /repair, on an anvil (crafted with anvil_iron iron ingots), with ingots of the piece's material:
-    # one ingot gives back durability_per_ingot of its durability, divided by (1 + penalty_per_repair x the
-    # repairs it already had): 4 ingots for a first full repair, then 5, 6, 7… Each use of the
-    # anvil (repair, combining books) has anvil_damage_chance to wear it: new → chipped → damaged → broken.
+    # /repair, on an anvil (crafted with anvil_iron iron ingots, 31 like Minecraft's 3 iron blocks + 4 ingots),
+    # with ingots of the piece's material: a first full repair takes recipe_share of the ingots of its recipe
+    # (rounded up, at least 1: a sword 1, a pickaxe 2, a chestplate 4), and each repair it already had adds
+    # penalty_per_repair to that. Each use of the anvil (repair, combining books) has anvil_damage_chance to wear
+    # it: new → chipped → damaged → broken.
     "repair": {
-        "durability_per_ingot": 0.25,
+        "recipe_share": 0.5,
         "penalty_per_repair": 0.25,
-        "anvil_iron": 22,
+        "anvil_iron": 31,
         "anvil_damage_chance": 0.12,
     },
     "daily": {
-        "base_reward": 30,
-        "streak_bonus_per_day": 10,
+        "base_reward": 100,
+        "streak_bonus_per_day": 30,
         "streak_cap_days": 7,
         "weekly_bonus_item": "iron",  # ingot given every bonus_every_days consecutive days
         "bonus_every_days": 7,
@@ -199,16 +200,16 @@ DEFAULTS: dict[str, Any] = {
         # or {"block": type, "amount": n} or {"lapis": n} or {"book": true} (random book)
         # or {"potions": n} (random potions).
         "table": [
-            {"weight": 40, "title": "An emerald pouch", "reward": {"emeralds": 50}},
-            {"weight": 3, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 1}},
-            {"weight": 15, "title": "A bedrock cluster", "reward": {"block": "bedrock", "amount": 10}},
+            {"weight": 80, "title": "An emerald pouch", "reward": {"emeralds": 200}},
+            {"weight": 6, "title": "An iron vein", "reward": {"ingot": "iron", "amount": 1}},
+            {"weight": 30, "title": "A bedrock cluster", "reward": {"block": "bedrock", "amount": 10}},
             {"weight": 1, "title": "A diamond vein", "reward": {"ingot": "diamond", "amount": 1}},
-            {"weight": 12, "title": "A lapis vein", "reward": {"lapis": 4}},
-            {"weight": 10, "title": "An enchanted book", "reward": {"book": True}},
-            {"weight": 12, "title": "A witch's stash", "reward": {"potions": 2}},
+            {"weight": 24, "title": "A lapis vein", "reward": {"lapis": 4}},
+            {"weight": 20, "title": "An enchanted book", "reward": {"book": True}},
+            {"weight": 24, "title": "A witch's stash", "reward": {"potions": 2}},
         ],
     },
-    "seasons": {"rewards": [300, 150, 75]},
+    "seasons": {"rewards": [3000, 1500, 750]},
     "teams": {
         "max_members": 5,
         "create_cost": 500,
@@ -289,8 +290,8 @@ DEFAULTS: dict[str, Any] = {
         # What he can sell: an asset key (game/assets.py) and an amount.
         # "book" = a random level I/II book, "potion" = random potions.
         "goods": [
-            {"asset": "ingot:iron", "amount": 8},
-            {"asset": "ingot:diamond", "amount": 4},
+            {"asset": "ingot:iron", "amount": 2},
+            {"asset": "ingot:diamond", "amount": 1},
             {"asset": "lapis", "amount": 10},
             {"asset": "book", "amount": 1},
             {"asset": "potion", "amount": 2},
@@ -298,7 +299,7 @@ DEFAULTS: dict[str, Any] = {
         # Blocks he can buy, and how many at once.
         "buys": {"gravel": 64, "deepslate": 48, "obsidian": 24, "bedrock": 16},
         # Exclusive offer: a level III book (exclusive_book_chance) or else a reinforced potion (II).
-        "book_iii_price": 450,
+        "book_iii_price": 300,
         "potion_ii_price": 120,
         "exclusive_book_chance": 0.5,
         "exclusive_mending_chance": 0.1,  # ...but first, this often, the exclusive offer is a Mending book
@@ -308,7 +309,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "tournament": {
         "entry_fee": 50,
-        "house_bonus": 200,  # emeralds the server adds to the pot
+        "house_bonus": 1000,  # emeralds the server adds to the pot
         "min_players": 4,
         "max_players": 32,
         # Local time. Days: 0 = Monday ... 6 = Sunday.
@@ -352,7 +353,7 @@ DEFAULTS: dict[str, Any] = {
         "frenzy_multiplier": 2.0,  # Gambling Frenzy: the maximum bet and the daily cap of games of chance
         "rush_xp_multiplier": 2.0,  # Mining Rush: mining XP
         "golden_sell_bonus": 0.5,  # Golden Hour: /sell pays this much more for blocks
-        "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of obsidian and bedrock when mining
+        "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of the rarest blocks (obsidian, bedrock…) when mining
         "market_sale_discount": 0.25,  # Market Sale: /market costs this much less
     },
     # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
@@ -380,7 +381,7 @@ DEFAULTS: dict[str, Any] = {
         },
         "clear_bonus": 0.5,
         "xp_per_wave": 15,
-        "wave_rewards": [5, 8, 12, 18, 27],
+        "wave_rewards": [25, 40, 60, 90, 135],
         # Calibrated (solo, no potions, all 5 waves): Easy ~98% with iron gear; Normal ~90% diamond;
         # Hard ~80% netherite; Hardcore ~80% enchanted netherite. Nightmare is a raid: its monsters are much
         # stronger but each extra player adds fewer of them (its own group_monsters), so a group of 5 in
@@ -429,7 +430,7 @@ DEFAULTS: dict[str, Any] = {
     # pyramid of 4 levels (level_ingots each), first all in gold, then each level in iron, diamond and netherite.
     # Each level gives its effects to everyone, times the multiplier of its material.
     "beacon": {
-        "level_ingots": [81, 225, 441, 729],  # 9, 25, 49 and 81 blocks of 9 ingots
+        "level_ingots": [9, 27, 45, 81],  # 1, 3, 5 and 9 blocks of 9 ingots
         "multipliers": {"gold": 1.0, "iron": 1.5, "diamond": 2.0, "netherite": 3.0},
         # Effects of each level in gold. Level 1: haste (mining cooldown) and mining XP; 2: /sell of blocks;
         # 3: strength (damage) and 4: resistance (damage taken) in the dungeon and against the gate bosses. Combat
@@ -439,7 +440,7 @@ DEFAULTS: dict[str, Any] = {
         # not given by Monday, that step is undone.
         "upkeep": 0.05,
         # A player who gave at least contributor_value emeralds' worth this week: mining XP and /sell bonus too.
-        "contributor_value": 200, "contributor_xp": 0.05, "contributor_sell": 0.05,
+        "contributor_value": 10000, "contributor_xp": 0.05, "contributor_sell": 0.05,
     },
     # Gang wars (game/war.py): every week all teams of at least min_members fight each other for points. Each
     # Monday `levy` of every team chest goes into the week's pot; the top teams share it (prizes) after `tax`.
@@ -495,8 +496,8 @@ DEFAULTS: dict[str, Any] = {
         "odds_malus": 0.9,
         "enabled": {"desert": True, "mountains": True, "badlands": True, "forest": True, "dark_forest": True,
                     "jungle": True, "swamp": True, "ocean": True, "mushroom": True, "tundra": True},
-        "challenge_reward": 250,
-        "challenges": {"desert": 30, "mountains": 1500, "badlands": 6, "forest": 3, "dark_forest": 3, "jungle": 20,
+        "challenge_reward": 1000,
+        "challenges": {"desert": 30, "mountains": 1500, "badlands": 2, "forest": 3, "dark_forest": 3, "jungle": 20,
                        "swamp": 3, "ocean": 3, "mushroom": 15, "tundra": 900},
     },
     # Day and night (/time, /sleep, game/night.py): the night is rob.night_start_hour to rob.night_end_hour.
@@ -504,16 +505,18 @@ DEFAULTS: dict[str, Any] = {
     # the target fights alone within fight_minutes. Won: rewards[kind] and xp. Lost or ignored: loss of their
     # emeralds (loss_max at most; the Phantom: phantom_loss, phantom_loss_max). The Phantom only goes after players
     # who didn't sleep the phantom_nights nights before. Monsters: the dungeon's (pve.monsters) × strength[kind]
-    # (calibrated alone: ~80% won in iron gear, ~95% in diamond); the Phantom: its own (~50% iron, ~80% diamond).
+    # (calibrated alone: without gear ~2 in 3 against a zombie, gold gear 96%); the Phantom: its own (without gear
+    # 29%, iron 96%).
     "night": {
         "monsters": 4,
         "margin_minutes": 30,  # no monster in the first and last minutes of the night
         "fight_minutes": 15,
         "min_level": 10,
         "active_hours": 24,  # only players who played (a command, mining) in the last hours are attacked
-        "strength": {"zombie": 10.3, "skeleton": 10.3, "spider": 10.3, "creeper": 12.8},
-        "phantom": {"hp": 37.1, "min_damage": 2.09, "max_damage": 6.84},
-        "rewards": {"zombie": 40, "skeleton": 50, "spider": 60, "creeper": 80, "phantom": 200},
+        # Calibrated so a player without gear beats a zombie about 2 times in 3, in gold gear 96% of the time.
+        "strength": {"zombie": 8.0, "skeleton": 8.0, "spider": 8.0, "creeper": 9.9},
+        "phantom": {"hp": 28.8, "min_damage": 1.62, "max_damage": 5.31},  # without gear 29%, iron 96%
+        "rewards": {"zombie": 200, "skeleton": 250, "spider": 300, "creeper": 400, "phantom": 1000},
         "xp": 15,
         "loss": 0.01,
         "loss_max": 200,
@@ -523,8 +526,8 @@ DEFAULTS: dict[str, Any] = {
         "sleep_daily_bonus": 0.25,
     },
     # Prestige (/prestige, game/prestige.py): Prestige n needs level base_level + level_step × (n - 1), every
-    # achievement, every dimension and the Beacon lit. The level stays; the parts switched on in
-    # "reset" start over. Each prestige: +bonus mining XP and /sell for good.
+    # achievement (but skip_achievements and those whose game is switched off), every dimension and the Beacon lit.
+    # The level stays; the parts switched on in "reset" start over. Each prestige: +bonus mining XP and /sell for good.
     "prestige": {
         "base_level": 50,
         "level_step": 10,
@@ -556,7 +559,7 @@ DEFAULTS: dict[str, Any] = {
         # What it takes to earn the other frames and the titles (game/profiles.py says what is counted).
         "frame_goals": {"netherite": 1, "ender": 1, "nether": 25, "champion": 1, "prestige": 1},
         "title_goals": {
-            "miner": 1000, "quarry_master": 50000, "bedrock_hunter": 100, "blacksmith": 50, "duelist": 25,
+            "miner": 1000, "quarry_master": 50000, "bedrock_hunter": 25, "blacksmith": 50, "duelist": 25,
             "gladiator": 100, "boss_slayer": 10, "season_champion": 1, "arena_champion": 1, "team_champion": 1,
             "dungeon_crawler": 1, "nightmare_survivor": 1, "tycoon": 100000, "banker": 10000, "merchant": 50,
             "heavy_hitter": 150, "veteran": 50, "legend": 100, "reborn": 1, "mythic": 5,
@@ -584,7 +587,7 @@ DEFAULTS: dict[str, Any] = {
         "witch_potions": 0.10,  # potion effects in duels and the dungeon
         "mage_enchants": 0.10,  # enchantment effects
         "miner_speed": 0.05,  # mining cooldown
-        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, the wheel)
+        "gambler_max_bet": 0.5,  # the maximum bet at the games of chance (Lucky Block, wheel, blackjack, mines)
     },
     # Loans between players (/loan). The lender picks the interest and the duration within these limits.
     "loans": {
@@ -602,7 +605,7 @@ DEFAULTS: dict[str, Any] = {
     },
     # Mini-games. The games of chance work in config.json channels.casino (anywhere when there is none).
     "games": {
-        # Games of chance (Lucky Block, the wheel): bets, waiting time, and what a player may win in a day
+        # Games of chance (Lucky Block, the wheel, blackjack, mines): bets, waiting time, and what a player may win in a day
         # (winnings minus losses at these games; then they can't play before tomorrow, 0 = no cap).
         "min_bet": 1,
         "max_bet": 200,
@@ -649,7 +652,7 @@ DEFAULTS: dict[str, Any] = {
         "quiz_every_jitter": 0.25,  # ...give or take 25%, so it isn't predictable
         "quiz_no_repeat": 40,  # the last 40 questions aren't asked again
         "quiz_seconds": 30,  # time to answer
-        "quiz_reward": 50,
+        "quiz_reward": 150,
         "quiz_xp": 20,
     },
     "challenges": {
@@ -658,92 +661,91 @@ DEFAULTS: dict[str, Any] = {
         # The pool the weekly challenges are picked from: what to reach, and the emeralds it pays. A week never
         # has the same challenges as the week before (when there are enough others).
         "goals": {
-            "mine_blocks": {"target": 500, "reward": 150},
-            "find_bedrock": {"target": 5, "reward": 150},
-            "sell_blocks": {"target": 1000, "reward": 150},
-            "craft_gear": {"target": 3, "reward": 100},
-            "win_duels": {"target": 3, "reward": 150},
-            "claim_drops": {"target": 2, "reward": 100},
-            "daily_rewards": {"target": 5, "reward": 150},
-            "trades": {"target": 2, "reward": 75},
-            "lucky_blocks": {"target": 25, "reward": 150},
-            "wheel_spins": {"target": 25, "reward": 150},
-            "blockdle": {"target": 4, "reward": 150},
-            "quiz": {"target": 3, "reward": 150},
-            "pve_waves": {"target": 15, "reward": 150},
-            "monster_damage": {"target": 200, "reward": 150},  # ≈ 3 solo dungeon runs, or one gate boss
-            "dummy": {"target": 10, "reward": 100},
-            "robs": {"target": 3, "reward": 150},
+            "mine_blocks": {"target": 500, "reward": 600},
+            "find_bedrock": {"target": 1, "reward": 600},
+            "sell_blocks": {"target": 1000, "reward": 600},
+            "craft_gear": {"target": 3, "reward": 600},
+            "win_duels": {"target": 3, "reward": 600},
+            "claim_drops": {"target": 2, "reward": 400},
+            "daily_rewards": {"target": 5, "reward": 600},
+            "trades": {"target": 2, "reward": 300},
+            "lucky_blocks": {"target": 25, "reward": 600},
+            "wheel_spins": {"target": 25, "reward": 600},
+            "blockdle": {"target": 4, "reward": 600},
+            "quiz": {"target": 3, "reward": 600},
+            "pve_waves": {"target": 15, "reward": 600},
+            "monster_damage": {"target": 200, "reward": 600},  # ≈ 3 solo dungeon runs, or one gate boss
+            "dummy": {"target": 10, "reward": 400},
+            "robs": {"target": 3, "reward": 600},
         },
         # The pool of the daily challenges (small ones), never the same as the day before.
         "daily_goals": {
-            "mine_blocks": {"target": 150, "reward": 30},
-            "find_bedrock": {"target": 1, "reward": 40},
-            "sell_blocks": {"target": 200, "reward": 30},
-            "win_duels": {"target": 1, "reward": 40},
-            "lucky_blocks": {"target": 5, "reward": 30},
-            "wheel_spins": {"target": 5, "reward": 30},
-            "blockdle": {"target": 1, "reward": 40},
-            "quiz": {"target": 1, "reward": 40},
-            "pve_waves": {"target": 3, "reward": 40},
-            "monster_damage": {"target": 50, "reward": 40},  # a solo dungeon run, or two night monsters
-            "dummy": {"target": 3, "reward": 25},
-            "robs": {"target": 1, "reward": 50},
+            "mine_blocks": {"target": 150, "reward": 90},
+            "sell_blocks": {"target": 200, "reward": 90},
+            "win_duels": {"target": 1, "reward": 120},
+            "lucky_blocks": {"target": 5, "reward": 90},
+            "wheel_spins": {"target": 5, "reward": 90},
+            "blockdle": {"target": 1, "reward": 120},
+            "quiz": {"target": 1, "reward": 120},
+            "pve_waves": {"target": 3, "reward": 120},
+            "monster_damage": {"target": 50, "reward": 120},  # a solo dungeon run, or two night monsters
+            "dummy": {"target": 3, "reward": 75},
+            "robs": {"target": 1, "reward": 150},
         },
     },
     # Achievements: the emeralds each one pays once, and the goal of the ones that count something.
     "achievements": {
-        "first_bedrock": {"reward": 25},
-        "bedrock_100": {"goal": 100, "reward": 200},
-        "first_obsidian": {"reward": 15},
-        "miner_1k": {"goal": 1000, "reward": 100},
-        "miner_10k": {"goal": 10000, "reward": 500},
-        "miner_50k": {"goal": 50000, "reward": 1500},
-        "first_craft": {"reward": 10},
-        "blacksmith": {"goal": 25, "reward": 200},
-        "iron_set": {"reward": 100},
-        "diamond_set": {"reward": 300},
-        "netherite_set": {"reward": 1000},
-        "level_10": {"goal": 10, "reward": 50},
-        "level_25": {"goal": 25, "reward": 150},
-        "level_50": {"goal": 50, "reward": 400},
-        "level_100": {"goal": 100, "reward": 1000},
-        "first_blood": {"reward": 20},
-        "gladiator": {"goal": 25, "reward": 300},
-        "streak_7": {"goal": 7, "reward": 100},
-        "streak_30": {"goal": 30, "reward": 500},
-        "merchant": {"goal": 10, "reward": 100},
-        "auctioneer": {"goal": 10, "reward": 100},
-        "treasure_hunter": {"goal": 10, "reward": 150},
-        "boss_slayer": {"reward": 100},
-        "champion": {"reward": 250},
-        "arena_champion": {"reward": 200},
-        "team_champion": {"reward": 150},
-        "tycoon": {"goal": 10000, "reward": 500},
-        "wear_and_tear": {"reward": 10},
-        "lucky_100": {"goal": 100, "reward": 200},
-        "wheel_100": {"goal": 100, "reward": 200},
-        "bullseye": {"reward": 100},
-        "blockdle_10": {"goal": 10, "reward": 150},
-        "quiz_10": {"goal": 10, "reward": 150},
-        "thief_10": {"goal": 10, "reward": 200},
-        "watch_5": {"goal": 5, "reward": 150},
-        "dungeon_hard": {"reward": 300},
-        "dungeon_hardcore": {"reward": 500},
-        "dungeon_nightmare": {"reward": 1000},
-        "challenger_10": {"goal": 10, "reward": 150},
-        "challenger_50": {"goal": 50, "reward": 500},
-        "high_roller": {"reward": 50},
-        "enchanter_10": {"goal": 10, "reward": 150},
-        "handyman_10": {"goal": 10, "reward": 100},
-        "regular_20": {"goal": 20, "reward": 200},
-        "moneylender": {"goal": 10000, "reward": 200},
-        "wither_slayer": {"reward": 1000},
-        "dragon_slayer": {"reward": 2000},
-        "warden_slayer": {"reward": 4000},
-        "beacon_builder": {"goal": 5000, "reward": 500},
-        "warlord": {"reward": 1000},
-        "raider_5": {"goal": 5, "reward": 300},
+        "first_bedrock": {"reward": 125},
+        "bedrock_100": {"goal": 10, "reward": 1000},
+        "first_obsidian": {"reward": 75},
+        "miner_1k": {"goal": 1000, "reward": 500},
+        "miner_10k": {"goal": 10000, "reward": 2500},
+        "miner_50k": {"goal": 50000, "reward": 7500},
+        "first_craft": {"reward": 50},
+        "blacksmith": {"goal": 25, "reward": 1000},
+        "iron_set": {"reward": 2000},
+        "diamond_set": {"reward": 10000},
+        "netherite_set": {"reward": 30000},
+        "level_10": {"goal": 10, "reward": 250},
+        "level_25": {"goal": 25, "reward": 750},
+        "level_50": {"goal": 50, "reward": 2000},
+        "level_100": {"goal": 100, "reward": 5000},
+        "first_blood": {"reward": 100},
+        "gladiator": {"goal": 25, "reward": 1500},
+        "streak_7": {"goal": 7, "reward": 500},
+        "streak_30": {"goal": 30, "reward": 2500},
+        "merchant": {"goal": 10, "reward": 500},
+        "auctioneer": {"goal": 10, "reward": 500},
+        "treasure_hunter": {"goal": 10, "reward": 750},
+        "boss_slayer": {"reward": 500},
+        "champion": {"reward": 1250},
+        "arena_champion": {"reward": 1000},
+        "team_champion": {"reward": 750},
+        "tycoon": {"goal": 10000, "reward": 2500},
+        "wear_and_tear": {"reward": 50},
+        "lucky_100": {"goal": 100, "reward": 1000},
+        "wheel_100": {"goal": 100, "reward": 1000},
+        "bullseye": {"reward": 500},
+        "blockdle_10": {"goal": 10, "reward": 750},
+        "quiz_10": {"goal": 10, "reward": 750},
+        "thief_10": {"goal": 10, "reward": 1000},
+        "watch_5": {"goal": 5, "reward": 750},
+        "dungeon_hard": {"reward": 1500},
+        "dungeon_hardcore": {"reward": 2500},
+        "dungeon_nightmare": {"reward": 5000},
+        "challenger_10": {"goal": 10, "reward": 750},
+        "challenger_50": {"goal": 50, "reward": 2500},
+        "high_roller": {"reward": 250},
+        "enchanter_10": {"goal": 10, "reward": 750},
+        "handyman_10": {"goal": 10, "reward": 1000},
+        "regular_20": {"goal": 20, "reward": 1000},
+        "moneylender": {"goal": 10000, "reward": 1000},
+        "wither_slayer": {"reward": 5000},
+        "dragon_slayer": {"reward": 10000},
+        "warden_slayer": {"reward": 20000},
+        "beacon_builder": {"goal": 100000, "reward": 5000},
+        "warlord": {"reward": 5000},
+        "raider_5": {"goal": 5, "reward": 1500},
     },
 }
 
@@ -778,7 +780,8 @@ def get() -> dict[str, Any]:
 # Dicts whose keys are free (not fixed by DEFAULTS): their values must look like the defaults' values.
 _FREE_KEYS = {("moderation", "warn_mutes"), ("villager", "buys")}
 # Settings that existed once: an old config.json may still have them, they're ignored without a warning.
-_RETIRED = {("challenges", "goals", "boss_damage"), ("challenges", "daily_goals", "boss_damage")}
+_RETIRED = {("challenges", "goals", "boss_damage"), ("challenges", "daily_goals", "boss_damage"),
+            ("repair", "durability_per_ingot"), ("challenges", "daily_goals", "find_bedrock")}
 # Lists that grew in an update (enchantments: levels I-III, then I-VII): an older, shorter override keeps its
 # values and gets the defaults for the rest.
 _GROWN = {("enchants", k) for k in ("apply_cost", "efficiency_seconds", "fortune_bonus", "fortune_hoe_xp",
@@ -1024,8 +1027,8 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     if float(table["curse_chance"]) > 0 and sum(float(w) for w in table["curse_weights"].values()) <= 0:
         out.append(("`balance.enchanting_table.curse_weights`: at least one curse needs a weight above 0.",
                     [("enchanting_table", "curse_weights", k) for k in table["curse_weights"]]))
-    if float(merged["repair"]["durability_per_ingot"]) <= 0:
-        out.append(("`balance.repair.durability_per_ingot` must be above 0.", [("repair", "durability_per_ingot")]))
+    if float(merged["repair"]["recipe_share"]) <= 0:
+        out.append(("`balance.repair.recipe_share` must be above 0.", [("repair", "recipe_share")]))
     if sum(float(w) for w in merged["potions"]["random_weights"].values()) <= 0:
         out.append(("`balance.potions.random_weights`: at least one potion needs a weight above 0.",
                     [("potions", "random_weights", k) for k in merged["potions"]["random_weights"]]))

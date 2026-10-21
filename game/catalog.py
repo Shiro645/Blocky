@@ -63,13 +63,13 @@ RECIPES = {
 TALENT_INFO = {
     "miner": "Better blocks (higher gravel/deepslate odds + bonus block chance).",
     "trader": "Bonus emeralds when you /sell.",
-    "lucky": "Higher bedrock and obsidian chance on 1-block rolls.",
+    "lucky": "Higher chance of the rarest blocks (obsidian and bedrock in the overworld) on 1-block rolls.",
     "efficiency": "Shorter cooldown between two mining rewards.",
 }
 
 GEAR_EFFECTS = {
-    "pickaxe": "Extra cobblestone each time you mine + chance to upgrade the block",
-    "shovel": "Extra gravel when you mine gravel",
+    "pickaxe": "Extra common blocks each time you mine (cobblestone, netherrack…) + chance to upgrade the block",
+    "shovel": "Extra gravel when you mine gravel (or the block of its rank in other dimensions)",
     "axe": "Chance to collect sticks while mining",
     "hoe": "More XP per message",
     "sword": "Higher maximum damage (duels, tournament, gate bosses, the dungeon)",
