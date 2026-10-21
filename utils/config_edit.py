@@ -367,10 +367,11 @@ FIELDS: list[Field] = [
        min=1, max=14),
     _b("daily.xp", "market", "Daily: XP"),
     # ---- tools ----
-    _pct("repair.durability_per_ingot", "tools", "/repair: durability per ingot",
-         "What one ingot of its material gives back to a piece, at its first repair (25% = 4 ingots).", max=1),
+    _pct("repair.recipe_share", "tools", "/repair: recipe share for a full repair",
+         "A first full repair takes this share of the piece's recipe ingots (rounded up, at least 1): 50% = a "
+         "sword 1, a pickaxe 2, a chestplate 4.", max=10),
     _pct("repair.penalty_per_repair", "tools", "/repair: costlier after each repair",
-         "25% = each repair the piece already had adds 25% to the ingots needed (4, 5, 6, 7 ingots…).", max=10),
+         "25% = each repair the piece already had adds 25% to the ingots needed.", max=10),
     _b("repair.anvil_iron", "tools", "Anvil: iron ingots to craft it", "The anvil is needed to repair and to "
        "combine books.", min=1, max=1000),
     _pct("repair.anvil_damage_chance", "tools", "Anvil: chance to wear at each use",

@@ -364,12 +364,12 @@ def _duel(s: Settings) -> list[str]:
 
 def _repair(s: Settings) -> list[str]:
     r = s["repair"]
-    per, penalty = float(r["durability_per_ingot"]), float(r["penalty_per_repair"])
-    fulls = [math.ceil(1 / (per / (1 + penalty * n)) - 1e-9) for n in range(4)]
+    share, penalty = float(r["recipe_share"]), float(r["penalty_per_repair"])
+    first = {item: max(1, math.ceil(RECIPES[item][0] * share - 1e-9)) for item in ("sword", "pickaxe", "chestplate")}
     return [
-        f"1 ingot = **{pct(per)}** of the piece's durability at its first repair; each repair it already had adds "
-        f"**{pct(penalty)}** to the ingots needed",
-        "Ingots for a full repair: " + " → ".join(f"**{n}**" for n in fulls) + " → …",
+        f"A first full repair takes **{pct(share)}** of the piece's recipe ingots (at least 1): "
+        + ", ".join(f"{item} **{n}**" for item, n in first.items())
+        + f"; each repair it already had adds **{pct(penalty)}** to the ingots needed",
         f"Anvil: **{num(r['anvil_iron'])}** iron ingots · **{pct(r['anvil_damage_chance'])}** chance to wear at each use",
     ]
 
