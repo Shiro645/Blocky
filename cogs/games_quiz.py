@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import time
@@ -9,12 +10,22 @@ from collections import deque
 import discord
 from discord.ext import commands, tasks
 
-from game import quiz, settings
+from game import botstate, quiz, settings
 from utils.config import channel_id
 from utils.ui import BaseView, em
 
 log = logging.getLogger("quiz")
 LETTERS = ("A", "B", "C", "D")
+OPEN_KEY = "open_quizzes"  # bot_state: the questions still open, closed at the next start if the bot restarts
+
+
+def _open(ctx, change=None) -> list[dict]:
+    """The open questions [{channel, message, answer}] (`change`: a function returning the new list)."""
+    items = json.loads(botstate.get(ctx, OPEN_KEY) or "[]")
+    if change is not None:
+        items = change(items)
+        botstate.put(ctx, OPEN_KEY, json.dumps(items) if items else None)
+    return items
 
 
 class QuizView(BaseView):
@@ -26,6 +37,7 @@ class QuizView(BaseView):
         super().__init__(timeout=None)
         self.seconds = seconds
         self.deadline = time.monotonic() + seconds
+        self.ends_at = int(time.time()) + seconds  # shown as a countdown
         self.cog, self.index, self.options, self.right = cog, index, options, right
         self.tried: set[int] = set()
         self.winner: discord.abc.User | None = None
@@ -36,7 +48,15 @@ class QuizView(BaseView):
         question = quiz.QUESTIONS[self.index][0]
         embed = discord.Embed(title="❓ Minecraft quiz", description=f"**{question}**", color=discord.Color.gold())
         embed.description += "\n\n" + "\n".join(f"**{LETTERS[i]}.** {text}" for i, text in enumerate(self.options))
+        if self.winner is None and not self.is_finished():
+            embed.description += f"\n\n⏳ Ends <t:{self.ends_at}:R> ({self.seconds} s to answer)"
         return embed
+
+    async def closed(self) -> None:
+        """The question is over: it's no longer to close at the next start."""
+        if self.message is not None:
+            mid = self.message.id
+            await self.cog.bot.db.run(_open, lambda items: [i for i in items if i["message"] != mid])
 
     def reveal(self) -> None:
         for item in self.children:
@@ -57,6 +77,7 @@ class QuizView(BaseView):
     async def on_timeout(self) -> None:
         if self.winner is not None:
             return
+        await self.closed()
         self.reveal()
         embed = self.embed()
         embed.color = discord.Color.dark_grey()
@@ -92,6 +113,7 @@ class AnswerButton(discord.ui.Button):
             return
         view.winner = interaction.user
         view.stop()
+        await view.closed()
         prize = await view.cog.bot.db.run(quiz.reward, interaction.user.id)
         view.reveal()
         embed = view.embed()
@@ -128,7 +150,25 @@ class QuizCog(commands.Cog):
         options, right = quiz.answers(self.rng, index)
         view = QuizView(self, index, options, right)
         view.message = await channel.send(embed=view.embed(), view=view)
+        entry = {"channel": view.message.channel.id, "message": view.message.id, "answer": options[right]}
+        await self.bot.db.run(_open, lambda items: items + [entry])
         view.start_clock()
+
+    async def close_left_open(self) -> None:
+        """Questions posted before a restart lost their buttons: close them with their answer."""
+        for item in await self.bot.db.run(_open, lambda items: []):
+            channel = self.bot.get_channel(item["channel"])
+            if not isinstance(channel, discord.abc.Messageable):
+                continue
+            try:
+                message = await channel.fetch_message(item["message"])
+                embed = message.embeds[0] if message.embeds else discord.Embed(title="❓ Minecraft quiz")
+                embed.color = discord.Color.dark_grey()
+                embed.description = (embed.description or "").split("\n\n⏳")[0]
+                embed.add_field(name="⌛ Closed", value=f"The bot restarted. The answer was **{item['answer']}**.")
+                await message.edit(embed=embed, view=None)
+            except discord.HTTPException:
+                log.warning("Could not close an old quiz question", exc_info=True)
 
     def schedule(self) -> None:
         g = settings.get()["games"]
@@ -159,6 +199,7 @@ class QuizCog(commands.Cog):
     @quiz_loop.before_loop
     async def before_quiz_loop(self):
         await self.bot.wait_until_ready()
+        await self.close_left_open()
 
 
 async def setup(bot: commands.Bot):

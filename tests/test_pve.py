@@ -163,6 +163,22 @@ class RunTests(GameTestCase):
         self.assertEqual((res["last"]["wave"], res["run"]["wave"]), (2, 2))
         self.assertFalse(any(pve.is_ready(res["run"], m) for m in res["run"]["in"]))  # ready again for wave 3
 
+    async def test_a_wave_not_cleared_asks_everyone_again(self):
+        """A wave stopped by the round limit is played again: nobody may stay "already ready" (it blocked)."""
+        from unittest import mock
+
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.join, run["run_id"], BOB)
+        await self.run_game(pve.start, run["run_id"], ALICE)
+        await self.run_game(pve.ready, run["run_id"], ALICE, 1)
+        stuck = {"cleared": False, "log": [], "deaths": [], "monsters": 3, "damage": {}}
+        with mock.patch.object(pve, "fight_wave", return_value=stuck):
+            res = await self.run_game(pve.ready, run["run_id"], BOB, 1)
+        self.assertEqual(res["run"]["wave"], 1)  # the same wave again
+        self.assertFalse(any(pve.is_ready(res["run"], m) for m in res["run"]["in"]))
+        res = await self.run_game(pve.ready, run["run_id"], ALICE, 1)  # no "already ready"
+        self.assertIsNone(res["last"])
+
     async def test_leaving_lets_the_others_go_on(self):
         run = await self.run_game(pve.create, ALICE, "easy")
         await self.run_game(pve.join, run["run_id"], BOB)
