@@ -535,6 +535,8 @@ def _play(ctx: Ctx, run: dict) -> dict:
         (wave if result["cleared"] else run["wave"], int(ctx.now + float(_cfg()["decision_minutes"]) * MINUTE),
          run["run_id"]),
     )
+    if not result["cleared"]:  # the same wave again: everyone must say they're ready again
+        ctx.execute("UPDATE pve_members SET ready_for=-1 WHERE run_id=?;", (run["run_id"],))
     run = get(ctx, run["run_id"])
     cleared_all = result["cleared"] and wave == len(WAVES)
     nether: list[int] = []  # the Nightmare's survivors open the Nether

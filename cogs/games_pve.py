@@ -206,6 +206,17 @@ class PveCog(commands.Cog):
     async def click(self, interaction: discord.Interaction, action: str, run_id: int, wave: int) -> None:
         db, uid = self.bot.db, interaction.user.id
         last = None
+        if action in ("ready", "next"):
+            current = await db.run(pve.get, run_id)
+            if current["status"] == "between" and current["wave"] != wave:
+                # This message is behind (its last update failed): show the run as it is now.
+                await interaction.response.send_message(
+                    "🔄 This message was behind: it's up to date now. Click **Ready** again.", ephemeral=True)
+                await self.refresh(current)
+                return
+        if action in ("start", "ready", "next"):
+            # Playing a wave can take a moment: answer Discord now (it allows 3 s), then update the message.
+            await interaction.response.defer()
         if action == "join":
             run = await db.run(pve.join, run_id, uid)
         elif action == "quit":
@@ -221,7 +232,7 @@ class PveCog(commands.Cog):
                 # Still waiting for others: keep the story of the last wave, only the players change.
                 embed = run_embed(run)
                 embed.title, embed.description = shown[0].title, shown[0].description
-                await interaction.response.edit_message(embed=embed, view=run_view(run))
+                await self.show(interaction, run, embed=embed)
                 return
         elif action == "leave":
             res = await db.run(pve.leave, run_id, uid)
@@ -238,8 +249,20 @@ class PveCog(commands.Cog):
             await interaction.response.send_message("Which potion?", view=PotionView(self, uid, run_id, owned),
                                                     ephemeral=True)
             return
-        await interaction.response.edit_message(embed=run_embed(run, last), view=run_view(run))
+        if interaction.response.is_done():
+            await self.show(interaction, run, last)
+        else:
+            await interaction.response.edit_message(embed=run_embed(run, last), view=run_view(run))
         await self.opened(last)
+
+    async def show(self, interaction: discord.Interaction, run: dict, last: dict | None = None,
+                   embed: discord.Embed | None = None) -> None:
+        """Update the run's message after a deferred click; if that fails, through the channel."""
+        try:
+            await interaction.edit_original_response(embed=embed or run_embed(run, last), view=run_view(run))
+        except discord.HTTPException:
+            log.warning("Could not update the dungeon message from the click: through the channel", exc_info=True)
+            await self.refresh(run, last if embed is None else None)
 
     async def opened(self, last: dict | None) -> None:
         """The Nightmare's survivors opened the Nether: they get its role."""
