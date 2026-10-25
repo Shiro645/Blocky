@@ -584,6 +584,9 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
         players.bump_stat(ctx, p.user_id, "monster_damage", int(round(p.damage)))  # the combat challenge
         pieces = gear.get_pieces(ctx, p.gear_ids)  # the pieces worn when the fight started
         sword = pieces.get("sword")
+        won = fight.result == "won" and p.alive
+        # The XP comes before this fight's wear: Mending only repairs what was worn before it.
+        mended = players.add_xp(ctx, p.user_id, int(c["xp"]))["mended"] if won else 0
         if sword and p.attacks:
             gear.wear(ctx, sword, p.attacks)
         for slot in ARMOR:
@@ -593,13 +596,12 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
             gear.wear_shield(ctx, pieces[SHIELD], p.blocks_used)
         if not p.alive:
             gear.vanish(ctx, pieces)  # the Curse of Vanishing
-        if fight.result != "won" or not p.alive:
+        if not won:
             continue
         opened = dimensions.unlock(ctx, p.user_id, b.opens)
         bounty = int(c["bounty"]) if opened else int(int(c["bounty"]) * float(_cfg()["repeat_reward"]))
         looting = int(bounty * enchants.effect(sword, "looting")) if sword else 0
         players.earn_emeralds(ctx, p.user_id, bounty + looting)
-        players.add_xp(ctx, p.user_id, int(c["xp"]))
         if ctx.rng.random() < float(ench["boss_mending_chance"]):
             book = ("mending", 1)  # the rarest book, now and then
             enchants.give_book(ctx, p.user_id, *book)
@@ -609,7 +611,7 @@ def _finish(ctx: Ctx, row: dict, fight: Fight) -> dict:
         players.bump_stat(ctx, p.user_id, "bosses_defeated")
         players.bump_stat(ctx, p.user_id, f"{row['boss']}_defeated")
         rewards[p.user_id] = {"opened": b.opens if opened else None, "bounty": bounty, "looting": looting,
-                              "book": enchants.label(*book), "xp": int(c["xp"])}
+                              "book": enchants.label(*book), "xp": int(c["xp"]), "mended": mended}
     # The first Wither ever beaten leaves a Nether Star: it lights the server's Beacon.
     lit = bool(fight.result == "won" and row["boss"] == "wither" and rewards
                and beacon.light(ctx, next(iter(rewards))))

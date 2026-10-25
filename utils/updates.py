@@ -469,4 +469,15 @@ UPDATES: tuple[Update, ...] = (
              "a new challenge counts the damage you deal to monsters (dungeon, night, bosses)."),
         ),
     ),
+    Update(
+        "2026-10-mending", "2026-10-25", "Mending fixed, Top lenders",
+        "Mending no longer eats the XP of a fight for nothing.",
+        (
+            ("🔧 Mending",
+             "The XP of a night monster or a gate boss comes before the fight wears your gear: Mending only repairs "
+             "what was already worn. When it takes XP, the message says how much."),
+            ("🏦 Top lenders",
+             "The Top senders leaderboard is now Top lenders: only loans count, not /pay."),
+        ),
+    ),
 )

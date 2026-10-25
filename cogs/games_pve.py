@@ -56,6 +56,8 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
             lines += last["result"]["log"][-12:]
             if last["result"]["cleared"] and not last["cleared_all"]:
                 lines.append(f"💰 +{em(last['reward'])} loot and +{last['xp']} XP each")
+            for uid, took in last.get("mended", {}).items():
+                lines.append(f"🔧 <@{uid}>: {took} XP repaired their gear (Mending)")
             if last["cleared_all"]:
                 lines.append(f"🏆 **The dungeon is cleared!** Loot +{float(c['clear_bonus']):.0%}, paid to everyone left.")
             if last.get("nether"):

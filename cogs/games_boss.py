@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from game import dimensions, gate, potions, settings
+from game import dimensions, gate, players, potions, settings
 from game.errors import GameError
 from utils.ui import BaseView, em, join_lines, potion_icon, report_error
 
@@ -74,7 +74,7 @@ def fight_embed(row: dict) -> discord.Embed:
             text = f"🏆 <@{uid}>: +{em(r['bounty'] + r['looting'])}"
             if r["looting"]:
                 text += f" (Looting +{em(r['looting'])})"
-            text += f", a **{r['book']}** book, +{r['xp']} XP"
+            text += f", a **{r['book']}** book, {players.xp_text(r['xp'], r.get('mended', 0))}"
             if r["opened"]:
                 text += f" · **the {dimensions.label(r['opened'])} opens!** (they go through: `/portal` to move)"
             lines.append(text)

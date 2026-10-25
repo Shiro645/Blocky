@@ -1,4 +1,4 @@
-"""Loans between players, the late penalty and collection, and the top senders board."""
+"""Loans between players, the late penalty and collection, and the top lenders board."""
 from __future__ import annotations
 
 from game import exchange, leaderboard, loans, players, reset, settings
@@ -191,14 +191,14 @@ class LateTests(LoanTestCase):
 
 
 class BoardAndResetTests(LoanTestCase):
-    async def test_top_senders_counts_pay_and_loans(self):
+    async def test_top_lenders_counts_only_loans(self):
         await self.run_game(exchange.pay, LENDER, OTHER, 100)
         await self.lend(500)
         await self.run_game(players.give_emeralds, OTHER, 1000)
         await self.run_game(exchange.pay, OTHER, LENDER, 50)
         await self.run_game(loans.repay, BORROWER, 100)  # repayments don't count
-        rows = await self.run_game(leaderboard.ranking, "sent")
-        self.assertEqual(rows, [(LENDER, 600), (OTHER, 50)])
+        rows = await self.run_game(leaderboard.ranking, "lent")
+        self.assertEqual(rows, [(LENDER, 500)])  # /pay doesn't count
 
     async def test_reset_cancels_the_loans(self):
         await self.lend(500)

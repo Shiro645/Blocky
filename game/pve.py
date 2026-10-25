@@ -518,6 +518,7 @@ def _play(ctx: Ctx, run: dict) -> dict:
     result = fight_wave(ctx.rng, heroes, wave, run["difficulty"])
     reward = int(round(wave_reward(run["difficulty"], wave) * biomes.multiplier(ctx, "dungeon_loot")))  # the Jungle
     xp = int(_cfg()["xp_per_wave"])
+    mended: dict[int, int] = {}  # XP Mending took, per player
     for hero in heroes:
         _save_hero(ctx, run["run_id"], hero)
         players.bump_stat(ctx, hero.user_id, "monster_damage", result["damage"].get(hero.user_id, 0))
@@ -528,7 +529,9 @@ def _play(ctx: Ctx, run: dict) -> dict:
         elif result["cleared"]:
             ctx.execute("UPDATE pve_members SET loot = loot + ? WHERE run_id=? AND user_id=?;",
                         (reward, run["run_id"], hero.user_id))
-            players.add_xp(ctx, hero.user_id, xp)
+            took = players.add_xp(ctx, hero.user_id, xp)["mended"]
+            if took:
+                mended[hero.user_id] = took
             players.bump_stat(ctx, hero.user_id, "pve_waves")
     ctx.execute(
         "UPDATE pve_runs SET wave=?, deadline=? WHERE run_id=?;",
@@ -549,7 +552,7 @@ def _play(ctx: Ctx, run: dict) -> dict:
                 nether.append(m["user_id"])
     run = _close_if_empty(ctx, run)
     return {"run": run, "wave": wave, "result": result, "reward": reward, "xp": xp, "cleared_all": cleared_all,
-            "nether": nether}
+            "nether": nether, "mended": mended}
 
 
 def leave(ctx: Ctx, run_id: int, user_id: int) -> dict:

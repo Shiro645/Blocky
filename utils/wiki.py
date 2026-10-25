@@ -194,7 +194,7 @@ SECTIONS: tuple[Section, ...] = (
         "at once. `/loan repay` pays back (all or part), `/loan list` shows what you owe and what you're owed, and "
         "`/loan forgive` cancels a debt. A **late** borrower pays a penalty, part of everything they earn goes to "
         "the lender until it's paid, and until then they can't pay, trade, buy or sell at the auction or take new loans.\n"
-        "The **Top senders** leaderboard ranks who sends and lends the most.",
+        "The **Top lenders** leaderboard ranks who lends the most (/pay doesn't count).",
         ("pay", "auction sell", "loan offer"),
     ),
     Section(
@@ -303,7 +303,7 @@ SECTIONS: tuple[Section, ...] = (
         "the blocks you mine (counted when mined), daily rewards, drops, bosses, challenges and the bonus when you "
         "sell. Spending doesn't lower it, and what other players give you doesn't count. At the end of the week "
         "the top 3 win emeralds and the winner gets the **champion role** until the next season ends.\n"
-        "**Leaderboards** (`/leaderboard`): emeralds, level, total fortune, this week's season, top senders, blocks "
+        "**Leaderboards** (`/leaderboard`): emeralds, level, total fortune, this week's season, top lenders, blocks "
         "mined, bedrock, crafts, duels won, boss damage and achievements.\n\n"
         "**Challenges** (`/challenges`): a few small goals **every day** and bigger ones **every week**, the same "
         "for everyone, with a reward each (and an enchanted book when you finish all the weekly ones). Mining, "

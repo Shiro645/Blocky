@@ -48,7 +48,7 @@ def claim(ctx: Ctx, user_id: int) -> dict:
         (streak, today.isoformat(), user_id),
     )
     players.earn_emeralds(ctx, user_id, emeralds)
-    players.add_xp(ctx, user_id, int(d["xp"]))
+    mended = players.add_xp(ctx, user_id, int(d["xp"]))["mended"]
     players.bump_stat(ctx, user_id, "daily_claims")
     players.set_stat_max(ctx, user_id, "best_streak", streak)
     return {
@@ -56,6 +56,7 @@ def claim(ctx: Ctx, user_id: int) -> dict:
         "emeralds": emeralds,
         "rested": rested,
         "xp": int(d["xp"]),
+        "mended": mended,
         "bonus_item": bonus_item,
         "next_reward": reward_for_streak(streak + 1),
         "lost_streak": user["daily_streak"] if streak == 1 and user["daily_streak"] > 1 else 0,

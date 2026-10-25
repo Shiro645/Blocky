@@ -1051,8 +1051,8 @@ PAGES: list[Page] = [
     # ---- trading ----
     Page(
         "pay", "trading",
-        "Sends emeralds to another player, instantly. Payments don't count for the seasons, but they count in "
-        "the **Top senders** leaderboard. Not possible while you have a late loan.",
+        "Sends emeralds to another player, instantly. Payments don't count for the seasons or the leaderboards. "
+        "Not possible while you have a late loan.",
         lambda s: [f"Minimum: {em(s['pay']['min_amount'])}"],
         examples=("/pay member:@Steve amount:100",),
         related=("trade", "loan offer"),
@@ -1061,7 +1061,7 @@ PAGES: list[Page] = [
         "loan offer", "trading",
         "Offers a loan to a player: the amount, the interest you ask (in %, 0 = free) and the days they have to "
         "repay. They accept or decline with the buttons (they still work after a restart); everything is checked "
-        "again when they accept, and the emeralds move at once. What you lend counts in the **Top senders** "
+        "again when they accept, and the emeralds move at once. What you lend counts in the **Top lenders** "
         "leaderboard.",
         _loans,
         examples=("/loan offer member:@Steve amount:1000 interest:10 days:3",),
@@ -1150,7 +1150,7 @@ PAGES: list[Page] = [
     Page(
         "leaderboard", "progress",
         "Shows a server ranking: emeralds, level, total fortune (everything you own, valued in emeralds), "
-        "this week's season, top senders (emeralds sent with /pay and lent with /loan), or a stat (blocks mined, "
+        "this week's season, top lenders (emeralds lent with /loan), or a stat (blocks mined, "
         "bedrock found, duels won, boss damage, achievements…).",
         examples=("/leaderboard", "/leaderboard board:Level"),
         related=("profile", "season"),
