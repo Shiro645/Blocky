@@ -7,7 +7,7 @@ from discord.ext import commands
 from game import anvil, enchanting_table, enchants, gear, settings, shop
 from game.catalog import GEAR_ITEMS, MATERIALS, RECIPES, gear_effect, materials_for
 from game.db import Ctx
-from utils.ui import EMOJI, em, gear_icon, gear_label, join_lines, mat, progress_bar, scrap_icon
+from utils.ui import EMOJI, anvil_icon, em, gear_icon, gear_label, join_lines, mat, progress_bar, scrap_icon, table_icon
 
 ITEM_CHOICES = [app_commands.Choice(name=i, value=i) for i in GEAR_ITEMS]
 CRAFT_CHOICES = ITEM_CHOICES + [
@@ -43,7 +43,7 @@ class EconomyCraftCog(commands.Cog):
         if res.get("enchanting_table"):
             books = ", ".join(enchants.label(n, lvl) for n, lvl in res["books"])
             return await interaction.response.send_message(
-                f"🪄 Crafted an **enchanting table**! Cost: {res['obsidian']} obsidian + {mat('diamond')} "
+                f"{table_icon()} Crafted an **enchanting table**! Cost: {res['obsidian']} obsidian + {mat('diamond')} "
                 f"{res['diamonds']} diamond ingots + your {books} book.\n"
                 "Use `/enchant table` on a piece without any enchantment: 1 to 3 random enchantments for lapis. "
                 "It never wears out."
@@ -85,12 +85,12 @@ class EconomyCraftCog(commands.Cog):
             note = f" *({', '.join(only)} only)*" if only != MATERIALS else ""
             lines.append(f"{gear_icon(item, 'iron')} **{item}** → " + " + ".join(cost) + note)
         iron = int(settings.get()["repair"]["anvil_iron"])
-        lines.append(f"🔨 **anvil** → {iron} ingot(s) *(iron only; needed to /repair and to combine books)*")
+        lines.append(f"{anvil_icon()} **anvil** → {iron} ingot(s) *(iron only; needed to /repair and to combine books)*")
         d = settings.get()["dimensions"]
         lines.append(f"🔥 **netherite ingot** → {scrap_icon()} {d['scraps_per_ingot']} netherite scraps + "
                      f"{d['gold_per_ingot']} gold ingots *(scraps: Ancient debris, mined in the Nether)*")
         lines.append("🔥 **netherite gear** → a diamond piece + 1 netherite ingot *(keeps its enchantments)*")
-        lines.append(f"🪄 **enchanting table** → {enchanting_table.recipe_text()} *(the least valuable book; never "
+        lines.append(f"{table_icon()} **enchanting table** → {enchanting_table.recipe_text()} *(the least valuable book; never "
                      "wears out; `/enchant table`)*")
 
         embed = discord.Embed(title="Crafting Recipes", description="\n".join(lines))
@@ -206,9 +206,9 @@ class EconomyCraftCog(commands.Cog):
         spare = [g for g in owned if not g["equipped"]]
         if spare:
             embed.add_field(name="Spare gear", value=join_lines([gear_label(g) for g in spare]), inline=False)
-        embed.add_field(name="🔨 Anvil", value=f"**{anvil.label(anvil_state)}**" if anvil_state
+        embed.add_field(name=f"{anvil_icon()} Anvil", value=f"**{anvil.label(anvil_state)}**" if anvil_state
                         else "None: `/craft item:anvil` to repair your gear", inline=False)
-        embed.add_field(name="🪄 Enchanting table", value="**Yes**: `/enchant table`" if table
+        embed.add_field(name=f"{table_icon()} Enchanting table", value="**Yes**: `/enchant table`" if table
                         else "None: `/craft item:enchanting_table`", inline=False)
         embed.set_footer(text="Gear wears out when used and breaks at 0 durability: /repair it with ingots on your anvil.")
         await interaction.response.send_message(embed=embed, ephemeral=True)

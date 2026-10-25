@@ -26,7 +26,7 @@ def gear_key(item: str, material: str) -> str:
 
 
 EXPECTED_NAMES: tuple[str, ...] = (
-    ("emerald", "stick", "xp", "lapis", "enchanted_book", "netherite_scrap")
+    ("emerald", "stick", "xp", "lapis", "enchanted_book", "netherite_scrap", "anvil", "enchanting_table")
     + ("potion_strength", "potion_speed", "potion_healing", "potion_harming")
     + MATERIALS
     + BLOCK_TYPES
