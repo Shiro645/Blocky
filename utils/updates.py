@@ -480,4 +480,15 @@ UPDATES: tuple[Update, ...] = (
              "The Top senders leaderboard is now Top lenders: only loans count, not /pay."),
         ),
     ),
+    Update(
+        "2026-10-inventory", "2026-10-25", "A tidier inventory",
+        "`/inventory` has pages and you can look at anyone's.",
+        (
+            ("📋 Pages",
+             "Overview, blocks (by dimension), resources, gear (equipped first) and books & potions: pick one in "
+             "the menu."),
+            ("👀 Public",
+             "`/inventory` is now shown to everyone, and `/inventory member:@someone` shows another player's."),
+        ),
+    ),
 )

@@ -57,7 +57,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Need one detail?** `/help` has a page for every command: its options, examples and numbers. "
         "`/help command:<name>` opens one directly. `/guide` shows your checklist of first steps.\n"
         "**Public or private?** Rewards (`/daily`, `/sell`, `/craft`, drops…) are shown in the channel. Personal "
-        "things (`/inventory`, `/gear`, `/xp`…) and errors are only shown to you. Buttons keep working after a "
+        "things (`/gear`, `/xp`…) and errors are only shown to you; `/inventory` is public, so you can show it off. Buttons keep working after a "
         "restart; an expired one tells you so.",
         ("guide",),
     ),
@@ -88,7 +88,8 @@ SECTIONS: tuple[Section, ...] = (
         "chance to upgrade the block), a shovel (more gravel or the like), Fortune (more blocks, and on the pickaxe a "
         "chance of a second ore), an axe (sticks), a hoe (more XP), the Efficiency enchantment and talent (shorter cooldown), "
         "the Miner and Lucky talents (better blocks), and the Miner species.\n\n"
-        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear. `/sell` sells your blocks: "
+        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear, in pages (anyone's: "
+        "`/inventory member:`). `/sell` sells your blocks: "
         "all of them, one kind (`block`) or a number of them (`amount`) (the Trader talent and the Villager species "
         "pay more). Rare blocks are worth much more than "
         "cobblestone. `/sell gear` sells a piece of gear back for part of its value, less when it's worn.\n"

@@ -811,10 +811,12 @@ PAGES: list[Page] = [
     ),
     Page(
         "inventory", "start",
-        "Shows everything you own: emeralds, blocks, sticks, ingots, lapis lazuli, enchanted books, potions "
-        "and your gear with its durability.",
+        "Shows everything you own, or another player's inventory (`member`), in a message everyone sees. The menu "
+        "below changes the page (only for the player who opened it): **Overview** (emeralds, total fortune, "
+        "dimension, equipped gear), **Blocks** (by dimension), **Resources** (ingots, scraps, lapis, sticks), "
+        "**Gear** (equipped first, with durability and enchantments) and **Books & potions**.",
         lambda s: [_block_values(s)],
-        examples=("/inventory",),
+        examples=("/inventory", "/inventory member:@Steve"),
         related=("sell", "gear", "enchant info", "potions"),
     ),
     Page(
