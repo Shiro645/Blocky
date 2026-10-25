@@ -27,3 +27,10 @@ Discord bot (discord.py + SQLite) for a Minecraft server. Runs in Docker on a UG
 - Read only the files the task needs (blocky-map); prefer grep and line ranges over whole files.
 - Delegate wide sweeps (audits, many text fixes) to a subagent so their reads stay out of the main context.
 - The README has no balance numbers on purpose: /help and the wiki are generated from `game/settings.py`.
+
+## Compacting the conversation
+- When the conversation is summarized (automatically or with /compact), keep: the open PRs and their state,
+  the decisions the owner made and the questions still waiting for them, the task in progress. Drop: file
+  contents, test and check outputs, simulation logs (they can be read or run again).
+- When the owner says a PR is merged and the conversation is already long, suggest in one line:
+  `/compact garde l'état des PR ouvertes et les décisions en cours`.
