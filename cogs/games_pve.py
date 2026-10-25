@@ -46,8 +46,9 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
         lines.append(f"<@{run['leader_id']}> opens a dungeon run. Entry: {em(entry)} each, up to "
                      f"**{c['max_players']}** players. Join with the button; the leader starts when ready "
                      f"(the group closes <t:{run['deadline']}:R>).")
-        lines.append("Health isn't restored between waves. Each wave cleared adds to your loot, "
-                     "but **if you die you lose it**: leave in time!")
+        lines.append(f"Made for **{pve.loot_players(diff)}** players: the monsters are the same whatever the group, "
+                     "and each wave's loot is shared by the survivors. Health isn't restored between waves. Each "
+                     "wave cleared adds to your loot, but **if you die you lose it**: leave in time!")
     elif run["status"] == "cancelled":
         lines.append("This group was cancelled: entries refunded.")
     else:
@@ -65,17 +66,17 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
                              + "! (`/dimensions`)")
         if run["status"] == "between":
             nxt = run["wave"] + 1
-            lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, len(run['in']), diff)} "
-                         f"(+{em(pve.wave_reward(diff, nxt))} each)")
+            lines.append(f"\n**Next: wave {nxt}/{len(pve.WAVES)}** — {pve.wave_text(nxt, diff)} "
+                         f"({em(pve.wave_pot(diff, nxt))} shared by the survivors)")
         elif run["status"] == "done" and last is None:
             lines.append("This run is over.")
     embed = discord.Embed(title=title, description=join_lines(lines, 4000), color=COLORS.get(run["status"]))
     members = [member_line(run, m) for m in run["members"]]
     embed.add_field(name=f"Players ({len(run['members'])}/{c['max_players']})", value=join_lines(members), inline=False)
     if run["status"] == "lobby":
-        waves = [f"{w}. {pve.wave_text(w)} — {em(pve.wave_reward(diff, w))}" for w in range(1, 6)]
+        waves = [f"{w}. {pve.wave_text(w, diff)} — {em(pve.wave_pot(diff, w))}" for w in range(1, 6)]
         waves.append(f"Clear all {len(pve.WAVES)}: loot +{float(c['clear_bonus']):.0%}")
-        embed.add_field(name="Waves (per player)", value="\n".join(waves), inline=False)
+        embed.add_field(name="Waves (loot shared by the survivors)", value="\n".join(waves), inline=False)
     elif run["status"] == "between":
         embed.set_footer(text="Everyone clicks Ready (✅) or leaves with their loot: the next wave starts when all "
                               "are ready. No answer in time = you leave with your loot. Anyone can drink a potion.")
@@ -153,9 +154,9 @@ class PotionView(BaseView):
 
 
 class PveCog(commands.Cog):
-    """/pve: a dungeon of 5 waves, alone or in a group."""
+    """/pve: a dungeon of 5 waves for a group."""
 
-    group = app_commands.Group(name="pve", description="Dungeon: 5 waves of monsters, alone or in a group.")
+    group = app_commands.Group(name="pve", description="Dungeon: 5 waves of monsters for a group.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -187,19 +188,21 @@ class PveCog(commands.Cog):
         for key in pve.DIFFICULTIES:
             d = c["difficulties"][key]
             total = sum(pve.wave_reward(key, w) for w in range(1, 6))
-            lines.append(f"{pve.label(key)} — entry {em(d['entry'])} · monsters ×{float(d['strength']):g} · "
-                         f"loot up to {em(round(total * (1 + float(c['clear_bonus']))))}")
-        waves = [f"{w}. {pve.wave_text(w)}" for w in range(1, 6)]
+            lines.append(f"{pve.label(key)} — entry {em(d['entry'])} · made for **{pve.loot_players(key)}** · "
+                         f"strength ×{float(d['strength']):g} · {pve.wave_text(1, key)} in wave 1 · "
+                         f"loot up to {em(round(total * (1 + float(c['clear_bonus']))))} each")
+        waves = [f"{w}. {pve.wave_text(w, 'normal')}" for w in range(1, 6)]
         embed = discord.Embed(
             title="⚔️ Dungeon",
             description=(
-                f"{len(pve.WAVES)} waves, alone or in a group (`/pve start`). Health isn't restored between waves. Each wave "
-                "cleared adds to your loot, but if you die you lose it (and the entry): leave in time! "
+                f"{len(pve.WAVES)} waves for a group (`/pve start`): the monsters are the same whatever the group, too "
+                "many for one player. Health isn't restored between waves. Each wave's loot is shared by the "
+                "survivors and adds to yours, but if you die you lose it (and the entry): leave in time! "
                 f"Clearing all {len(pve.WAVES)} gives +{float(c['clear_bonus']):.0%}.\n\n" + "\n".join(lines)
             ),
             color=discord.Color.blurple(),
         )
-        embed.add_field(name="Waves (per player)", value="\n".join(waves), inline=False)
+        embed.add_field(name=f"Waves ({pve.label('normal')})", value="\n".join(waves), inline=False)
         when = f"<t:{ready}:R>" if ready > discord.utils.utcnow().timestamp() else "now"
         embed.add_field(name="You can play", value=when, inline=True)
         await interaction.response.send_message(embed=embed, ephemeral=True)

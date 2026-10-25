@@ -717,16 +717,19 @@ def _pve(s: Settings) -> list[str]:
     for key, (name, emoji) in DUNGEON.items():
         d = p["difficulties"][key]
         loot = sum(round(int(r) * float(d["reward"])) for r in p["wave_rewards"])
-        lines.append(f"{emoji} **{name}**: entry {em(d['entry'])} · monsters ×{num(d['strength'])} · "
-                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))}")
+        zombies = max(1, round(3 * float(d["monsters"])))
+        lines.append(f"{emoji} **{name}**: entry {em(d['entry'])} · made for **{num(d['loot_players'])}** · "
+                     f"strength ×{num(d['strength'])} · {zombies} zombies in wave 1 · "
+                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))} each")
+    targets = int(p["harming_targets"])
     lines += [
         f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
-        f"Up to **{num(p['max_players'])}** players (each extra player: **+{pct(p['group_monsters'])}** monsters, "
-        f"**+{pct(p['difficulties']['nightmare'].get('group_monsters', p['group_monsters']))}** in Nightmare: a raid "
-        "for a full group) · "
-        "a run every "
+        f"Up to **{num(p['max_players'])}** players. The monsters are the same whatever the group; a wave's loot "
+        "is paid for the players it's made for and shared by the survivors · a run every "
         f"**{duration(float(p['cooldown_minutes']) * 60)}**",
-        f"**{num(p['max_potions'])}** potions per run · **{num(p['xp_per_wave'])}** XP per wave cleared · "
+        f"**{num(p['max_potions'])}** potion{'s' if int(p['max_potions']) != 1 else ''} per run (Harming hits "
+        + (f"**{targets}** monsters" if targets else "every monster") + ") · "
+        f"**{num(p['xp_per_wave'])}** XP per wave cleared · "
         f"**{duration(float(p['decision_minutes']) * 60)}** to decide between waves",
     ]
     return lines
@@ -1272,7 +1275,7 @@ PAGES: list[Page] = [
         "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
         "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
         "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
-        "(Harming hits every monster at its start). Potions come from drops and the villager.",
+        "(Harming hits a few monsters at its start). Potions come from drops and the villager.",
         _potions,
         examples=("/potions",),
         related=("duel", "pve start", "villager"),
@@ -1513,20 +1516,23 @@ PAGES: list[Page] = [
     Page(
         "pve start", "combat",
         "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
-        "a creeper that explodes if you don't kill it fast, and a Ravager at the end). Others can join with the "
-        "button (each pays the entry); the leader starts when ready. Each wave plays out on its own with your "
+        "a creeper that explodes if you don't kill it fast, and a Ravager at the end). It's made for a group: the "
+        "monsters are the same however many you are, too many for one player. Others join with the button (each "
+        "pays the entry); the leader starts when ready. Each wave plays out on its own with your "
         "gear (and species). Your health isn't restored between waves: between two waves, everyone clicks **Ready** "
         "or **leaves with their loot**, and the next wave starts by itself when all are ready (whoever doesn't "
         "answer in time leaves with their loot). Anyone can drink a potion (Healing heals now, the others help "
-        "during the next wave). Each wave cleared adds to your loot, but **if you die you lose it** and the entry. "
-        "Clearing wave 5 gives a bonus. Gear wears out like in duels.",
+        "during the next wave; Harming only hits a few monsters). Each wave's loot is shared by the survivors and "
+        "adds to yours, but **if you die you lose it** and the entry. Clearing wave 5 gives a bonus. Gear wears "
+        "out like in duels.",
         _pve,
         examples=("/pve start difficulty:🟡 Normal",),
         related=("pve info", "potions", "species choose"),
     ),
     Page(
         "pve info", "combat",
-        "Shows the difficulties (entry, monster strength, loot), the waves and when you can play again. "
+        "Shows the difficulties (entry, players it's made for, monsters, loot), the waves and when you can play "
+        "again. "
         "Only you see it.",
         _pve,
         examples=("/pve info",),

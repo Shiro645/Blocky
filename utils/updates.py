@@ -491,4 +491,18 @@ UPDATES: tuple[Update, ...] = (
              "`/inventory` is now shown to everyone, and `/inventory member:@someone` shows another player's."),
         ),
     ),
+    Update(
+        "2026-10-dungeon", "2026-10-25", "A dungeon for groups",
+        "The dungeon's monsters no longer grow with the group: come together.",
+        (
+            ("👥 Made for a group",
+             "Each difficulty has its own monsters, the same however many you are. Alone you won't make it: "
+             "Easy is for 3 players without gear, Normal for 3 in iron, Hard for 3 in diamond, Hardcore for 3 in "
+             "enchanted diamond, Nightmare for 5 in enchanted diamond."),
+            ("💰 Shared loot",
+             "Each wave's loot is shared by the survivors: more players is safer, but each one earns less."),
+            ("🧪 Potions",
+             "One potion per run, and it helps a lot. Harming now hits 3 monsters instead of all of them."),
+        ),
+    ),
 )

@@ -859,8 +859,8 @@ FIELDS: list[Field] = [
     _b("pve.decision_minutes", "pve", "Minutes to decide between waves",
        "Then everyone still in leaves with their loot.", min=1, max=60),
     _b("pve.max_potions", "pve", "Potions per player and run", "Reinforced (II) ones: see Potions.", max=20),
-    _pct("pve.group_monsters", "pve", "Monsters added per extra player",
-         "100% = each player in the group adds a whole wave of monsters.", max=5),
+    _b("pve.harming_targets", "pve", "Monsters a Harming potion hits", "At the start of the next wave "
+       "(0 = all of them).", max=100),
     _b("pve.min_hit_after_armor", "pve", "Smallest monster hit after armor", "Armor never lowers a hit below "
        "this.", kind="float", max=10),
     *[f for key, name in (("zombie", "Zombie"), ("skeleton", "Skeleton"), ("spider", "Spider"),
@@ -876,7 +876,8 @@ FIELDS: list[Field] = [
     _pct("pve.clear_bonus", "pve", "Bonus for clearing wave 5", "Added to the loot.", max=10),
     _b("pve.xp_per_wave", "pve", "XP per wave cleared", max=10_000),
     *[_b(f"pve.wave_rewards.{i}", "pve", f"Wave {i + 1} reward (× difficulty)",
-         "Emeralds for clearing this wave, multiplied by the difficulty's reward. Lost on death.")
+         "One player's emeralds for clearing this wave (× the difficulty's reward), in a group of its \"loot paid "
+         "for\". Shared between the survivors. Lost on death.")
       for i in range(5)],
     *[f for key, name in (("easy", "Easy"), ("normal", "Normal"), ("hard", "Hard"), ("hardcore", "Hardcore"),
                           ("nightmare", "Nightmare"))
@@ -884,12 +885,14 @@ FIELDS: list[Field] = [
           _b(f"pve.difficulties.{key}.entry", "pve", f"{name}: entry fee"),
           _b(f"pve.difficulties.{key}.strength", "pve", f"{name}: monster strength",
              "Multiplies the monsters' health and damage (Normal = 1).", kind="float", min=0.1, max=100),
+          _b(f"pve.difficulties.{key}.monsters", "pve", f"{name}: monsters (× each wave)",
+             "Multiplies every wave's base count (3 zombies in wave 1…). The same for any group.", kind="float",
+             min=0.1, max=20),
           _b(f"pve.difficulties.{key}.reward", "pve", f"{name}: reward multiplier",
              "Multiplies the wave rewards.", kind="float", min=0, max=1000),
+          _b(f"pve.difficulties.{key}.loot_players", "pve", f"{name}: loot paid for (players)",
+             "A wave's loot is this many players' reward, shared between the survivors.", min=1, max=10),
       )],
-    _pct("pve.difficulties.nightmare.group_monsters", "pve", "Nightmare: monsters added per extra player",
-         "Its own share (the others use \"Monsters added per extra player\"): lower = a raid for a full group.",
-         max=5),
     # ---- species ----
     _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),
     _b("species.change_days", "species", "Days between two changes", kind="float", max=365),

@@ -1,14 +1,18 @@
-"""PVE dungeon (/pve): 5 waves of monsters, alone or in a group of up to `max_players` (5).
+"""PVE dungeon (/pve): 5 waves of monsters for a group of up to `max_players` (5).
 
 - Waves: 1 zombies, 2 skeletons (they shoot before the first attack), 3 both,
   4 spiders (two bites a turn), a creeper (it explodes on its 2nd turn unless
   killed before) and a skeleton, 5 a mix with a Ravager. Every wave is
   `wave_growth` stronger than the previous one, and the difficulty multiplies
-  the monsters' health and damage. A group faces as many monsters per player.
+  the monsters' health and damage. The number of monsters is the difficulty's,
+  whatever the group: it's made for a group, never for one player.
+- The loot of a wave is paid for `loot_players` players and shared between the
+  survivors: a bigger group is safer, but each one gets less.
 - Health is not restored between waves. Each wave plays out automatically;
   between waves every member says they're ready (the next wave starts when they
   all are) or leaves with their loot, and anyone can drink a potion (it heals
-  now, or helps during the next wave). No answer in time = leaving with the loot.
+  now, or helps during the next wave; Harming hits `harming_targets` monsters).
+  No answer in time = leaving with the loot.
 - The loot of every wave cleared adds up, but a player who dies loses it (and
   the entry fee). Clearing wave 5 adds `clear_bonus` and pays everyone left.
 - Clearing the Nightmare difficulty opens the **Nether** to the members still there at the end of wave 5.
@@ -86,19 +90,16 @@ def label(difficulty: str) -> str:
     return f"{emoji} {name}"
 
 
-def wave_text(wave: int, players_count: int = 1, difficulty: str | None = None) -> str:
-    """'3 🧟 Zombie, 2 💀 Skeleton' for wave 1..5."""
-    return ", ".join(f"{group_count(n, players_count, difficulty)} {MONSTERS[k].emoji} {MONSTERS[k].name}"
+def wave_text(wave: int, difficulty: str) -> str:
+    """'10 🧟 Zombie, 7 💀 Skeleton' for wave 1..5."""
+    return ", ".join(f"{monster_count(n, difficulty)} {MONSTERS[k].emoji} {MONSTERS[k].name}"
                      for k, n in WAVES[wave - 1])
 
 
-def group_count(count: int, heroes: int, difficulty: str | None = None) -> int:
-    """How many of a wave's monsters a group of `heroes` faces: pve.group_monsters per extra player, or the
-    difficulty's own share (Nightmare: fewer, it's a raid for a full group)."""
-    c = _cfg()
-    per = float(c["difficulties"][difficulty].get("group_monsters", c["group_monsters"]) if difficulty
-                else c["group_monsters"])
-    return count + round(count * per * (max(1, heroes) - 1))
+def monster_count(count: int, difficulty: str) -> int:
+    """How many monsters of a kind a wave has: its base count times the difficulty's `monsters`, whatever the
+    group's size."""
+    return max(1, round(count * float(_cfg()["difficulties"][difficulty]["monsters"])))
 
 
 def strength(difficulty: str, wave: int) -> float:
@@ -108,7 +109,17 @@ def strength(difficulty: str, wave: int) -> float:
 
 
 def wave_reward(difficulty: str, wave: int) -> int:
+    """One player's loot for a wave, in a group of the difficulty's `loot_players`."""
     return round(int(_cfg()["wave_rewards"][wave - 1]) * float(_cfg()["difficulties"][difficulty]["reward"]))
+
+
+def loot_players(difficulty: str) -> int:
+    return max(1, int(_cfg()["difficulties"][difficulty]["loot_players"]))
+
+
+def wave_pot(difficulty: str, wave: int) -> int:
+    """The loot of a wave for the whole group, shared between its survivors."""
+    return wave_reward(difficulty, wave) * loot_players(difficulty)
 
 
 # ---------------- the fight ----------------
@@ -123,7 +134,7 @@ class Hero:
     potion_boost: float = 0.0  # Witches
     strength: float = 0.0  # next wave: minimum damage +X (Strength potion)
     speed: float = 0.0  # next wave: chance of a second hit (Speed potion)
-    harming: float = 0.0  # start of the next wave: damage to every monster (Harming potion)
+    harming: float = 0.0  # start of the next wave: damage to pve.harming_targets monsters (Harming potion)
     attacks: int = 0
     hits_taken: int = 0
     gear_ids: dict[str, int] = field(default_factory=dict)
@@ -170,12 +181,12 @@ def make_hero(ctx: Ctx, user_id: int) -> Hero:
                 fire=f.fire, thorns=f.thorns, sweep=gear.sweep(equipped))
 
 
-def spawn(wave: int, difficulty: str, heroes: int) -> list[Monster]:
+def spawn(wave: int, difficulty: str) -> list[Monster]:
     mult = strength(difficulty, wave)
     out = []
     for kind, count in WAVES[wave - 1]:
         k = MONSTERS[kind]
-        for _ in range(group_count(count, heroes, difficulty)):
+        for _ in range(monster_count(count, difficulty)):
             out.append(Monster(kind, k.hp * mult, (k.dmg[0] * mult, k.dmg[1] * mult), k.fuse))
     return out
 
@@ -195,7 +206,7 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
     d = settings.get()["duel"]
     crit_chance, crit_mult = float(d["crit_chance"]), float(d["crit_multiplier"])
     fighting = [h for h in heroes if h.alive]
-    monsters = spawn(wave, difficulty, len(fighting)) if monsters is None else monsters
+    monsters = spawn(wave, difficulty) if monsters is None else monsters
     log: list[str] = []
     deaths: list[int] = []
     kills: dict[int, int] = {h.user_id: 0 for h in fighting}
@@ -236,14 +247,17 @@ def fight_wave(rng: random.Random, heroes: list[Hero], wave: int, difficulty: st
                 return
             hurt(rng.choice(targets), rng.uniform(*m.dmg), m)
 
-    # A Harming potion drunk before the wave hits every monster.
+    # A Harming potion drunk before the wave hits pve.harming_targets monsters (0: all of them).
+    targets = int(_cfg()["harming_targets"])
     for hero in fighting:
         if hero.harming:
             alive = [m for m in monsters if m.alive]
-            for m in alive:
+            hit = rng.sample(alive, targets) if 0 < targets < len(alive) else alive
+            for m in hit:
                 strike(hero.user_id, m, hero.harming)
-            log.append(f"☠️ <@{hero.user_id}> throws a Harming potion: -{hero.harming:g} HP to every monster")
-            kills[hero.user_id] += sum(1 for m in alive if not m.alive)  # only the ones this potion killed
+            log.append(f"☠️ <@{hero.user_id}> throws a Harming potion: -{hero.harming:g} HP to "
+                       f"{len(hit)} monster{'s' if len(hit) != 1 else ''}")
+            kills[hero.user_id] += sum(1 for m in hit if not m.alive)  # only the ones this potion killed
     # Skeletons shoot first.
     for m in monsters:
         if m.alive and MONSTERS[m.kind].ranged:
@@ -516,7 +530,10 @@ def _play(ctx: Ctx, run: dict) -> dict:
     members = {m["user_id"]: m for m in run["in"]}
     heroes = [m["hero"] for m in run["in"]]
     result = fight_wave(ctx.rng, heroes, wave, run["difficulty"])
-    reward = int(round(wave_reward(run["difficulty"], wave) * biomes.multiplier(ctx, "dungeon_loot")))  # the Jungle
+    survivors = sum(1 for hero in heroes if hero.alive)
+    # The wave's loot, shared between the survivors (the Jungle adds to it).
+    pot = wave_pot(run["difficulty"], wave) * biomes.multiplier(ctx, "dungeon_loot")
+    reward = int(round(pot / max(1, survivors)))
     xp = int(_cfg()["xp_per_wave"])
     mended: dict[int, int] = {}  # XP Mending took, per player
     for hero in heroes:
@@ -602,7 +619,10 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
         effect = f"next wave: {hero.speed:.0%} chance to strike twice"
     else:
         hero.harming = potions.effect(key, "harming_damage") * boost
-        effect = f"next wave: -{hero.harming:g} HP to every monster at the start"
+        targets = int(_cfg()["harming_targets"])
+        effect = (f"next wave: -{hero.harming:g} HP to "
+                  + (f"{targets} monster{'s' if targets != 1 else ''}" if targets > 0 else "every monster")
+                  + " at the start")
     _save_hero(ctx, run_id, hero)
     ctx.execute(
         "UPDATE pve_members SET potions = potions + 1, strong_potion = strong_potion + ? WHERE run_id=? AND user_id=?;",
