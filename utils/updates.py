@@ -505,4 +505,16 @@ UPDATES: tuple[Update, ...] = (
              "One potion per run, and it helps a lot. Harming now hits 3 monsters instead of all of them."),
         ),
     ),
+    Update(
+        "2026-10-sleep", "2026-10-25", "Asleep means asleep",
+        "When you `/sleep`, you rest until the morning.",
+        (
+            ("💤 In bed",
+             "While you sleep, only the commands that look things up work: `/profile`, `/inventory`, "
+             "`/leaderboard`, `/time`, `/help`… The others wait for the morning."),
+            ("☀️ /wake",
+             "`/wake` gets you up early. The night no longer counts as slept: monsters may attack you, your next "
+             "`/daily` has no bonus, and you can't go back to bed that night."),
+        ),
+    ),
 )

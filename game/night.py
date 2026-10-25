@@ -7,7 +7,8 @@
 - A 👻 Phantom also comes every night, for a player who didn't sleep the night.phantom_nights nights before:
   stronger, a bigger reward, a bigger loss.
 - /sleep (once a night): no monster attacks you until the morning, and the next /daily pays night.sleep_daily_bonus
-  more.
+  more. Asleep, a player can only use the commands of SLEEP_OK (looking things up) and the staff commands;
+  /wake gets them up early, without the protection or the bonus, and they can't go back to bed that night.
 The nights are named after the date of their evening ("2026-10-19" = from the 19th at 22:00 to the 20th at 06:00).
 """
 from __future__ import annotations
@@ -88,6 +89,19 @@ def slots(ctx: Ctx, night: date) -> list[tuple[int, int, str]]:
 
 
 # ---------------- sleep ----------------
+# What a sleeping player may still use (qualified names, "group sub" for a subcommand): only commands that look
+# things up. A command missing here is refused while asleep, so a new command is safe by default. /market,
+# /villager and /auction browse stay out: their buy buttons would work in bed.
+SLEEP_OK = frozenset({
+    "help", "time", "sleep", "wake", "profile", "inventory", "gear", "craftlist", "xp", "talents", "potions",
+    "leaderboard", "achievements", "challenges", "season", "war", "events", "biome", "dimensions", "guide",
+    "server_status", "ip", "modpacks", "link_status",
+    "pve info", "boss info", "bounty list", "bounty info", "team info", "team top", "chest view", "auction mine",
+    "enchant table", "enchant info", "loan list", "tournament info", "tournament bracket", "blockdle today",
+    "blockdle top", "dummy top", "beacon info", "customize list", "species list",
+})
+
+
 def _since(ctx: Ctx) -> date:
     """The first night the bot counted (players who never slept are counted from it)."""
     saved = botstate.get(ctx, "night_since")
@@ -110,11 +124,34 @@ def sleep(ctx: Ctx, user_id: int) -> dict:
     user = players.get_user(ctx, user_id)
     if user["last_sleep"] == night.isoformat():
         raise GameError("You're already asleep. Sweet dreams! 💤")
+    if user.get("woke_night") == night.isoformat():
+        raise GameError("You got up this night: no going back to bed before tomorrow night.")
     if ctx.one("SELECT 1 FROM night_attacks WHERE target_id=? AND status='waiting';", (user_id,)):
         raise GameError("You may not rest now, there are monsters nearby! Fight it first.")
-    ctx.execute("UPDATE users SET last_sleep=? WHERE user_id=?;", (night.isoformat(), user_id))
+    ctx.execute("UPDATE users SET prev_sleep=last_sleep, last_sleep=? WHERE user_id=?;", (night.isoformat(), user_id))
     players.bump_stat(ctx, user_id, "nights_slept")
     return {"night": night.isoformat(), "dawn": next_change(ctx), "bonus": float(_cfg()["sleep_daily_bonus"])}
+
+
+def asleep_until(ctx: Ctx, user_id: int) -> int | None:
+    """When a sleeping player wakes up (the dawn), or None when they're awake."""
+    night = night_of(ctx)
+    if night is None:
+        return None
+    row = ctx.one("SELECT last_sleep FROM users WHERE user_id=?;", (user_id,))
+    return next_change(ctx) if row and row["last_sleep"] == night.isoformat() else None
+
+
+def wake(ctx: Ctx, user_id: int) -> dict:
+    """Get up before dawn: the night counts as not slept (monsters, Phantom, /daily bonus), and no going back."""
+    night = night_of(ctx)
+    user = players.get_user(ctx, user_id)
+    if night is None or user["last_sleep"] != night.isoformat():
+        raise GameError("You're not asleep.")
+    ctx.execute("UPDATE users SET last_sleep=prev_sleep, prev_sleep=NULL, woke_night=? WHERE user_id=?;",
+                (night.isoformat(), user_id))
+    players.bump_stat(ctx, user_id, "nights_slept", -1)
+    return {"dawn": next_change(ctx), "bonus": float(_cfg()["sleep_daily_bonus"])}
 
 
 def slept_before(user: dict, today: date) -> bool:
@@ -280,6 +317,7 @@ def status(ctx: Ctx, user_id: int) -> dict:
     if night is not None:
         out["slept"] = user["last_sleep"] == night.isoformat()
         out["awake"] = nights_awake(ctx, user, night)
+        out["woke"] = user.get("woke_night") == night.isoformat()
     else:
         out["rested"] = slept_before(user, ctx.today)
     row = ctx.one("SELECT attack_id FROM night_attacks WHERE target_id=? AND status='waiting';", (user_id,))

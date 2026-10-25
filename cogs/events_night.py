@@ -72,7 +72,7 @@ def fight_view(attack_id: int) -> discord.ui.View:
 
 
 class NightCog(commands.Cog):
-    """/time and /sleep: day and night, and the monsters of the night."""
+    """/time, /sleep and /wake: day and night, and the monsters of the night."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -94,7 +94,10 @@ class NightCog(commands.Cog):
             lines = [f"🌙 **It's night.** The sun rises <t:{st['change']}:R> (<t:{st['change']}:t>)."]
             if st["slept"]:
                 lines.append("💤 You're asleep: no monster comes for you, and tomorrow's `/daily` pays "
-                             f"+{float(c['sleep_daily_bonus']):.0%}.")
+                             f"+{float(c['sleep_daily_bonus']):.0%}. Only the commands that look things up "
+                             "work until dawn (`/wake` to get up).")
+            elif st.get("woke"):
+                lines.append("👀 You got up tonight: monsters may attack you, and no going back to bed.")
             else:
                 lines.append(f"👀 You're awake: monsters may attack you. `/sleep` to be safe (and +"
                              f"{float(c['sleep_daily_bonus']):.0%} on tomorrow's `/daily`).")
@@ -115,6 +118,13 @@ class NightCog(commands.Cog):
         await interaction.response.send_message(
             f"💤 Good night! No monster comes for you until <t:{res['dawn']}:t>, and your next `/daily` pays "
             f"+{res['bonus']:.0%}.", ephemeral=True)
+
+    @app_commands.command(name="wake", description="Get up before dawn: monsters can attack you again, no /daily bonus.")
+    async def wake(self, interaction: discord.Interaction):
+        res = await self.bot.db.run(night.wake, interaction.user.id)
+        await interaction.response.send_message(
+            f"☀️ You're up. Monsters may attack you until <t:{res['dawn']}:t>, your next `/daily` has no "
+            f"+{res['bonus']:.0%}, and you can't go back to bed tonight.", ephemeral=True)
 
     # ---------- activity (only active players are attacked) ----------
     async def note(self, user_id: int) -> None:

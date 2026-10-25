@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from game import restrictions, settings, shop
+from game import night, restrictions, settings, shop
 from game.db import Database
 from utils.announcer import Announcer
 from utils.config import CONFIG_PATH, balance_overrides, load_config, read_config_file, reload_config, staff_role_id
@@ -234,7 +234,27 @@ class Bot(commands.Bot):
             if interaction.type is not discord.InteractionType.autocomplete:
                 await self.tell_blocked(interaction, block)
             return False
-        return await self.in_its_place(interaction)
+        return await self.in_its_place(interaction) and await self.not_asleep(interaction)
+
+    async def not_asleep(self, interaction: discord.Interaction) -> bool:
+        """A sleeping player (/sleep) only looks things up (game/night.SLEEP_OK); staff commands always work."""
+        command = interaction.command
+        if command is None or not isinstance(command, app_commands.Command):
+            return True
+        if command.qualified_name in night.SLEEP_OK or is_staff_command(command) \
+                or is_staff_command(command.root_parent or command):
+            return True
+        dawn = await self.db.run(night.asleep_until, interaction.user.id)
+        if dawn is None:
+            return True
+        if interaction.type is not discord.InteractionType.autocomplete:
+            try:
+                await interaction.response.send_message(
+                    f"💤 You're asleep until <t:{dawn}:t>. `/wake` to get up (you lose the monster protection "
+                    "and tomorrow's `/daily` bonus).", ephemeral=True)
+            except discord.HTTPException:
+                pass
+        return False
 
     async def in_its_place(self, interaction: discord.Interaction) -> bool:
         """Each player command works in its channel (utils/routing.py); elsewhere the player is told where."""
