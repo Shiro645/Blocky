@@ -15,7 +15,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Gear**: `/craft` tools, weapons, armor and the shield; the anvil and `/repair`; netherite from the Nether.
 - **Enchanting**: books (I–VII), `/enchant apply` / `combine`, the enchanting table (`/enchant table`, with curses); combat enchantments (Fire Aspect, Thorns, Sweeping Edge).
 - **Progress**: XP and talents, achievements, daily and weekly challenges, species, prestige, profile cards (`/profile`, `/customize`), titles and frames.
-- **Fights**: duels with potions and shields, the training dummy, the weekend tournament, the PVE dungeon (`/pve`), night monsters (`/time`, `/sleep`), gate bosses (`/boss`) that open the next dimension, the server's Beacon.
+- **Fights**: duels with potions and shields, the training dummy, the weekend tournament, the PVE dungeon (`/pve`), night monsters (`/time`, `/sleep`, `/wake`), gate bosses (`/boss`) that open the next dimension, the server's Beacon.
 - **Teams**: teams and team seasons, team spaces, team chests with bonuses and defenses, the weekly gang war and turn-based raids, bounties.
 - **Games**: the casino (Lucky Block, the wheel, blackjack, mines), Blockdle, the Minecraft quiz, robberies (`/rob`).
 - **Events**: random drops, the wandering villager, timed events (Gambling Frenzy, Mining Rush…), the biome of the week, weekly seasons.

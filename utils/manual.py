@@ -473,7 +473,8 @@ def _night(s: Settings) -> list[str]:
         f"Lost or ignored: **{pct(n['loss'])}** of your emeralds ({em(n['loss_max'])} max) · Phantom "
         f"**{pct(n['phantom_loss'])}** ({em(n['phantom_loss_max'])} max), after {num(n['phantom_nights'])} nights "
         "without sleep",
-        f"/sleep: safe until morning · next /daily **+{pct(n['sleep_daily_bonus'])}**",
+        f"/sleep: safe until morning · next /daily **+{pct(n['sleep_daily_bonus'])}** · only look-up commands "
+        "until dawn (/wake to get up)",
     ]
 
 
@@ -1420,10 +1421,21 @@ PAGES: list[Page] = [
         "sleep", "events",
         "Goes to bed, at night only (once a night): no monster or Phantom attacks you until the morning, and your "
         "next `/daily` pays more. You can't sleep while a monster is attacking you: fight it first. Sleeping also "
-        "keeps the Phantoms away (they hunt the ones who don't sleep).",
+        "keeps the Phantoms away (they hunt the ones who don't sleep). While you sleep, only the commands that "
+        "look things up work (`/profile`, `/inventory`, `/leaderboard`, `/time`, `/help`…): the others wait for "
+        "the morning, or for `/wake`. The buttons of a game already open still work.",
         _night,
         examples=("/sleep",),
-        related=("time", "daily"),
+        related=("wake", "time", "daily"),
+    ),
+    Page(
+        "wake", "events",
+        "Gets you up before dawn, after a `/sleep`: every command works again, but the night no longer counts as "
+        "slept. Monsters and Phantoms may attack you until the morning, your next `/daily` has no bonus, and you "
+        "can't go back to bed that night.",
+        _night,
+        examples=("/wake",),
+        related=("sleep", "time"),
     ),
     Page(
         "biome", "events",

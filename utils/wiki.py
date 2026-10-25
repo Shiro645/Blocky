@@ -290,7 +290,9 @@ SECTIONS: tuple[Section, ...] = (
         "random player who didn't **`/sleep`**: you're pinged with a **Fight** button and fight it alone with your "
         "gear. Beat it for emeralds and XP; lose, or don't come in time, and it takes a few of your emeralds. A 👻 "
         "**Phantom** hunts the players who haven't slept for 3 nights. `/sleep` keeps you safe until the morning "
-        "and your next `/daily` pays 25% more.\n\n"
+        "and your next `/daily` pays 25% more, but until dawn you can only use the commands that look things up "
+        "(`/profile`, `/inventory`, `/leaderboard`…). **`/wake`** gets you up early, without the protection or the "
+        "bonus.\n\n"
         "**Drops**: when someone mines, a drop sometimes appears (emeralds, ingots, bedrock, lapis, a book, "
         "potions…). The **first player to click** gets it.\n\n"
 
@@ -298,7 +300,7 @@ SECTIONS: tuple[Section, ...] = (
         "below the value, a purchase of your blocks above the /sell price, and an exclusive (a level III book or a "
         "reinforced potion). Each offer exists **once**: the first to click gets it. `/villager` says when he's "
         "next here.",
-        ("events", "biome", "time", "sleep", "villager"),
+        ("events", "biome", "time", "sleep", "wake", "villager"),
     ),
     Section(
         "competition", "🏆 Seasons, challenges, achievements and leaderboards",

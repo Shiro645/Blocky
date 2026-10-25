@@ -779,6 +779,11 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN current_dimension TEXT;
     """,
+    # 44: /wake: the night slept before the current sleep (put back on waking), and the night the player got up
+    """
+    ALTER TABLE users ADD COLUMN prev_sleep TEXT;
+    ALTER TABLE users ADD COLUMN woke_night TEXT;
+    """,
 ]
 
 
