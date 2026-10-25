@@ -71,6 +71,14 @@ def scrap_icon() -> str:
     return EMOJI.get("netherite_scrap") or "🔩"
 
 
+def anvil_icon() -> str:
+    return EMOJI.get("anvil") or "🔨"
+
+
+def table_icon() -> str:
+    return EMOJI.get("enchanting_table") or "🪄"
+
+
 def asset_icon(key: str) -> str:
     """Emoji for an asset key of game/assets.py ('' if none)."""
     parts = key.split(":")
