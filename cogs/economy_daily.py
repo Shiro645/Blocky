@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import daily, settings
+from game import daily, players, settings
 from utils.ui import EMOJI, em, mat
 
 
@@ -19,7 +19,7 @@ class DailyCog(commands.Cog):
 
         flames = "🔥" * min(res["streak"], cap)
         lines = [
-            f"+{em(res['emeralds'])}  ·  +{res['xp']} XP {EMOJI['xp']}".rstrip(),
+            f"+{em(res['emeralds'])}  ·  {players.xp_text(res['xp'], res.get('mended', 0))} {EMOJI['xp']}".rstrip(),
             f"Streak: **{res['streak']} day{'s' if res['streak'] > 1 else ''}** {flames}",
         ]
         if res.get("rested"):

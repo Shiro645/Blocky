@@ -235,6 +235,8 @@ def fight(ctx: Ctx, attack_id: int, user_id: int) -> dict:
     hero = pve.make_hero(ctx, user_id)
     result = pve.fight_wave(ctx.rng, [hero], 1, "normal", [_monster(a["kind"])])
     players.bump_stat(ctx, user_id, "monster_damage", result["damage"].get(user_id, 0))
+    # The XP comes before this fight's wear: Mending only repairs what was worn before it.
+    mended = players.add_xp(ctx, user_id, int(_cfg()["xp"]))["mended"] if result["cleared"] else 0
     pieces = gear.get_pieces(ctx, hero.gear_ids)
     if pieces.get("sword") and hero.attacks:
         gear.wear(ctx, pieces["sword"], hero.attacks)
@@ -244,13 +246,14 @@ def fight(ctx: Ctx, attack_id: int, user_id: int) -> dict:
     if result["cleared"]:
         amount = reward(a["kind"])
         players.earn_emeralds(ctx, user_id, amount)
-        players.add_xp(ctx, user_id, int(_cfg()["xp"]))
         players.bump_stat(ctx, user_id, "phantoms_defeated" if a["kind"] == PHANTOM else "night_monsters_defeated")
         status = "won"
     else:
         amount = _loss(ctx, user_id, a["kind"])
         status = "lost"
     log = result["log"][-6:] + [f"❤️ <@{user_id}>: {hero.hp:.1f} HP left"]
+    if result["cleared"]:
+        log.append(players.xp_text(int(_cfg()["xp"]), mended))
     ctx.execute("UPDATE night_attacks SET status=?, amount=?, log=? WHERE attack_id=?;",
                 (status, amount, json.dumps(log), attack_id))
     return get(ctx, attack_id)

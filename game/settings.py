@@ -356,7 +356,7 @@ DEFAULTS: dict[str, Any] = {
         "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of the rarest blocks (obsidian, bedrock…) when mining
         "market_sale_discount": 0.25,  # Market Sale: /market costs this much less
     },
-    # PVE dungeon (/pve): 5 waves, alone or in a group. Health isn't restored between waves; the loot of
+    # PVE dungeon (/pve): 5 waves for a group. Health isn't restored between waves; the loot of
     # every wave cleared adds up but is lost on death. Monsters' health and damage: x strength of the
     # difficulty, +wave_growth every wave. Wave rewards (emeralds, waves 1 to 5) are multiplied by the
     # difficulty's reward; clearing wave 5 adds clear_bonus.
@@ -366,10 +366,9 @@ DEFAULTS: dict[str, Any] = {
         "cooldown_minutes": 60,
         "lobby_minutes": 5,  # a group not started by then is cancelled (entries refunded)
         "decision_minutes": 5,  # between waves: no decision by then = everyone leaves with their loot
-        "max_potions": 3,  # per player and per run (reinforced II ones: potions.strong_per_fight)
+        "max_potions": 1,  # per player and per run (reinforced II ones: potions.strong_per_fight)
+        "harming_targets": 3,  # monsters a Harming potion hits at the start of the next wave (0 = all of them)
         "wave_growth": 0.10,
-        # Each extra player in the group adds this share of every wave's monsters (1 = a whole wave more).
-        "group_monsters": 1.0,
         "min_hit_after_armor": 0.1,  # armor never lowers a monster's hit below this
         # Health and damage of each monster at strength 1 (Normal); difficulty and wave_growth multiply them.
         "monsters": {
@@ -382,17 +381,19 @@ DEFAULTS: dict[str, Any] = {
         "clear_bonus": 0.5,
         "xp_per_wave": 15,
         "wave_rewards": [25, 40, 60, 90, 135],
-        # Calibrated (solo, no potions, all 5 waves): Easy ~98% with iron gear; Normal ~90% diamond;
-        # Hard ~80% netherite; Hardcore ~80% enchanted netherite. Nightmare is a raid: its monsters are much
-        # stronger but each extra player adds fewer of them (its own group_monsters), so a group of 5 in
-        # diamond with Protection III and Sharpness III clears it ~35% of the time (4 players or fewer ~0-2%,
-        # 5 in the same netherite gear ~68%).
+        # Each difficulty has a fixed number of monsters, whatever the group: `monsters` multiplies every wave's
+        # base count (3 zombies in wave 1...). The loot of a wave is paid for `loot_players` players and shared
+        # between the survivors. Calibrated, all 5 waves, no potion / 1 potion each:
+        # Easy: 3 players without gear ~70% / ~99% (2 players 0%). Normal: 3 in iron ~65% / ~99% (5 without gear
+        # 100%). Hard: 3 in diamond ~60% / ~98% (5 in iron 100%). Hardcore: 3 in diamond with Sharpness and
+        # Protection III ~65% / ~98% (5 in diamond 100%). Nightmare: 5 in enchanted diamond (III) ~65% / ~100%
+        # (4 players 0%, 5 in plain diamond 0% / ~15%). Alone: 0% everywhere, even in netherite.
         "difficulties": {
-            "easy": {"entry": 30, "strength": 0.85, "reward": 1.0},
-            "normal": {"entry": 75, "strength": 1.0, "reward": 2.5},
-            "hard": {"entry": 200, "strength": 1.13, "reward": 6.0},
-            "hardcore": {"entry": 500, "strength": 1.26, "reward": 14.0},
-            "nightmare": {"entry": 1200, "strength": 2.64, "reward": 32.0, "group_monsters": 0.5},
+            "easy": {"entry": 30, "strength": 0.77, "monsters": 3.0, "reward": 1.0, "loot_players": 3},
+            "normal": {"entry": 75, "strength": 0.99, "monsters": 3.0, "reward": 2.5, "loot_players": 3},
+            "hard": {"entry": 200, "strength": 1.1, "monsters": 3.0, "reward": 6.0, "loot_players": 3},
+            "hardcore": {"entry": 500, "strength": 1.29, "monsters": 3.0, "reward": 14.0, "loot_players": 3},
+            "nightmare": {"entry": 1200, "strength": 1.55, "monsters": 4.5, "reward": 32.0, "loot_players": 5},
         },
     },
     # Gate bosses (/boss, game/gate.py): the Wither opens the End, the Ender Dragon the Deep Dark, the Warden the
@@ -781,7 +782,9 @@ def get() -> dict[str, Any]:
 _FREE_KEYS = {("moderation", "warn_mutes"), ("villager", "buys")}
 # Settings that existed once: an old config.json may still have them, they're ignored without a warning.
 _RETIRED = {("challenges", "goals", "boss_damage"), ("challenges", "daily_goals", "boss_damage"),
-            ("repair", "durability_per_ingot"), ("challenges", "daily_goals", "find_bedrock")}
+            ("repair", "durability_per_ingot"), ("challenges", "daily_goals", "find_bedrock"),
+            # 2.3: a fixed number of monsters per difficulty, whatever the group.
+            ("pve", "group_monsters"), ("pve", "difficulties", "nightmare", "group_monsters")}
 # Lists that grew in an update (enchantments: levels I-III, then I-VII): an older, shorter override keeps its
 # values and gets the defaults for the rest.
 _GROWN = {("enchants", k) for k in ("apply_cost", "efficiency_seconds", "fortune_bonus", "fortune_hoe_xp",

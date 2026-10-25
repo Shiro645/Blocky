@@ -319,14 +319,17 @@ def _spent_talent_points(user: dict) -> int:
 
 
 def add_xp(ctx: Ctx, user_id: int, amount: int, mending: bool = True) -> dict:
-    """XP earned by playing. With Mending gear, it repairs that gear first (`mending=False`: the staff's XP)."""
+    """XP earned by playing. With Mending gear, it repairs that gear first (`mending=False`: the staff's XP).
+    The player's row comes back with "mended": the XP Mending took."""
+    mended = 0
     if mending and amount > 0:
         from game import gear  # here: gear depends on this module
 
-        amount = gear.mend(ctx, user_id, amount)
+        left = gear.mend(ctx, user_id, amount)
+        mended, amount = amount - left, left
     user = get_user(ctx, user_id)
     if amount <= 0:
-        return user
+        return {**user, "mended": mended}
     xp, level = user["xp"] + amount, user["level"]
     while xp >= xp_required_for_level(level):
         xp -= xp_required_for_level(level)
@@ -339,7 +342,14 @@ def add_xp(ctx: Ctx, user_id: int, amount: int, mending: bool = True) -> dict:
     if level > user["level"]:
         ctx.notices.append(LevelUp(user_id, user["level"], level, gained))
         _stat_changed(ctx, user_id, "level", 0)
-    return get_user(ctx, user_id)
+    return {**get_user(ctx, user_id), "mended": mended}
+
+
+def xp_text(xp: int, mended: int) -> str:
+    """'+15 XP', or '+5 XP (🔧 10 XP repaired your gear: Mending)'."""
+    if not mended:
+        return f"+{xp} XP"
+    return f"+{xp - mended} XP (🔧 {mended} XP repaired your gear: Mending)"
 
 
 def set_xp(ctx: Ctx, user_id: int, xp: int) -> dict:

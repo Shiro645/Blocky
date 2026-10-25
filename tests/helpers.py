@@ -25,7 +25,11 @@ LEGACY_ECONOMY = {
     "games": {"quiz_reward": 50},
     "biomes": {"challenge_reward": 250},
     "beacon": {"level_ingots": [81, 225, 441, 729], "contributor_value": 200},
-    "pve": {"wave_rewards": [5, 8, 12, 18, 27]},
+    "pve": {"wave_rewards": [5, 8, 12, 18, 27],
+            # Before 2.3: one wave of monsters per player (here: a solo player's) and the loot paid per player.
+            "max_potions": 3, "harming_targets": 0,
+            "difficulties": {k: {"strength": s, "monsters": 1.0, "loot_players": 1} for k, s in
+                             (("easy", 0.85), ("normal", 1.0), ("hard", 1.13), ("hardcore", 1.26), ("nightmare", 2.64))}},
 }
 _NEW_ACHIEVEMENT_REWARDS = {"iron_set": 100, "diamond_set": 300, "netherite_set": 1000, "handyman_10": 100,
                             "beacon_builder": 500}

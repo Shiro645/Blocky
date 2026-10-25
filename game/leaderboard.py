@@ -15,7 +15,7 @@ BOARDS: dict[str, tuple[str, str]] = {
     "obsidian_found": ("Obsidian found", ""),
     "items_crafted": ("Items crafted", ""),
     "duels_won": ("Duels won", ""),
-    "sent": ("Top senders (/pay + loans)", "emerald"),
+    "lent": ("Top lenders (/loan)", "emerald"),
     "tournaments_won": ("Tournaments won", ""),
     "boss_damage": ("Boss damage", ""),
     "beacon_value": ("Beacon builders (emeralds' worth given)", "emerald"),
@@ -51,12 +51,9 @@ def ranking(ctx: Ctx, board: str) -> list[tuple[int, int]]:
         return [(r["user_id"], r["n"]) for r in rows]
     if board == "season":
         return seasons.standings(ctx, ctx.week_id)
-    if board == "sent":
+    if board == "lent":  # /pay doesn't count: only loans
         rows = ctx.all(
-            """
-            SELECT user_id, SUM(value) AS v FROM stats WHERE stat IN ('emeralds_sent', 'emeralds_lent') AND value > 0
-            GROUP BY user_id ORDER BY v DESC, user_id;
-            """
+            "SELECT user_id, value AS v FROM stats WHERE stat='emeralds_lent' AND value > 0 ORDER BY v DESC, user_id;"
         )
         return [(r["user_id"], r["v"]) for r in rows]
     if board == "fortune":

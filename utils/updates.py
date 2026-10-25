@@ -469,4 +469,40 @@ UPDATES: tuple[Update, ...] = (
              "a new challenge counts the damage you deal to monsters (dungeon, night, bosses)."),
         ),
     ),
+    Update(
+        "2026-10-mending", "2026-10-25", "Mending fixed, Top lenders",
+        "Mending no longer eats the XP of a fight for nothing.",
+        (
+            ("🔧 Mending",
+             "The XP of a night monster or a gate boss comes before the fight wears your gear: Mending only repairs "
+             "what was already worn. When it takes XP, the message says how much."),
+            ("🏦 Top lenders",
+             "The Top senders leaderboard is now Top lenders: only loans count, not /pay."),
+        ),
+    ),
+    Update(
+        "2026-10-inventory", "2026-10-25", "A tidier inventory",
+        "`/inventory` has pages and you can look at anyone's.",
+        (
+            ("📋 Pages",
+             "Overview, blocks (by dimension), resources, gear (equipped first) and books & potions: pick one in "
+             "the menu."),
+            ("👀 Public",
+             "`/inventory` is now shown to everyone, and `/inventory member:@someone` shows another player's."),
+        ),
+    ),
+    Update(
+        "2026-10-dungeon", "2026-10-25", "A dungeon for groups",
+        "The dungeon's monsters no longer grow with the group: come together.",
+        (
+            ("👥 Made for a group",
+             "Each difficulty has its own monsters, the same however many you are. Alone you won't make it: "
+             "Easy is for 3 players without gear, Normal for 3 in iron, Hard for 3 in diamond, Hardcore for 3 in "
+             "enchanted diamond, Nightmare for 5 in enchanted diamond."),
+            ("💰 Shared loot",
+             "Each wave's loot is shared by the survivors: more players is safer, but each one earns less."),
+            ("🧪 Potions",
+             "One potion per run, and it helps a lot. Harming now hits 3 monsters instead of all of them."),
+        ),
+    ),
 )

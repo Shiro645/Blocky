@@ -57,7 +57,7 @@ SECTIONS: tuple[Section, ...] = (
         "**Need one detail?** `/help` has a page for every command: its options, examples and numbers. "
         "`/help command:<name>` opens one directly. `/guide` shows your checklist of first steps.\n"
         "**Public or private?** Rewards (`/daily`, `/sell`, `/craft`, drops…) are shown in the channel. Personal "
-        "things (`/inventory`, `/gear`, `/xp`…) and errors are only shown to you. Buttons keep working after a "
+        "things (`/gear`, `/xp`…) and errors are only shown to you; `/inventory` is public, so you can show it off. Buttons keep working after a "
         "restart; an expired one tells you so.",
         ("guide",),
     ),
@@ -88,7 +88,8 @@ SECTIONS: tuple[Section, ...] = (
         "chance to upgrade the block), a shovel (more gravel or the like), Fortune (more blocks, and on the pickaxe a "
         "chance of a second ore), an axe (sticks), a hoe (more XP), the Efficiency enchantment and talent (shorter cooldown), "
         "the Miner and Lucky talents (better blocks), and the Miner species.\n\n"
-        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear. `/sell` sells your blocks: "
+        "**Your blocks**: `/inventory` shows them, with your emeralds, items and gear, in pages (anyone's: "
+        "`/inventory member:`). `/sell` sells your blocks: "
         "all of them, one kind (`block`) or a number of them (`amount`) (the Trader talent and the Villager species "
         "pay more). Rare blocks are worth much more than "
         "cobblestone. `/sell gear` sells a piece of gear back for part of its value, less when it's worn.\n"
@@ -194,7 +195,7 @@ SECTIONS: tuple[Section, ...] = (
         "at once. `/loan repay` pays back (all or part), `/loan list` shows what you owe and what you're owed, and "
         "`/loan forgive` cancels a debt. A **late** borrower pays a penalty, part of everything they earn goes to "
         "the lender until it's paid, and until then they can't pay, trade, buy or sell at the auction or take new loans.\n"
-        "The **Top senders** leaderboard ranks who sends and lends the most.",
+        "The **Top lenders** leaderboard ranks who lends the most (/pay doesn't count).",
         ("pay", "auction sell", "loan offer"),
     ),
     Section(
@@ -224,13 +225,15 @@ SECTIONS: tuple[Section, ...] = (
         "`/pve start <difficulty>` opens a run of **5 waves** of monsters: 🧟 zombies, then 💀 skeletons (they "
         "shoot before you attack), both together, 🕷️ spiders (two bites a turn) with a 🟩 creeper (it explodes on "
         "its 2nd turn unless you kill it first) and a skeleton, then a mix with a 🐂 ravager.\n"
-        "Play **alone or in a group**: others join with the button (each pays the entry, refunded if they leave "
-        "before the start) and the leader starts. Each wave plays out on its own with your gear and species; the "
+        "It's made for a **group**: each difficulty has its monsters, the same however many you are, so alone you "
+        "won't make it. Others join with the button (each pays the entry, refunded if they leave before the "
+        "start) and the leader starts. Each wave's loot is paid for the group the difficulty is made for and "
+        "shared by the survivors: more players is safer, but each one earns less. Each wave plays out on its own with your gear and species; the "
         "message shows the fight, everyone's health and the loot.\n\n"
         "**Health isn't restored between waves.** Between two waves everyone clicks **Ready** or **leaves with "
         "their loot**: the next wave starts by itself when all are ready, and whoever doesn't answer in time "
         "leaves with their loot. Anyone can drink a potion (Healing heals now, Strength and Speed help in the "
-        "next wave, Harming hits every monster). Each wave cleared adds to your loot, but **if you die you lose it** and the "
+        "next wave, Harming hits a few monsters). Each wave cleared adds to your loot, but **if you die you lose it** and the "
         "entry. Clearing all 5 waves pays a bonus. Gear wears out like in duels. `/pve info` shows the difficulties "
         "and when you can play again.",
         ("pve start",),
@@ -303,7 +306,7 @@ SECTIONS: tuple[Section, ...] = (
         "the blocks you mine (counted when mined), daily rewards, drops, bosses, challenges and the bonus when you "
         "sell. Spending doesn't lower it, and what other players give you doesn't count. At the end of the week "
         "the top 3 win emeralds and the winner gets the **champion role** until the next season ends.\n"
-        "**Leaderboards** (`/leaderboard`): emeralds, level, total fortune, this week's season, top senders, blocks "
+        "**Leaderboards** (`/leaderboard`): emeralds, level, total fortune, this week's season, top lenders, blocks "
         "mined, bedrock, crafts, duels won, boss damage and achievements.\n\n"
         "**Challenges** (`/challenges`): a few small goals **every day** and bigger ones **every week**, the same "
         "for everyone, with a reward each (and an enchanted book when you finish all the weekly ones). Mining, "

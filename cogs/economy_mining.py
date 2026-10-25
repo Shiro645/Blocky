@@ -6,22 +6,116 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from game import dimensions, enchants, mining, players, settings, shop
-from game.catalog import BLOCK_TYPES, DIMENSION_BLOCKS, block_name
+from game import dimensions, enchants, leaderboard, mining, players, settings, shop
+from game.catalog import BLOCK_TYPES, DIMENSION_BLOCKS, DIMENSIONS, GEAR_ITEMS, MATERIALS, block_name
 from game.db import Ctx
 from game.errors import GameError
 from utils.config import channel_ids
-from utils.ui import EMOJI, ConfirmView, block_icon, em, gear_label, item_label, join_lines, scrap_icon
+from utils.ui import EMOJI, BaseView, ConfirmView, block_icon, em, gear_label, item_label, join_lines, scrap_icon
 
 
-def _inventory(ctx: Ctx, user_id: int) -> dict:
+def _inventory(ctx: Ctx, user_id: int, viewer_id: int) -> dict:
+    if user_id != viewer_id and ctx.one("SELECT 1 FROM users WHERE user_id=?;", (user_id,)) is None:
+        raise GameError(f"<@{user_id}> hasn't played yet.")
     return {
         "blocks": players.get_blocks(ctx, user_id),
         "items": players.get_items(ctx, user_id),
         "gear": shop.get_gear(ctx, user_id),
         "emeralds": players.get_emeralds(ctx, user_id),
-        "dimension_blocks": {b for d in dimensions.unlocked(ctx, user_id) for b in DIMENSION_BLOCKS[d]},
+        "unlocked": dimensions.unlocked(ctx, user_id),
+        "dimension": dimensions.current(ctx, user_id),
+        "fortune": leaderboard.fortunes(ctx).get(user_id, 0),
     }
+
+
+INVENTORY_PAGES = {
+    "overview": ("📋", "Overview"),
+    "blocks": ("🧱", "Blocks"),
+    "resources": ("⛏️", "Resources"),
+    "gear": ("⚔️", "Gear"),
+    "books": ("📚", "Books & potions"),
+}
+RESOURCES = ("ingot", "scrap", "lapis", "stick")
+
+
+def _gear_order(g: dict) -> tuple:
+    return (not g["equipped"], GEAR_ITEMS.index(g["item"]) if g["item"] in GEAR_ITEMS else 99,
+            -MATERIALS.index(g["material"]) if g["material"] in MATERIALS else 0, g["gear_id"])
+
+
+def _items_of(inv: dict, kinds: tuple[str, ...]) -> list[str]:
+    def order(entry):
+        (item, material), _ = entry
+        tier = MATERIALS.index(material) if material in MATERIALS else 0
+        return kinds.index(item), tier, material
+    mine = [entry for entry in inv["items"].items() if entry[0][0] in kinds]
+    return [item_label(item, material, amount) for (item, material), amount in sorted(mine, key=order)]
+
+
+def inventory_embed(inv: dict, member: discord.abc.User, page: str) -> discord.Embed:
+    """One page of a player's inventory."""
+    emoji, name = INVENTORY_PAGES[page]
+    embed = discord.Embed(title=f"{member.display_name}'s Inventory · {emoji} {name}", color=discord.Color.dark_green())
+    blocks_value = sum(amount * players.block_value(b) for b, amount in inv["blocks"].items())
+    if page == "overview":
+        count = lambda kinds: sum(a for (item, _), a in inv["items"].items() if item in kinds)
+        equipped = [g for g in inv["gear"] if g["equipped"]]
+        embed.description = (
+            f"{EMOJI['emerald']} **{inv['emeralds']:,}** emeralds\n".lstrip()
+            + f"💰 Total fortune: {em(inv['fortune'])} (blocks {em(blocks_value)})\n"
+            + f"📍 In the {dimensions.label(inv['dimension'])}\n\n"
+            + f"🧱 {sum(inv['blocks'].values()):,} blocks · ⛏️ {count(RESOURCES):,} resources · "
+            + f"⚔️ {len(inv['gear'])} pieces of gear · 📚 {count(('book',))} books · 🧪 {count(('potion',))} potions"
+        )
+        embed.add_field(name="Equipped", inline=False, value=join_lines(
+            [gear_label(g) for g in sorted(equipped, key=_gear_order)], empty="Nothing equipped."))
+    elif page == "blocks":
+        for dimension in DIMENSIONS:
+            if dimension not in inv["unlocked"] and not any(inv["blocks"].get(b) for b in DIMENSION_BLOCKS[dimension]):
+                continue  # a dimension they haven't reached
+            lines = [f"{block_icon(b)} **{block_name(b)}**: {inv['blocks'].get(b, 0):,} ({em(players.block_value(b))} each)"
+                     for b in DIMENSION_BLOCKS[dimension]]
+            embed.add_field(name=dimensions.label(dimension), value=join_lines(lines), inline=False)
+        embed.set_footer(text=f"Sell value: {blocks_value:,} emeralds")
+    elif page == "resources":
+        embed.description = join_lines(_items_of(inv, RESOURCES), limit=4096, empty="No resources yet.")
+    elif page == "gear":
+        pieces = sorted(inv["gear"], key=_gear_order)
+        embed.add_field(name="🟢 Equipped", inline=False, value=join_lines(
+            [gear_label(g) for g in pieces if g["equipped"]], empty="Nothing equipped."))
+        embed.add_field(name="▫️ In the chest", inline=False, value=join_lines(
+            [gear_label(g) for g in pieces if not g["equipped"]], empty="Nothing else."))
+    else:
+        embed.add_field(name="📚 Books", inline=False, value=join_lines(_items_of(inv, ("book",)), empty="No books."))
+        embed.add_field(name="🧪 Potions", inline=False, value=join_lines(_items_of(inv, ("potion",)), empty="No potions."))
+    return embed
+
+
+class InventoryView(BaseView):
+    """The pages of an inventory: only the player who opened it changes the page."""
+
+    def __init__(self, cog: "EconomyMiningCog", viewer_id: int, member: discord.abc.User, page: str = "overview"):
+        super().__init__(allowed_ids={viewer_id}, timeout=300)
+        self.cog, self.viewer_id, self.member = cog, viewer_id, member
+        self.add_item(InventoryPageSelect(page))
+
+
+class InventoryPageSelect(discord.ui.Select):
+    view: InventoryView
+
+    def __init__(self, current: str):
+        options = [discord.SelectOption(label=name, value=key, emoji=emoji, default=key == current)
+                   for key, (emoji, name) in INVENTORY_PAGES.items()]
+        super().__init__(placeholder="Choose a page…", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        inv = await view.cog.bot.db.run(_inventory, view.member.id, view.viewer_id)
+        page = self.values[0]
+        new = InventoryView(view.cog, view.viewer_id, view.member, page)
+        new.message = view.message
+        view.stop()  # the old menu must not come back when it times out
+        await interaction.response.edit_message(embed=inventory_embed(inv, view.member, page), view=new)
 
 
 ORE_ICONS = {"gold": "🟨", "iron": "⬜", "diamond": "💎", "emerald": "💚"}  # when no custom emoji is set
@@ -84,33 +178,16 @@ class EconomyMiningCog(commands.Cog):
             except discord.HTTPException:
                 pass
 
-    @app_commands.command(name="inventory", description="Show your blocks, emeralds, items and gear.")
-    async def inventory(self, interaction: discord.Interaction):
-        inv = await self.bot.db.run(_inventory, interaction.user.id)
-
-        lines, total_value = [], 0
-        for block, amount in inv["blocks"].items():
-            if not amount and block not in inv["dimension_blocks"]:
-                continue  # blocks of dimensions they haven't reached
-            value = players.block_value(block)
-            total_value += amount * value
-            lines.append(f"{block_icon(block)} **{block_name(block)}**: {amount} ({em(value)} each)")
-
-        embed = discord.Embed(
-            title=f"{interaction.user.display_name}'s Inventory",
-            description="\n".join(lines),
-            color=discord.Color.dark_green(),
-        )
-        embed.add_field(name=f"{EMOJI['emerald']} Emeralds".strip(), value=f"{inv['emeralds']:,}", inline=True)
-        embed.add_field(name="Blocks sell value", value=em(total_value), inline=True)
-
-        item_lines = [item_label(item, material, amount) for (item, material), amount in sorted(inv["items"].items())]
-        embed.add_field(name="Items", value=join_lines(item_lines, empty="No items yet."), inline=False)
-
-        gear_lines = [("🟢 " if g["equipped"] else "▫️ ") + gear_label(g) for g in inv["gear"]]
-        embed.add_field(name="Gear (🟢 equipped)", value=join_lines(gear_lines, empty="No gear yet."), inline=False)
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    @app_commands.command(name="inventory", description="Show your inventory, or another player's (everyone sees it).")
+    @app_commands.describe(member="Whose inventory (empty = yours)")
+    async def inventory(self, interaction: discord.Interaction, member: discord.Member | None = None):
+        member = member or interaction.user
+        if member.bot:
+            raise GameError("Bots don't have an inventory.")
+        inv = await self.bot.db.run(_inventory, member.id, interaction.user.id)
+        view = InventoryView(self, interaction.user.id, member)
+        await interaction.response.send_message(embed=inventory_embed(inv, member, "overview"), view=view)
+        view.message = await interaction.original_response()
 
     async def gear_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[int]]:
         """The player's pieces with what each one sells for."""
