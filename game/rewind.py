@@ -20,8 +20,8 @@ def piece_refund(piece: dict) -> int:
     """What a piece was worth new: its recipe at the market prices and its books (a netherite piece made before
     the 2.0 was crafted with netherite ingots, like the others)."""
     ingots, sticks = RECIPES[piece["item"]]
-    books = sum(shop.item_value("book", enchants.book_material(name, level)) for name, level in piece["enchants"].items())
-    return round(ingots * shop.ingot_value(piece["material"]) + sticks * shop.stick_value() + books)
+    return round(ingots * shop.ingot_value(piece["material"]) + sticks * shop.stick_value()
+                 + shop.books_value(piece["enchants"]))
 
 
 def _listing_refund(listing: dict) -> int | None:

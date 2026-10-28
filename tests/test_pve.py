@@ -268,3 +268,45 @@ class RunTests(GameTestCase):
         self.assertEqual(await self.emeralds(BOB), 1000)  # the group never started: refunded
         self.assertEqual(await self.emeralds(ALICE), 970 + pve.wave_pot("easy", 1))  # left with the loot
         self.assertEqual((await self.run_game(pve.get, lobby["run_id"]))["status"], "cancelled")
+
+
+class LapisTests(GameTestCase):
+    legacy_economy = False
+    overrides = {"pve": {"difficulties": {"easy": {"strength": 0.1, "lapis_chance": 1.0, "lapis": [2, 2]}}},
+                 "challenges": {"per_day": 0}}
+
+    async def test_survivors_find_lapis_and_keep_it(self):
+        for uid in (ALICE, BOB):
+            await self.run_game(players.give_emeralds, uid, 1000)
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.join, run["run_id"], BOB)
+        res = await self.run_game(pve.start, run["run_id"], ALICE)
+        self.assertEqual(res["lapis"], {ALICE: 2, BOB: 2})
+        for uid in (ALICE, BOB):
+            self.assertEqual(await self.run_game(players.item_amount, uid, "lapis", "none"), 2)
+            self.assertEqual((await self.run_game(players.get_stats, uid)).get("lapis_found"), 2)
+
+    async def test_no_chance_no_lapis(self):
+        settings.load({"pve": {"difficulties": {"easy": {"strength": 0.1, "lapis_chance": 0.0}}}})
+        await self.run_game(players.give_emeralds, ALICE, 1000)
+        run = await self.run_game(pve.create, ALICE, "easy")
+        res = await self.run_game(pve.start, run["run_id"], ALICE)
+        self.assertEqual(res["lapis"], {})
+
+    def test_harder_gives_more_lapis(self):
+        diffs = settings.DEFAULTS["pve"]["difficulties"]
+        mean = [diffs[k]["lapis_chance"] * sum(diffs[k]["lapis"]) / 2 for k in pve.DIFFICULTIES]
+        self.assertEqual(mean, sorted(mean))
+
+
+class ExpireRunTests(GameTestCase):
+    overrides = {"pve": {"difficulties": {"easy": {"strength": 0.3}}}, "challenges": {"per_day": 0}}
+
+    async def test_a_click_before_the_loop_wins(self):
+        await self.run_game(players.give_emeralds, ALICE, 1000)
+        run = await self.run_game(pve.create, ALICE, "easy")
+        await self.run_game(pve.start, run["run_id"], ALICE)
+        self.advance(5 * MINUTE)
+        self.assertEqual(await self.run_game(pve.expired), [run["run_id"]])
+        await self.run_game(pve.leave, run["run_id"], ALICE)  # clicked just before the loop got the run
+        self.assertIsNone(await self.run_game(pve.expire_run, run["run_id"]))

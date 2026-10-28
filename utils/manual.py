@@ -721,7 +721,8 @@ def _pve(s: Settings) -> list[str]:
         zombies = max(1, round(3 * float(d["monsters"])))
         lines.append(f"{emoji} **{name}**: entry {em(d['entry'])} · made for **{num(d['loot_players'])}** · "
                      f"strength ×{num(d['strength'])} · {zombies} zombies in wave 1 · "
-                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))} each")
+                     f"loot up to {em(round(loot * (1 + float(p['clear_bonus']))))} each · "
+                     f"lapis {pct(d['lapis_chance'])} per wave ({num(d['lapis'][0])}–{num(d['lapis'][1])})")
     targets = int(p["harming_targets"])
     lines += [
         f"**{num(p['hp'])}** HP, not restored between waves · monsters **+{pct(p['wave_growth'])}** each wave",
@@ -765,7 +766,7 @@ PAGES: list[Page] = [
         "its options, its current numbers (they follow the server settings), examples and related commands.\n"
         "You can also open a page directly with the `command` option. It works in every channel.\n"
         "**Where commands go** (when the staff set the channels): 🎰 /luckyblock, /wheel, /blackjack and /mines in "
-        "the casino; 🌀 /pve, /boss, /portal and /dimensions in the portal channel; 💬 every other command "
+        "the casino; 🌀 /dungeon, /boss, /portal and /dimensions in the portal channel; 💬 every other command "
         "(/rob too) in the commands channel. A command typed elsewhere tells you where it goes; "
         "in your guide channel everything works.",
         examples=("/help", "/help command:duel", "/help command:mining"),
@@ -1275,11 +1276,11 @@ PAGES: list[Page] = [
         "potions", "combat",
         "Shows your potions and what they do. In duels (not in the tournament): on your turn, drink one from "
         "the menu, then attack; the effect lasts for that turn (Speed lasts a few turns). In the dungeon "
-        "(/pve), drink them between waves: Healing heals at once, the others help during the next wave "
+        "(/dungeon), drink them between waves: Healing heals at once, the others help during the next wave "
         "(Harming hits a few monsters at its start). Potions come from drops and the villager.",
         _potions,
         examples=("/potions",),
-        related=("duel", "pve start", "villager"),
+        related=("duel", "dungeon start", "villager"),
     ),
     Page(
         "challenges", "progress",
@@ -1329,7 +1330,7 @@ PAGES: list[Page] = [
         "(sometimes Mending) and XP; the fallen get nothing. Gear wears out like in duels.",
         _gate,
         examples=("/boss fight boss:🖤 Wither",),
-        related=("boss info", "dimensions", "pve start", "enchant combine"),
+        related=("boss info", "dimensions", "dungeon start", "enchant combine"),
     ),
     Page(
         "beacon info", "progress",
@@ -1358,7 +1359,7 @@ PAGES: list[Page] = [
         "boss info", "combat",
         "Shows the gate bosses: where each one lives, what it opens, its entry and bounty, the ones you already "
         "beat, how each one fights, and when you can fight again. The Nether opens by clearing the **Nightmare** "
-        "dungeon (/pve start).",
+        "dungeon (/dungeon start).",
         _gate,
         examples=("/boss info",),
         related=("boss fight", "dimensions"),
@@ -1526,7 +1527,7 @@ PAGES: list[Page] = [
         related=("blockdle guess",),
     ),
     Page(
-        "pve start", "combat",
+        "dungeon start", "combat",
         "Opens a dungeon run: 5 waves of monsters (zombies, then skeletons that shoot first, both, spiders and "
         "a creeper that explodes if you don't kill it fast, and a Ravager at the end). It's made for a group: the "
         "monsters are the same however many you are, too many for one player. Others join with the button (each "
@@ -1535,20 +1536,21 @@ PAGES: list[Page] = [
         "or **leaves with their loot**, and the next wave starts by itself when all are ready (whoever doesn't "
         "answer in time leaves with their loot). Anyone can drink a potion (Healing heals now, the others help "
         "during the next wave; Harming only hits a few monsters). Each wave's loot is shared by the survivors and "
-        "adds to yours, but **if you die you lose it** and the entry. Clearing wave 5 gives a bonus. Gear wears "
+        "adds to yours, but **if you die you lose it** and the entry. Each survivor of a cleared wave sometimes finds "
+        "lapis lazuli: that one stays yours even if you die later. Clearing wave 5 gives a bonus. Gear wears "
         "out like in duels.",
         _pve,
-        examples=("/pve start difficulty:🟡 Normal",),
-        related=("pve info", "potions", "species choose"),
+        examples=("/dungeon start difficulty:🟡 Normal",),
+        related=("dungeon info", "potions", "species choose"),
     ),
     Page(
-        "pve info", "combat",
+        "dungeon info", "combat",
         "Shows the difficulties (entry, players it's made for, monsters, loot), the waves and when you can play "
         "again. "
         "Only you see it.",
         _pve,
-        examples=("/pve info",),
-        related=("pve start",),
+        examples=("/dungeon info",),
+        related=("dungeon start",),
     ),
     Page(
         "rob", "games",
@@ -2077,7 +2079,7 @@ PAGES: list[Page] = [
         "claim is undone: claiming again gives today's reward once more, the streak doesn't grow twice). The "
         "member gets a DM and the staff channel keeps a trace.",
         examples=("/player cooldowns member:@Steve", "/player cooldowns member:@Steve timer:Robbing again"),
-        related=("rob", "daily", "pve start"),
+        related=("rob", "daily", "dungeon start"),
     ),
     # ---- staff: events ----
     Page(

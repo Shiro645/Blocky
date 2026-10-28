@@ -15,7 +15,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 - **Gear**: `/craft` tools, weapons, armor and the shield; the anvil and `/repair`; netherite from the Nether.
 - **Enchanting**: books (I–VII), `/enchant apply` / `combine`, the enchanting table (`/enchant table`, with curses); combat enchantments (Fire Aspect, Thorns, Sweeping Edge).
 - **Progress**: XP and talents, achievements, daily and weekly challenges, species, prestige, profile cards (`/profile`, `/customize`), titles and frames.
-- **Fights**: duels with potions and shields, the training dummy, the weekend tournament, the PVE dungeon (`/pve`), night monsters (`/time`, `/sleep`, `/wake`), gate bosses (`/boss`) that open the next dimension, the server's Beacon.
+- **Fights**: duels with potions and shields, the training dummy, the weekend tournament, the PVE dungeon (`/dungeon`), night monsters (`/time`, `/sleep`, `/wake`), gate bosses (`/boss`) that open the next dimension, the server's Beacon.
 - **Teams**: teams and team seasons, team spaces, team chests with bonuses and defenses, the weekly gang war and turn-based raids, bounties.
 - **Games**: the casino (Lucky Block, the wheel, blackjack, mines), Blockdle, the Minecraft quiz, robberies (`/rob`).
 - **Events**: random drops, the wandering villager, timed events (Gambling Frenzy, Mining Rush…), the biome of the week, weekly seasons.
@@ -25,7 +25,7 @@ It connects to the Minecraft server through **RCON** to manage the whitelist, sh
 ### 🗂️ Where commands work
 Each player command works in its own channel, set in `/config` → Channels:
 - 🎰 the **casino** (`channels.casino`): the games of chance;
-- 🌀 the **portal** (`channels.portal`): `/pve`, `/boss`, `/portal`, `/dimensions`;
+- 🌀 the **portal** (`channels.portal`): `/dungeon`, `/boss`, `/portal`, `/dimensions`;
 - 💬 the **commands** channel (`channels.commands`): everything else (`/rob` too; the robbery the bot posts goes to `channels.robberies`).
 
 Staff commands, `/help` and the guide channels work everywhere. A channel that isn't set lets its commands work anywhere. Typed in the wrong place, a command answers where it goes.
@@ -63,7 +63,7 @@ Copy `config.example.json` to `config.json` and fill in your values:
 | `channels.robberies` | Robberies channel: every robbery is posted there with its *Stop the thief!* button (0 = where `/rob` is used; `/rob` itself is typed in the commands channel) |
 | `channels.market` | Market channel: the bot keeps two messages there, always up to date: the market (fixed prices) then every auction listing, each with a menu to buy |
 | `channels.casino` | Casino channels: `/luckyblock`, `/wheel`, `/blackjack` and `/mines` only work there (empty = anywhere). The old `channels.games` is moved here at the first start |
-| `channels.portal` | Portal channels: `/pve`, `/boss`, `/portal` and `/dimensions` only work there (empty = anywhere) |
+| `channels.portal` | Portal channels: `/dungeon`, `/boss`, `/portal` and `/dimensions` only work there (empty = anywhere) |
 | `channels.commands` | Commands channels: every other player command only works there (empty = anywhere) |
 | `channels.updates` | Updates channel: each new Blocky feature is announced there once, after the bot is updated (0 = the announcements wait) |
 | `channels.wiki` | Wiki channel: the bot keeps every feature explained there, with the current numbers (0 = no wiki) |

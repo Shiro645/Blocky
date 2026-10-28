@@ -135,7 +135,7 @@ def guide_pages() -> list[discord.Embed]:
             f"**Duels.** `/duel <member> <stake>`: both bet the same emeralds (at least {s['duel']['min_stake']}) and "
             "the winner takes it all. On your turn: drink a potion if you want, then **Attack** (or **Attack + block** "
             "with a shield). Potions (`/potions`): Strength, Speed, Healing, Harming.\n"
-            f"**Dungeon.** `/pve start <difficulty>`: 5 waves of monsters, alone or with up to "
+            f"**Dungeon.** `/dungeon start <difficulty>`: 5 waves of monsters, alone or with up to "
             f"{max(0, int(s['pve']['max_players']) - 1)} friends, from "
             f"{em(easy)} to enter. Health isn't restored between waves: leave with your loot in time, or lose it.\n"
             "**Dimensions and gate bosses.** Clear the Nightmare dungeon to open the Nether, then beat the Wither, the "

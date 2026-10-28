@@ -190,7 +190,7 @@ class GateBossCog(commands.Cog):
             return dimensions.level(ctx, interaction.user.id), gate.ready_at(ctx, interaction.user.id)
 
         level, ready = await self.bot.db.run(load)
-        lines = [f"🌋 **Nether**: clear the 💀 Nightmare dungeon (`/pve start`): the survivors of wave 5 open it."]
+        lines = [f"🌋 **Nether**: clear the 💀 Nightmare dungeon (`/dungeon start`): the survivors of wave 5 open it."]
         for b in gate.BOSSES.values():
             bc = gate.boss_cfg(b.key)
             if level > dimensions.level_of(b.home):

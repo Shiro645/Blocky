@@ -356,7 +356,7 @@ DEFAULTS: dict[str, Any] = {
         "lucky_rare_multiplier": 2.0,  # Lucky Hour: weight of the rarest blocks (obsidian, bedrock…) when mining
         "market_sale_discount": 0.25,  # Market Sale: /market costs this much less
     },
-    # PVE dungeon (/pve): 5 waves for a group. Health isn't restored between waves; the loot of
+    # PVE dungeon (/dungeon): 5 waves for a group. Health isn't restored between waves; the loot of
     # every wave cleared adds up but is lost on death. Monsters' health and damage: x strength of the
     # difficulty, +wave_growth every wave. Wave rewards (emeralds, waves 1 to 5) are multiplied by the
     # difficulty's reward; clearing wave 5 adds clear_bonus.
@@ -388,12 +388,19 @@ DEFAULTS: dict[str, Any] = {
         # 100%). Hard: 3 in diamond ~60% / ~98% (5 in iron 100%). Hardcore: 3 in diamond with Sharpness and
         # Protection III ~65% / ~98% (5 in diamond 100%). Nightmare: 5 in enchanted diamond (III) ~65% / ~100%
         # (4 players 0%, 5 in plain diamond 0% / ~15%). Alone: 0% everywhere, even in netherite.
+        # Lapis: each survivor of a cleared wave finds lapis_chance of the time `lapis` (min, max), kept even if
+        # they die later (a full Normal run ~2.5 lapis, Nightmare ~10).
         "difficulties": {
-            "easy": {"entry": 30, "strength": 0.77, "monsters": 3.0, "reward": 1.0, "loot_players": 3},
-            "normal": {"entry": 75, "strength": 0.99, "monsters": 3.0, "reward": 2.5, "loot_players": 3},
-            "hard": {"entry": 200, "strength": 1.1, "monsters": 3.0, "reward": 6.0, "loot_players": 3},
-            "hardcore": {"entry": 500, "strength": 1.29, "monsters": 3.0, "reward": 14.0, "loot_players": 3},
-            "nightmare": {"entry": 1200, "strength": 1.55, "monsters": 4.5, "reward": 32.0, "loot_players": 5},
+            "easy": {"entry": 30, "strength": 0.77, "monsters": 3.0, "reward": 1.0, "loot_players": 3,
+                     "lapis_chance": 0.2, "lapis": [1, 2]},
+            "normal": {"entry": 75, "strength": 0.99, "monsters": 3.0, "reward": 2.5, "loot_players": 3,
+                     "lapis_chance": 0.25, "lapis": [1, 3]},
+            "hard": {"entry": 200, "strength": 1.1, "monsters": 3.0, "reward": 6.0, "loot_players": 3,
+                     "lapis_chance": 0.3, "lapis": [2, 3]},
+            "hardcore": {"entry": 500, "strength": 1.29, "monsters": 3.0, "reward": 14.0, "loot_players": 3,
+                     "lapis_chance": 0.35, "lapis": [2, 4]},
+            "nightmare": {"entry": 1200, "strength": 1.55, "monsters": 4.5, "reward": 32.0, "loot_players": 5,
+                     "lapis_chance": 0.5, "lapis": [3, 5]},
         },
     },
     # Gate bosses (/boss, game/gate.py): the Wither opens the End, the Ender Dragon the Deep Dark, the Warden the
@@ -1011,6 +1018,11 @@ def _cross_checks(merged: dict) -> list[tuple[str, list[tuple[str, ...]]]]:
     lo, hi = merged["enchants"]["lapis_amount"]
     if lo > hi:
         out.append(("`balance.enchants.lapis_amount`: the first value is the minimum, the second the maximum.", [("enchants", "lapis_amount")]))
+    for key, diff in merged["pve"]["difficulties"].items():
+        lo, hi = diff["lapis"]
+        if lo > hi:
+            out.append((f"`balance.pve.difficulties.{key}.lapis`: the first value is the minimum, the second the "
+                        "maximum.", [("pve", "difficulties", key, "lapis")]))
 
     # Weights picked at random: all at 0 would make the draw fail (a challenge reward, a boss, a block…).
     ench = merged["enchants"]

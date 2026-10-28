@@ -107,7 +107,7 @@ class EnchantCog(commands.Cog):
         embed = discord.Embed(
             title="✨ Enchanting",
             description=(
-                f"{lapis_icon()} You have **{data['lapis']} lapis lazuli** (found while mining).\n"
+                f"{lapis_icon()} You have **{data['lapis']} lapis lazuli** (found while mining and in the dungeon).\n"
                 f"Applying a book costs **{costs} lapis** for level I to VII and replaces a lower level. "
                 "Two identical books combine into the next level with `/enchant combine` (on an anvil). Levels IV to "
                 f"VII only come from combining, up to your maximum: **{ROMAN[data['max_level']]}** (III, +1 per "

@@ -209,6 +209,16 @@ class SellGearTests(GameTestCase):
         self.assertNotIn("sword", await self.run_game(gear.get_equipped, ALICE))
         self.assertEqual(await self.run_game(enchants.of_gear, [gid]), {})
 
+    async def test_a_curse_adds_nothing_and_never_hides_the_list(self):
+        gid = await self.run_game(shop.create_gear, ALICE, "sword", "diamond")
+        await self.run_game(enchants.set_enchants, gid, {"sharpness": 2, "vanishing": 1})
+        await self.run_game(shop.create_gear, ALICE, "pickaxe", "iron")
+        offers = await self.run_game(shop.gear_offers, ALICE)  # a cursed piece broke the whole list
+        self.assertEqual(len(offers), 2)
+        sword = next(offer for piece, offer in offers if piece["gear_id"] == gid)
+        self.assertEqual(sword["price"], 216)  # the same as without the curse
+        self.assertEqual((await self.run_game(shop.sell_gear, ALICE, gid))["price"], 216)
+
     async def test_villagers_get_their_bonus(self):
         await self.run_game(species.choose, ALICE, "villager")
         gid = await self.run_game(shop.create_gear, ALICE, "sword", "diamond")

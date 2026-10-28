@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 
@@ -9,7 +10,7 @@ from discord.ext import commands, tasks
 
 from game import potions, pve, settings
 from game.errors import GameError
-from utils.ui import BaseView, em, join_lines, potion_icon, report_error
+from utils.ui import BaseView, em, join_lines, lapis_icon, potion_icon, report_error
 
 log = logging.getLogger("pve")
 
@@ -57,6 +58,8 @@ def run_embed(run: dict, last: dict | None = None) -> discord.Embed:
             lines += last["result"]["log"][-12:]
             if last["result"]["cleared"] and not last["cleared_all"]:
                 lines.append(f"💰 +{em(last['reward'])} loot and +{last['xp']} XP each")
+            for uid, found in last.get("lapis", {}).items():
+                lines.append(f"{lapis_icon()} <@{uid}> found **{found} lapis lazuli**")
             for uid, took in last.get("mended", {}).items():
                 lines.append(f"🔧 <@{uid}>: {took} XP repaired their gear (Mending)")
             if last["cleared_all"]:
@@ -154,12 +157,23 @@ class PotionView(BaseView):
 
 
 class PveCog(commands.Cog):
-    """/pve: a dungeon of 5 waves for a group."""
+    """/dungeon: a dungeon of 5 waves for a group."""
 
-    group = app_commands.Group(name="pve", description="Dungeon: 5 waves of monsters for a group.")
+    group = app_commands.Group(name="dungeon", description="Dungeon: 5 waves of monsters for a group.")
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        # One lock per run: two clicks at the same time are played one after the other, each with its update of
+        # the message, so a late update can't bring back an older state of the run (and its old buttons).
+        self._locks: dict[int, asyncio.Lock] = {}
+
+    def lock(self, run_id: int) -> asyncio.Lock:
+        return self._locks.setdefault(run_id, asyncio.Lock())
+
+    def forget(self, run: dict) -> None:
+        """A run that is over needs no lock anymore."""
+        if run["status"] not in ("lobby", "between"):
+            self._locks.pop(run["run_id"], None)
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(PveButton)
@@ -195,7 +209,7 @@ class PveCog(commands.Cog):
         embed = discord.Embed(
             title="⚔️ Dungeon",
             description=(
-                f"{len(pve.WAVES)} waves for a group (`/pve start`): the monsters are the same whatever the group, too "
+                f"{len(pve.WAVES)} waves for a group (`/dungeon start`): the monsters are the same whatever the group, too "
                 "many for one player. Health isn't restored between waves. Each wave's loot is shared by the "
                 "survivors and adds to yours, but if you die you lose it (and the entry): leave in time! "
                 f"Clearing all {len(pve.WAVES)} gives +{float(c['clear_bonus']):.0%}.\n\n" + "\n".join(lines)
@@ -209,19 +223,22 @@ class PveCog(commands.Cog):
 
     # ---------- buttons ----------
     async def click(self, interaction: discord.Interaction, action: str, run_id: int, wave: int) -> None:
+        # Answer Discord now (it allows 3 s): the click may wait for another one, then play a wave.
+        await interaction.response.defer()
+        async with self.lock(run_id):
+            await self.play_click(interaction, action, run_id, wave)
+
+    async def play_click(self, interaction: discord.Interaction, action: str, run_id: int, wave: int) -> None:
         db, uid = self.bot.db, interaction.user.id
         last = None
         if action in ("ready", "next"):
             current = await db.run(pve.get, run_id)
             if current["status"] == "between" and current["wave"] != wave:
                 # This message is behind (its last update failed): show the run as it is now.
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "🔄 This message was behind: it's up to date now. Click **Ready** again.", ephemeral=True)
                 await self.refresh(current)
                 return
-        if action in ("start", "ready", "next"):
-            # Playing a wave can take a moment: answer Discord now (it allows 3 s), then update the message.
-            await interaction.response.defer()
         if action == "join":
             run = await db.run(pve.join, run_id, uid)
         elif action == "quit":
@@ -241,7 +258,7 @@ class PveCog(commands.Cog):
                 return
         elif action == "leave":
             res = await db.run(pve.leave, run_id, uid)
-            await interaction.response.send_message(f"🚪 You left the dungeon with {em(res['paid'])}.", ephemeral=True)
+            await interaction.followup.send(f"🚪 You left the dungeon with {em(res['paid'])}.", ephemeral=True)
             await self.refresh(res["run"], res["last"])  # the others may have been waiting for you
             return
         else:  # potion
@@ -251,18 +268,15 @@ class PveCog(commands.Cog):
             owned = await db.run(potions.owned, uid)
             if not owned:
                 raise GameError("You have no potions.")
-            await interaction.response.send_message("Which potion?", view=PotionView(self, uid, run_id, owned),
-                                                    ephemeral=True)
+            await interaction.followup.send("Which potion?", view=PotionView(self, uid, run_id, owned), ephemeral=True)
             return
-        if interaction.response.is_done():
-            await self.show(interaction, run, last)
-        else:
-            await interaction.response.edit_message(embed=run_embed(run, last), view=run_view(run))
+        await self.show(interaction, run, last)
         await self.opened(last)
 
     async def show(self, interaction: discord.Interaction, run: dict, last: dict | None = None,
                    embed: discord.Embed | None = None) -> None:
         """Update the run's message after a deferred click; if that fails, through the channel."""
+        self.forget(run)
         try:
             await interaction.edit_original_response(embed=embed or run_embed(run, last), view=run_view(run))
         except discord.HTTPException:
@@ -277,13 +291,16 @@ class PveCog(commands.Cog):
                 await cog.sync_roles(uid)  # type: ignore[attr-defined]
 
     async def drink(self, interaction: discord.Interaction, run_id: int, key: str) -> None:
-        res = await self.bot.db.run(pve.drink, run_id, interaction.user.id, key)
-        await interaction.response.edit_message(content=f"{potion_icon(key)} {potions.label(key)}: {res['effect']}.",
-                                                view=None)
-        await self.refresh(res["run"])
+        await interaction.response.defer()
+        async with self.lock(run_id):
+            res = await self.bot.db.run(pve.drink, run_id, interaction.user.id, key)
+            await interaction.edit_original_response(
+                content=f"{potion_icon(key)} {potions.label(key)}: {res['effect']}.", view=None)
+            await self.refresh(res["run"])
 
     async def refresh(self, run: dict, last: dict | None = None) -> None:
         """Update the run's message (after a potion, a departure or a timeout; `last`: a wave just played)."""
+        self.forget(run)
         channel = self.bot.get_channel(run["channel_id"] or 0)
         if not isinstance(channel, discord.abc.Messageable) or not run["message_id"]:
             return
@@ -297,8 +314,11 @@ class PveCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def pve_loop(self):
         try:
-            for event in await self.bot.db.run(pve.expire):
-                await self.refresh(event["run"], event.get("last"))
+            for run_id in await self.bot.db.run(pve.expired):
+                async with self.lock(run_id):  # not while a click of this run is being played
+                    event = await self.bot.db.run(pve.expire_run, run_id)
+                    if event is not None:
+                        await self.refresh(event["run"], event.get("last"))
         except Exception:  # an error must never stop the loop
             log.exception("PVE loop failed")
 
