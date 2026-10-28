@@ -271,10 +271,15 @@ def owned_piece(ctx: Ctx, user_id: int, gear_id: int) -> dict:
     return enchants.attach(ctx, [dict(row)])[0]
 
 
+def books_value(applied: dict[str, int]) -> float:
+    """What the enchantments of a piece are worth: the books applied to it (a curse is no book: it adds nothing)."""
+    return sum(item_value("book", enchants.book_material(name, level)) for name, level in applied.items()
+               if not enchants.ENCHANTS[name].curse)
+
+
 def gear_value(piece: dict) -> float:
     """What a piece is worth new: the resources of its craft and the books applied to it."""
-    books = sum(item_value("book", enchants.book_material(name, level)) for name, level in piece["enchants"].items())
-    return craft_cost(piece["item"], piece["material"]) + books
+    return craft_cost(piece["item"], piece["material"]) + books_value(piece["enchants"])
 
 
 def gear_offer(ctx: Ctx, user_id: int, piece: dict) -> dict:

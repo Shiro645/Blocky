@@ -223,7 +223,7 @@ FIELDS: list[Field] = [
     Field("ch_casino", "channels", "Casino channels", ("channels", "casino"), "channels",
           help="/luckyblock, /wheel, /blackjack and /mines work only there. Not set = anywhere."),
     Field("ch_portal", "channels", "Portal channels", ("channels", "portal"), "channels",
-          help="/pve (the dungeon), /boss, /portal and /dimensions work only there. Not set = anywhere."),
+          help="/dungeon (the dungeon), /boss, /portal and /dimensions work only there. Not set = anywhere."),
     Field("ch_robberies", "channels", "Robberies channel", ("channels", "robberies"), "channel",
           help="Robberies (/rob, typed in the commands channel) are posted there with the Stop the thief! button (the "
                "victim is pinged there for a risky one). Best as a channel where members can't write. Not set = "
@@ -892,6 +892,10 @@ FIELDS: list[Field] = [
              "Multiplies the wave rewards.", kind="float", min=0, max=1000),
           _b(f"pve.difficulties.{key}.loot_players", "pve", f"{name}: loot paid for (players)",
              "A wave's loot is this many players' reward, shared between the survivors.", min=1, max=10),
+          _pct(f"pve.difficulties.{key}.lapis_chance", "pve", f"{name}: lapis chance per wave",
+               "Each survivor of a cleared wave finds lapis this often (kept even if they die later)."),
+          _b(f"pve.difficulties.{key}.lapis.0", "pve", f"{name}: lapis found, minimum", min=1, max=1000),
+          _b(f"pve.difficulties.{key}.lapis.1", "pve", f"{name}: lapis found, maximum", min=1, max=1000),
       )],
     # ---- species ----
     _b("species.change_cost", "species", "Cost to change species", "The first choice is free."),

@@ -33,7 +33,7 @@ class SleepOkTests(GameTestCase):
             self.assertIn(name, names)
 
     def test_the_shops_stay_closed(self):
-        for name in ("market", "villager", "auction browse", "daily", "rob", "pve start", "sell"):
+        for name in ("market", "villager", "auction browse", "daily", "rob", "dungeon start", "sell"):
             self.assertNotIn(name, night.SLEEP_OK)
 
 

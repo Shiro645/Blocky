@@ -69,7 +69,7 @@ SECTIONS: tuple[Section, ...] = (
         "overworld, big piles are dirt and cobblestone; the smaller the pile, the rarer the block can be: gravel and deepslate come "
         "in smaller piles, obsidian and bedrock only alone. Then you wait the **cooldown** before the next reward: "
         "messages in between give nothing, so spamming doesn't help. Each reward also gives **XP**, sometimes "
-        "**lapis lazuli**, and sometimes makes a **drop** appear (see Timed events, drops and the villager).\n"
+        "**lapis lazuli** (the dungeon too), and sometimes makes a **drop** appear (see Timed events, drops and the villager).\n"
         "**Spam channels** (set by the staff) give only a tiny emerald reward: no blocks, XP, drops or challenge "
         "progress.\n\n"
         "**Dimensions**: after the overworld come the **Nether**, the **End**, the **Deep Dark** and the "
@@ -221,8 +221,8 @@ SECTIONS: tuple[Section, ...] = (
         ("duel", "potions", "dummy hit", "bounty place"),
     ),
     Section(
-        "dungeon", "🏰 The PVE dungeon",
-        "`/pve start <difficulty>` opens a run of **5 waves** of monsters: 🧟 zombies, then 💀 skeletons (they "
+        "dungeon", "🏰 The dungeon",
+        "`/dungeon start <difficulty>` opens a run of **5 waves** of monsters: 🧟 zombies, then 💀 skeletons (they "
         "shoot before you attack), both together, 🕷️ spiders (two bites a turn) with a 🟩 creeper (it explodes on "
         "its 2nd turn unless you kill it first) and a skeleton, then a mix with a 🐂 ravager.\n"
         "It's made for a **group**: each difficulty has its monsters, the same however many you are, so alone you "
@@ -234,14 +234,16 @@ SECTIONS: tuple[Section, ...] = (
         "their loot**: the next wave starts by itself when all are ready, and whoever doesn't answer in time "
         "leaves with their loot. Anyone can drink a potion (Healing heals now, Strength and Speed help in the "
         "next wave, Harming hits a few monsters). Each wave cleared adds to your loot, but **if you die you lose it** and the "
-        "entry. Clearing all 5 waves pays a bonus. Gear wears out like in duels. `/pve info` shows the difficulties "
+        "entry. The survivors of a cleared wave sometimes find **lapis lazuli** (more in the harder difficulties), "
+        "theirs even if they die later. Clearing all 5 waves pays a bonus. Gear wears out like in duels. "
+        "`/dungeon info` shows the difficulties "
         "and when you can play again.",
-        ("pve start",),
+        ("dungeon start",),
     ),
     Section(
         "gate_bosses", "🚪 Gate bosses",
         "The **dimensions** after the Nether are opened by **gate bosses**. The Nether itself opens by clearing the "
-        "💀 **Nightmare** dungeon (`/pve start`): the players still there at the end of wave 5 reach it. Then the 🖤 "
+        "💀 **Nightmare** dungeon (`/dungeon start`): the players still there at the end of wave 5 reach it. Then the 🖤 "
         "**Wither** (in the Nether) opens the End, the 🐉 **Ender Dragon** (in the End) the Deep Dark, and the 👁️ "
         "**Warden** (in the Deep Dark) the Shimmer.\n\n"
         "`/boss fight <boss>` calls a group (up to 4 players who reached the boss's dimension; each pays the entry, "

@@ -1,4 +1,4 @@
-"""PVE dungeon (/pve): 5 waves of monsters for a group of up to `max_players` (5).
+"""PVE dungeon (/dungeon): 5 waves of monsters for a group of up to `max_players` (5).
 
 - Waves: 1 zombies, 2 skeletons (they shoot before the first attack), 3 both,
   4 spiders (two bites a turn), a creeper (it explodes on its 2nd turn unless
@@ -28,7 +28,7 @@ import json
 import random
 from dataclasses import asdict, dataclass, field
 
-from game import beacon, biomes, cooldowns, dimensions, duel, gear, players, potions, settings, teams
+from game import beacon, biomes, cooldowns, dimensions, duel, enchants, gear, players, potions, settings, teams
 from game.db import Ctx
 from game.errors import GameError
 
@@ -536,6 +536,9 @@ def _play(ctx: Ctx, run: dict) -> dict:
     reward = int(round(pot / max(1, survivors)))
     xp = int(_cfg()["xp_per_wave"])
     mended: dict[int, int] = {}  # XP Mending took, per player
+    lapis: dict[int, int] = {}  # lapis found, per survivor (kept even if they die later)
+    diff = _cfg()["difficulties"][run["difficulty"]]
+    lapis_chance = float(diff["lapis_chance"])
     for hero in heroes:
         _save_hero(ctx, run["run_id"], hero)
         players.bump_stat(ctx, hero.user_id, "monster_damage", result["damage"].get(hero.user_id, 0))
@@ -550,6 +553,11 @@ def _play(ctx: Ctx, run: dict) -> dict:
             if took:
                 mended[hero.user_id] = took
             players.bump_stat(ctx, hero.user_id, "pve_waves")
+            if lapis_chance > 0 and ctx.rng.random() < lapis_chance:
+                lo, hi = (int(n) for n in diff["lapis"])
+                lapis[hero.user_id] = ctx.rng.randint(lo, hi)
+                enchants.give_lapis(ctx, hero.user_id, lapis[hero.user_id])
+                players.bump_stat(ctx, hero.user_id, "lapis_found", lapis[hero.user_id])
     ctx.execute(
         "UPDATE pve_runs SET wave=?, deadline=? WHERE run_id=?;",
         (wave if result["cleared"] else run["wave"], int(ctx.now + float(_cfg()["decision_minutes"]) * MINUTE),
@@ -569,7 +577,7 @@ def _play(ctx: Ctx, run: dict) -> dict:
                 nether.append(m["user_id"])
     run = _close_if_empty(ctx, run)
     return {"run": run, "wave": wave, "result": result, "reward": reward, "xp": xp, "cleared_all": cleared_all,
-            "nether": nether, "mended": mended}
+            "nether": nether, "mended": mended, "lapis": lapis}
 
 
 def leave(ctx: Ctx, run_id: int, user_id: int) -> dict:
@@ -631,22 +639,29 @@ def drink(ctx: Ctx, run_id: int, user_id: int, key: str) -> dict:
     return {"run": get(ctx, run_id), "effect": effect, "potion": key}
 
 
-def expire(ctx: Ctx) -> list[dict]:
-    """Called every minute: groups not started in time are refunded. Between two waves, the members who didn't
-    say they were ready in time leave with their loot, and the next wave starts for the ones who did."""
-    events = []
-    for row in ctx.all("SELECT run_id, status FROM pve_runs WHERE status IN ('lobby', 'between') AND deadline <= ?;",
-                       (int(ctx.now),)):
-        run = get(ctx, row["run_id"])
-        if run["status"] == "lobby":
-            _refund_all(ctx, run, "cancelled")
-            events.append({"type": "cancelled", "run": get(ctx, run["run_id"])})
-        else:
-            for m in run["in"]:
-                if not is_ready(run, m):
-                    _end_member(ctx, run, m, "left", m["loot"])
-            _close_if_empty(ctx, run)
-            res = _go_on_if_ready(ctx, run["run_id"])
-            events.append({"type": "continued" if res["last"] else "timeout", **res})
-    return events
+def expired(ctx: Ctx) -> list[int]:
+    """The runs whose deadline passed (a group not started, or a decision not made between two waves)."""
+    return [r["run_id"] for r in ctx.all(
+        "SELECT run_id FROM pve_runs WHERE status IN ('lobby', 'between') AND deadline <= ?;", (int(ctx.now),))]
 
+
+def expire_run(ctx: Ctx, run_id: int) -> dict | None:
+    """A group not started in time is refunded. Between two waves, the members who didn't say they were ready in
+    time leave with their loot, and the next wave starts for the ones who did. None: nothing to do (anymore)."""
+    run = get(ctx, run_id)
+    if run["status"] not in ("lobby", "between") or run["deadline"] > ctx.now:
+        return None  # a click came first
+    if run["status"] == "lobby":
+        _refund_all(ctx, run, "cancelled")
+        return {"type": "cancelled", "run": get(ctx, run_id)}
+    for m in run["in"]:
+        if not is_ready(run, m):
+            _end_member(ctx, run, m, "left", m["loot"])
+    _close_if_empty(ctx, run)
+    res = _go_on_if_ready(ctx, run_id)
+    return {"type": "continued" if res["last"] else "timeout", **res}
+
+
+def expire(ctx: Ctx) -> list[dict]:
+    """Every expired run at once (the bot does them one by one, see cogs/games_pve.py)."""
+    return [e for e in (expire_run(ctx, run_id) for run_id in expired(ctx)) if e is not None]

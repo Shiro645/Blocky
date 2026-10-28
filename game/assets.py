@@ -119,8 +119,7 @@ def unit_value(key: str) -> float:
         return shop.item_value("book", f"{parts[1]}:{parts[2]}")
     if kind == "potion":
         return shop.item_value("potion", ":".join(parts[1:]))
-    books = sum(shop.item_value("book", enchants.book_material(n, lvl)) for n, lvl in gear_enchants(key).items())
-    return shop.craft_cost(parts[2], parts[1]) + books
+    return shop.craft_cost(parts[2], parts[1]) + shop.books_value(gear_enchants(key))
 
 
 def owned(ctx: Ctx, user_id: int) -> list[tuple[str, int]]:

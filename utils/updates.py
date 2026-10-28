@@ -36,7 +36,7 @@ UPDATES: tuple[Update, ...] = (
              "`/dummy hit` tests your damage, with a leaderboard (`/dummy top`). `/dummy duel` is a training duel "
              "against a dummy that hits back: free potions, nothing to lose."),
             ("🏰 The PVE dungeon",
-             "`/pve start`: 5 waves of zombies, skeletons, spiders, creepers and a ravager, alone or with up to 3 "
+             "`/dungeon start`: 5 waves of zombies, skeletons, spiders, creepers and a ravager, alone or with up to 3 "
              "friends, in 5 difficulties. Health isn't restored between waves: leave with your loot in time, or lose "
              "it."),
             ("🧬 Species",
@@ -261,7 +261,7 @@ UPDATES: tuple[Update, ...] = (
         "The dimensions now open by fighting! The old server boss is gone: meet the **gate bosses**.",
         (
             ("🔥 The Nether",
-             "Clear the 💀 **Nightmare** dungeon (`/pve start`): everyone still standing at the end of wave 5 reaches "
+             "Clear the 💀 **Nightmare** dungeon (`/dungeon start`): everyone still standing at the end of wave 5 reaches "
              "the Nether."),
             ("🖤 🐉 👁️ Wither, Ender Dragon, Warden",
              "`/boss fight` calls a group of up to 4: turn by turn, each player drinks a potion if they want, then "
@@ -515,6 +515,20 @@ UPDATES: tuple[Update, ...] = (
             ("☀️ /wake",
              "`/wake` gets you up early. The night no longer counts as slept: monsters may attack you, your next "
              "`/daily` has no bonus, and you can't go back to bed that night."),
+        ),
+    ),
+    Update(
+        "2026-10-dungeon-lapis", "2026-10-28", "/dungeon and its lapis",
+        "`/pve` is now `/dungeon`, and the dungeon gives lapis.",
+        (
+            ("🏰 /dungeon",
+             "`/pve start` and `/pve info` are now `/dungeon start` and `/dungeon info`."),
+            ("🔷 Lapis",
+             "Each survivor of a cleared wave sometimes finds lapis lazuli, more in the harder difficulties. "
+             "It's yours even if you die later. `/dungeon info` shows the chances."),
+            ("🛠️ Fixes",
+             "Two players clicking at the same time no longer breaks a run. `/sell` lists your gear again when a "
+             "piece is cursed."),
         ),
     ),
 )

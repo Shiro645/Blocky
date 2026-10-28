@@ -96,7 +96,7 @@ SLEEP_OK = frozenset({
     "help", "time", "sleep", "wake", "profile", "inventory", "gear", "craftlist", "xp", "talents", "potions",
     "leaderboard", "achievements", "challenges", "season", "war", "events", "biome", "dimensions", "guide",
     "server_status", "ip", "modpacks", "link_status",
-    "pve info", "boss info", "bounty list", "bounty info", "team info", "team top", "chest view", "auction mine",
+    "dungeon info", "boss info", "bounty list", "bounty info", "team info", "team top", "chest view", "auction mine",
     "enchant table", "enchant info", "loan list", "tournament info", "tournament bracket", "blockdle today",
     "blockdle top", "dummy top", "beacon info", "customize list", "species list",
 })

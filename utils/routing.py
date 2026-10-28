@@ -15,7 +15,7 @@ from typing import Any
 from utils.config import channel_ids
 
 CASINO = ("luckyblock", "wheel", "blackjack", "mines")
-PORTAL = ("pve", "boss", "portal", "dimensions")
+PORTAL = ("dungeon", "boss", "portal", "dimensions")
 ANYWHERE = ("help",)
 
 PLACES = {
